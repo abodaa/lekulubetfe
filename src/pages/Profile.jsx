@@ -1,0 +1,268 @@
+import React, { useState, useEffect } from 'react';
+import BottomNav from '../components/BottomNav';
+import { useAuth } from '../lib/auth/AuthProvider';
+import { apiFetch } from '../lib/api/client';
+
+export default function Profile({ onNavigate }) {
+    const [sound, setSound] = useState(true);
+    const [profileData, setProfileData] = useState({
+        user: {
+            firstName: 'User',
+            lastName: '',
+            phone: null,
+            isRegistered: false,
+            totalGamesPlayed: 0,
+            totalGamesWon: 0,
+            registrationDate: new Date()
+        },
+        wallet: {
+            balance: 0,
+            gamesWon: 0
+        }
+    });
+    const [inviteStats, setInviteStats] = useState({
+        totalInvites: 0,
+        totalRewards: 0,
+        totalDepositsFromInvited: 0,
+        inviteCode: null
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const { user, sessionId, isLoading: authLoading } = useAuth();
+
+    const displayName = profileData.user?.firstName || user?.firstName || 'Player';
+    const initials = displayName.charAt(0).toUpperCase();
+
+    // Fetch profile data: user info from /user/profile (optional) and wallet from /wallet (authoritative)
+    const fetchProfileData = React.useCallback(async () => {
+        if (authLoading || !sessionId) {
+            setLoading(false);
+            return;
+        }
+        try {
+            setLoading(true);
+            setError(null);
+
+            const [profileRes, walletRes, inviteRes] = await Promise.all([
+                apiFetch('/user/profile', { sessionId }).catch(err => {
+                    // 404 means no extra profile info yet - fall back to auth user
+                    if (err?.message === 'api_error_404') {
+                        console.warn('Profile 404 - using auth user info only');
+                        return null;
+                    }
+                    throw err;
+                }),
+                apiFetch('/wallet', { sessionId }).catch(err => {
+                    // If wallet fetch fails, use default values
+                    console.warn('Wallet fetch failed:', err);
+                    return { balance: 0, main: 0, play: 0, gamesWon: 0 };
+                }),
+                apiFetch('/user/invite-stats', { sessionId }).catch(() => null)
+            ]);
+
+            const userInfo = profileRes?.user || {
+                firstName: user?.firstName || 'User',
+                lastName: user?.lastName || '',
+                phone: user?.phone || null,
+                isRegistered: user?.isRegistered || false,
+                totalGamesPlayed: 0,
+                totalGamesWon: 0,
+                registrationDate: new Date()
+            };
+
+            // Debug logging to verify wallet data
+            console.log('Profile wallet fetch:', {
+                main: walletRes.main,
+                play: walletRes.play,
+                balance: walletRes.balance,
+                fullResponse: walletRes
+            });
+
+            // Use actual wallet values - prioritize main/play fields, fall back to balance only if null/undefined
+            const mainValue = (walletRes.main !== null && walletRes.main !== undefined) 
+                ? walletRes.main 
+                : (walletRes.balance ?? 0);
+            const playValue = (walletRes.play !== null && walletRes.play !== undefined) 
+                ? walletRes.play 
+                : 0;
+
+            const walletInfo = {
+                balance: walletRes.balance ?? 0,
+                main: mainValue,
+                play: playValue,
+                gamesWon: walletRes.gamesWon ?? 0
+            };
+
+            setProfileData({
+                user: userInfo,
+                wallet: walletInfo
+            });
+
+            if (inviteRes) {
+                setInviteStats(inviteRes);
+            }
+        } catch (error) {
+            console.error('Failed to fetch profile data:', error);
+            const code = error?.message || 'unknown';
+            if (code === 'request_timeout') {
+                setError('Request timeout - please try again.');
+            } else if (code.startsWith('api_error_')) {
+                setError(`Failed to load profile (API ${code.replace('api_error_', '')}). Please try again.`);
+            } else {
+                setError(`Failed to load profile (${code}). Please try again.`);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [sessionId, authLoading, user]);
+
+    useEffect(() => {
+        fetchProfileData();
+    }, [fetchProfileData]);
+
+    return (
+        <div className="profile-page">
+            {/* Header */}
+            <header className="profile-header">
+                <div className="profile-header-content">
+                    <div className="profile-avatar">{initials}</div>
+                    <h1 className="profile-name">{displayName}</h1>
+                    {profileData.user?.isRegistered && (
+                        <div className="profile-verified">
+                            <span className="profile-verified-icon">✓</span>
+                            <span className="profile-verified-text">Verified User</span>
+                        </div>
+                    )}
+                </div>
+            </header>
+
+            {/* Main content */}
+            <main className="profile-main">
+                {loading ? (
+                    <div className="profile-loading">
+                        <div className="profile-spinner"></div>
+                        <div className="profile-loading-text">Loading profile...</div>
+                    </div>
+                ) : error ? (
+                    <div className="profile-error">
+                        <div className="profile-error-icon">❌ Error Loading Data</div>
+                        <div className="profile-error-text">{error}</div>
+                        <div className="text-xs text-gray-400 mt-2">
+                            Session: {sessionId ? 'present' : 'missing'}
+                        </div>
+                        <button
+                            onClick={fetchProfileData}
+                            className="profile-retry-button"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Wallet & Statistics Cards */}
+                        <div className="profile-cards">
+                            {/* Main Wallet Balance */}
+                            <div className="profile-card">
+                                <div className="profile-card-title">
+                                    <span className="profile-card-icon">💰</span>
+                                    <span className="profile-card-label">Main Wallet</span>
+                                </div>
+                                <div className="profile-card-value">{profileData.wallet.main?.toLocaleString() || 0}</div>
+                                <div className="profile-card-subtitle">Primary balance</div>
+                            </div>
+
+                            {/* Play Wallet Balance */}
+                            <div className="profile-card">
+                                <div className="profile-card-title">
+                                    <span className="profile-card-icon">🎮</span>
+                                    <span className="profile-card-label">Play Wallet</span>
+                                </div>
+                                <div className="profile-card-value profile-card-value-green">{profileData.wallet.play?.toLocaleString() || 0}</div>
+                                <div className="profile-card-subtitle">Game funds</div>
+                            </div>
+
+                            {/* Games Won */}
+                            <div className="profile-card">
+                                <div className="profile-card-title">
+                                    <span className="profile-card-icon">🏆</span>
+                                    <span className="profile-card-label">Games Won</span>
+                                </div>
+                                <div className="profile-card-value">{profileData.wallet.gamesWon?.toLocaleString() || 0}</div>
+                                <div className="profile-card-subtitle">Victories</div>
+                            </div>
+
+                            {/* Invite Stats */}
+                            <div className="profile-card">
+                                <div className="profile-card-title">
+                                    <span className="profile-card-icon">👥</span>
+                                    <span className="profile-card-label">Invites</span>
+                                </div>
+                                <div className="profile-card-value">{inviteStats.totalInvites || 0}</div>
+                                <div className="profile-card-subtitle">Friends invited</div>
+                            </div>
+
+                            {/* Invite Rewards */}
+                            <div className="profile-card">
+                                <div className="profile-card-title">
+                                    <span className="profile-card-icon">🎁</span>
+                                    <span className="profile-card-label">Invite Rewards</span>
+                                </div>
+                                <div className="profile-card-value profile-card-value-green">{inviteStats.totalRewards?.toLocaleString() || 0}</div>
+                                <div className="profile-card-subtitle">
+                                    ETB earned (play wallet)
+                                    <br />
+                                    <span className="text-xs text-gray-400">ETB 1 per invited user registration</span>
+                                </div>
+                            </div>
+
+                            {/* Total Deposits from Invited Users */}
+                            {inviteStats.totalDepositsFromInvited !== undefined && inviteStats.totalDepositsFromInvited > 0 && (
+                                <div className="profile-card">
+                                    <div className="profile-card-title">
+                                        <span className="profile-card-icon">💰</span>
+                                        <span className="profile-card-label">Invited Users Deposits</span>
+                                    </div>
+                                    <div className="profile-card-value profile-card-value-blue">{inviteStats.totalDepositsFromInvited?.toLocaleString() || 0}</div>
+                                    <div className="profile-card-subtitle">Total deposits from invited users</div>
+                                </div>
+                            )}
+
+                            {/* Invite Code */}
+                            {inviteStats.inviteCode && (
+                                <div className="profile-card">
+                                    <div className="profile-card-title">
+                                        <span className="profile-card-icon">🔗</span>
+                                        <span className="profile-card-label">Invite Code</span>
+                                    </div>
+                                    <div className="profile-card-value profile-card-value-purple">{inviteStats.inviteCode}</div>
+                                    <div className="profile-card-subtitle">Share with friends</div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Settings Section */}
+                        <div className="profile-settings">
+                            <h2 className="profile-settings-title">Settings</h2>
+
+                            {/* Sound Toggle */}
+                            <div className="profile-settings-row">
+                                <div className="profile-settings-content">
+                                    <div className="profile-settings-label">
+                                        <span className="profile-settings-icon">🔉</span>
+                                        <span className="profile-settings-text">Sound</span>
+                                    </div>
+                                    <button onClick={() => setSound(!sound)} className={`profile-switch ${sound ? 'on' : ''}`} aria-pressed={sound}>
+                                        <span className="profile-switch-knob"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+            </main>
+
+            <BottomNav current="profile" onNavigate={onNavigate} />
+        </div>
+    );
+}
+
