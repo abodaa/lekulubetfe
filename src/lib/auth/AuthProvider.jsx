@@ -16,11 +16,7 @@ const AuthContext = createContext({
 });
 
 async function verifyTelegram(initData) {
-  const apiBase =
-    import.meta.env.VITE_API_URL ||
-    (window.location.hostname === "localhost"
-      ? "http://localhost:3001"
-      : "https://markbingo.com");
+  const apiBase = "http://localhost:3001";
 
   console.log("🔐 Verifying Telegram auth:", {
     apiBase,
@@ -141,7 +137,9 @@ export function AuthProvider({ children }) {
                 isRegistered: prof.user.isRegistered,
               };
             }
-          } catch {}
+          } catch {
+            console.warn("⚠️ Failed to fetch profile with new session");
+          }
 
           setUser(mergedUser);
           localStorage.setItem("user", JSON.stringify(mergedUser));
