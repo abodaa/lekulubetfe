@@ -5,7 +5,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { apiFetch } from "../api/client";
 
 const AuthContext = createContext({
   sessionId: null,
@@ -14,7 +13,10 @@ const AuthContext = createContext({
   isLoading: true,
 });
 
-// Helper: Verify Telegram Data with Backend
+/**
+ * Backend Verification Call
+ * Sends the Telegram initData to your server to validate the hash.
+ */
 async function verifyTelegram(initData) {
   const apiBase =
     import.meta.env.VITE_API_URL ||
@@ -28,11 +30,14 @@ async function verifyTelegram(initData) {
     body: JSON.stringify({ initData }),
   });
 
-  if (!res.ok) throw new Error("verify_failed");
+  if (!res.ok) throw new Error(`Auth failed with status: ${res.status}`);
   return await res.json();
 }
 
-// Helper: Token Expiry Check
+/**
+ * JWT Expiry Check
+ * Checks if the session stored in LocalStorage is actually still valid.
+ */
 function isTokenExpired(token) {
   if (!token) return true;
   try {
@@ -40,15 +45,6 @@ function isTokenExpired(token) {
     return payload.exp < Math.floor(Date.now() / 1000);
   } catch {
     return true;
-  }
-}
-
-async function fetchProfileWithSession(sessionId) {
-  if (!sessionId) return null;
-  try {
-    return await apiFetch("/user/profile", { sessionId });
-  } catch {
-    return null;
   }
 }
 
@@ -65,81 +61,58 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // 1. POLLING: Wait for the Telegram SDK to inject WebApp
+        // 1. Wait for Telegram WebApp SDK to initialize
         let attempts = 0;
-        while (attempts < 15 && !window?.Telegram?.WebApp) {
+        while (attempts < 10 && !window?.Telegram?.WebApp) {
           await new Promise((r) => setTimeout(r, 500));
           attempts++;
         }
 
-        const WebApp = window?.Telegram?.WebApp;
-        if (WebApp) {
-          WebApp.ready();
-          WebApp.expand();
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
         }
 
-        // 2. EXTRACT: Check SDK, then URL Hash, then URL Search
+        // 2. Identify initData from SDK or URL (Hash/Search)
         const hashParams = new URLSearchParams(
           window.location.hash.substring(1),
         );
         const searchParams = new URLSearchParams(window.location.search);
 
         const initData =
-          WebApp?.initData && WebApp.initData.trim() !== ""
-            ? WebApp.initData
-            : hashParams.get("tgWebAppData") ||
-              searchParams.get("tgWebAppData");
+          window.Telegram?.WebApp?.initData ||
+          hashParams.get("tgWebAppData") ||
+          searchParams.get("tgWebAppData");
 
-        // 3. LOGIC BRANCH A: Fresh Telegram Session
+        // 3. PRIORITY 1: Fresh Telegram Session
         if (initData && initData.trim() !== "") {
           const out = await verifyTelegram(initData);
 
           if (out?.sessionId) {
-            // User Switching Safety: Clear old user if IDs don't match
-            const prevUser = JSON.parse(localStorage.getItem("user") || "null");
-            if (prevUser && out.user && prevUser.id !== out.user.id) {
-              localStorage.removeItem("user");
-            }
-
             setSessionId(out.sessionId);
+            setUser(out.user);
             localStorage.setItem("sessionId", out.sessionId);
-
-            // Profile Hydration
-            let mergedUser = out.user;
-            try {
-              const prof = await fetchProfileWithSession(out.sessionId);
-              if (prof?.user) mergedUser = { ...mergedUser, ...prof.user };
-            } catch (e) {
-              console.warn("Hydration failed");
-            }
-
-            setUser(mergedUser);
-            localStorage.setItem("user", JSON.stringify(mergedUser));
+            localStorage.setItem("user", JSON.stringify(out.user));
             setIsLoading(false);
             return;
           }
         }
 
-        // 4. LOGIC BRANCH B: Fallback to Local Session
-        const localSession = localStorage.getItem("sessionId");
+        // 4. PRIORITY 2: Local Session Fallback
+        const localSess = localStorage.getItem("sessionId");
         const localUser = JSON.parse(localStorage.getItem("user") || "null");
 
-        if (localSession && localUser && !isTokenExpired(localSession)) {
-          try {
-            const prof = await fetchProfileWithSession(localSession);
-            if (prof?.user) {
-              setUser({ ...localUser, ...prof.user });
-              setIsLoading(false);
-              return;
-            }
-          } catch (e) {
-            clearAuth();
-          }
-        } else {
-          clearAuth();
+        if (localSess && localUser && !isTokenExpired(localSess)) {
+          setSessionId(localSess);
+          setUser(localUser);
+          setIsLoading(false);
+          return;
         }
-      } catch (error) {
-        console.error("Auth Error:", error);
+
+        // 5. FAIL: No valid data sources found
+        clearAuth();
+      } catch (err) {
+        console.error("Authentication crash:", err);
         clearAuth();
       } finally {
         setIsLoading(false);
@@ -147,20 +120,26 @@ export function AuthProvider({ children }) {
     };
 
     const clearAuth = () => {
-      setSessionId(null);
-      setUser(null);
       localStorage.removeItem("sessionId");
       localStorage.removeItem("user");
+      setSessionId(null);
+      setUser(null);
     };
 
     initAuth();
   }, []);
 
   const value = useMemo(
-    () => ({ sessionId, user, setSessionId, isLoading }),
+    () => ({
+      sessionId,
+      user,
+      setSessionId,
+      isLoading,
+    }),
     [sessionId, user, isLoading],
   );
 
+  // UI Logic: Loading State
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#e6e6fa]">
@@ -168,24 +147,25 @@ export function AuthProvider({ children }) {
           <img
             src="/lb.png"
             alt="Logo"
-            className="w-24 h-24 mx-auto animate-pulse mb-4"
+            className="w-20 h-20 animate-pulse mx-auto mb-4"
           />
-          <p className="text-white font-semibold">Authenticating...</p>
+          <p className="text-white font-medium">Authenticating...</p>
         </div>
       </div>
     );
   }
 
+  // UI Logic: Access Restricted (The "Gate")
   if (!sessionId || !user) {
     return (
-      <div className="min-h-screen bg-purple-900 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md">
-          <div className="text-6xl mb-4">⚠️</div>
+      <div className="min-h-screen bg-purple-900 flex items-center justify-center p-8 text-center">
+        <div className="max-w-xs">
+          <div className="text-5xl mb-6">🚫</div>
           <h1 className="text-white text-2xl font-bold mb-4">
             Access Restricted
           </h1>
-          <p className="text-white/80">
-            Please open this app from within the Mark Bingo Telegram bot.
+          <p className="text-white/70 text-sm leading-relaxed">
+            To play, please open this link from your Telegram bot.
           </p>
         </div>
       </div>
