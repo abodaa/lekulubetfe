@@ -48,7 +48,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        // 🔐 1. Check existing session
+        console.log("🚀 Auth init started");
+
+        // 🔐 1. Check stored session
         const storedSession = localStorage.getItem("sessionId");
         const storedUser = localStorage.getItem("user");
 
@@ -56,30 +58,22 @@ export function AuthProvider({ children }) {
           try {
             const prof = await fetchProfileWithSession(storedSession);
             if (prof?.user) {
-              console.log("✅ Existing session valid");
-
               setSessionId(storedSession);
               setUser(JSON.parse(storedUser));
               setIsLoading(false);
               return;
-            } else {
-              console.warn("⚠️ Session invalid, clearing...");
             }
-          } catch {
-            console.warn("⚠️ Session check failed, clearing...");
-          }
+          } catch {}
 
           localStorage.removeItem("sessionId");
           localStorage.removeItem("user");
         }
 
-        // 🔄 2. Try Telegram login (optional)
+        // 🔄 2. Telegram login (if available)
         const tg = window?.Telegram?.WebApp;
         const initData = tg?.initData;
 
         if (initData && initData.trim() !== "") {
-          console.log("🔐 Logging in via Telegram...");
-
           const out = await verifyTelegram(initData);
 
           setSessionId(out.sessionId);
@@ -92,13 +86,11 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // ❌ 3. No authentication
-        console.warn("❌ No valid authentication found");
-
+        // ❌ No auth
         setSessionId(null);
         setUser(null);
       } catch (e) {
-        console.error("❌ Auth error:", e);
+        console.error("Auth error:", e);
         setSessionId(null);
         setUser(null);
       } finally {
@@ -112,16 +104,43 @@ export function AuthProvider({ children }) {
     [sessionId, user, isLoading],
   );
 
-  // ⏳ Loading screen
+  // 🔍 DEBUG INFO (VISIBLE IN UI)
+  const debugInfo = {
+    telegram: !!window?.Telegram,
+    webApp: !!window?.Telegram?.WebApp,
+    initData: window?.Telegram?.WebApp?.initData || "NONE",
+    initDataLength: window?.Telegram?.WebApp?.initData?.length || 0,
+    platform: window?.Telegram?.WebApp?.platform || "UNKNOWN",
+    userAgent: navigator.userAgent,
+    hasSession: !!sessionId,
+    hasUser: !!user,
+  };
+
+  // ⏳ Loading
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Authenticating...</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <p>Authenticating...</p>
+
+          <pre
+            style={{
+              marginTop: "20px",
+              fontSize: "10px",
+              color: "black",
+              textAlign: "left",
+              maxWidth: "300px",
+              overflow: "auto",
+            }}
+          >
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </div>
       </div>
     );
   }
 
-  // 🔒 Block unauthenticated users
+  // 🔒 Block
   if (!sessionId || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
@@ -132,6 +151,20 @@ export function AuthProvider({ children }) {
             <br />
             Please open from Telegram or login.
           </p>
+
+          {/* 🔍 DEBUG PANEL */}
+          <pre
+            style={{
+              marginTop: "20px",
+              fontSize: "10px",
+              color: "white",
+              textAlign: "left",
+              maxWidth: "300px",
+              overflow: "auto",
+            }}
+          >
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
         </div>
       </div>
     );
