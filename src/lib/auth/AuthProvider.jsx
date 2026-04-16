@@ -14,6 +14,12 @@ const AuthContext = createContext({
   isLoading: true,
 });
 
+const isDev = import.meta.env.DEV;
+const allowDevAuth = isDev && import.meta.env.VITE_ALLOW_DEV_AUTH === "true";
+
+/**
+ * Telegram verify API
+ */
 async function verifyTelegram(initData) {
   const apiBase =
     import.meta.env.VITE_API_URL ||
@@ -28,13 +34,15 @@ async function verifyTelegram(initData) {
   });
 
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error || "verify_failed");
+    throw new Error(await res.text());
   }
 
   return res.json();
 }
 
+/**
+ * Fetch profile via session
+ */
 async function fetchProfileWithSession(sessionId) {
   if (!sessionId) return null;
   try {
@@ -44,14 +52,17 @@ async function fetchProfileWithSession(sessionId) {
   }
 }
 
-// Optional: Development mock (remove or condition in production)
-const isDev = import.meta.env.DEV;
+/**
+ * Mock Telegram for local dev
+ */
 if (isDev && !window.Telegram?.WebApp) {
-  console.warn("🔧 Dev mode: Mocking Telegram WebApp");
+  console.warn("🔧 Mock Telegram WebApp enabled");
+
   window.Telegram = {
     WebApp: {
-      initData: "", // Paste a real initData string here for local testing if needed
-      platform: "android",
+      initData: "",
+      platform: "web",
+      version: "dev",
       ready: () => {},
     },
   };
@@ -62,33 +73,43 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const tg = window?.Telegram?.WebApp;
+  const initData = tg?.initData?.trim() || "";
+  const isTelegramUser = initData.length > 20;
+
+  /**
+   * AUTH FLOW
+   */
   useEffect(() => {
     (async () => {
       try {
-        console.log("🚀 Auth init started");
+        console.log("🚀 Auth starting...");
 
-        const tg = window?.Telegram?.WebApp;
-        const initData = tg?.initData?.trim() || "";
-
-        // 1. Try stored valid session first (survives refresh)
+        /**
+         * 1. Restore session first
+         */
         const storedSession = localStorage.getItem("sessionId");
+
         if (storedSession) {
           const prof = await fetchProfileWithSession(storedSession);
+
           if (prof?.user) {
             setSessionId(storedSession);
             setUser(prof.user);
             setIsLoading(false);
             return;
           }
-          // Invalid session → clear it
+
           localStorage.removeItem("sessionId");
           localStorage.removeItem("user");
         }
 
-        // 2. Try Telegram initData (primary auth method)
-        if (initData.length > 20) {
-          // reasonable minimum length
+        /**
+         * 2. Telegram login (REAL USER)
+         */
+        if (isTelegramUser) {
           const out = await verifyTelegram(initData);
+
           setSessionId(out.sessionId);
           setUser(out.user);
 
@@ -99,11 +120,51 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // 3. No valid auth found
-        console.warn("No Telegram initData or valid session");
-      } catch (e) {
-        console.error("Auth error:", e);
-      } finally {
+        /**
+         * 3. DEV MODE (optional bypass)
+         */
+        if (allowDevAuth) {
+          console.warn("🔧 DEV AUTH ENABLED");
+
+          const mockUser = {
+            id: "dev-user",
+            username: "developer",
+            first_name: "Dev",
+          };
+
+          const mockSession = "dev-session";
+
+          setSessionId(mockSession);
+          setUser(mockUser);
+
+          localStorage.setItem("sessionId", mockSession);
+          localStorage.setItem("user", JSON.stringify(mockUser));
+
+          setIsLoading(false);
+          return;
+        }
+
+        /**
+         * 4. GUEST MODE (IMPORTANT CHANGE)
+         * Allow browser access safely
+         */
+        console.warn("👤 Guest mode activated");
+
+        const guestUser = {
+          id: "guest",
+          username: "guest",
+          first_name: "Guest",
+          isGuest: true,
+        };
+
+        const guestSession = "guest-session";
+
+        setSessionId(guestSession);
+        setUser(guestUser);
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Auth error:", err);
         setIsLoading(false);
       }
     })();
@@ -116,63 +177,22 @@ export function AuthProvider({ children }) {
 
   const debugInfo = {
     telegram: !!window?.Telegram,
-    webApp: !!window?.Telegram?.WebApp,
-    initData: window?.Telegram?.WebApp?.initData ? "PRESENT" : "NONE",
-    initDataLength: window?.Telegram?.WebApp?.initData?.length || 0,
-    platform: window?.Telegram?.WebApp?.platform || "UNKNOWN",
-    userAgent: navigator.userAgent,
+    isTelegramUser,
+    initDataLength: initData.length,
     hasSession: !!sessionId,
-    hasUser: !!user,
+    isGuest: user?.isGuest,
+    devMode: allowDevAuth,
   };
 
+  /**
+   * LOADING UI
+   */
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p>Authenticating with Telegram...</p>
-          <pre
-            style={{
-              marginTop: "20px",
-              fontSize: "10px",
-              color: "#666",
-              textAlign: "left",
-            }}
-          >
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-        </div>
-      </div>
-    );
-  }
-
-  if (!sessionId || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-center p-6">
-        <div>
-          <h1 className="text-xl font-bold mb-4">⚠️ Access Restricted</h1>
-          <p className="mb-4">
-            You must open this app from inside Telegram.
-            <br />
-            Please go back to the bot and tap the <strong>
-              🎮 Play-10
-            </strong>{" "}
-            button.
-          </p>
-          <p className="text-sm text-gray-500">
-            Do not open this link directly in your browser or refresh the page
-            outside Telegram.
-          </p>
-
-          <pre
-            style={{
-              marginTop: "30px",
-              fontSize: "10px",
-              color: "#999",
-              textAlign: "left",
-              maxWidth: "320px",
-              margin: "30px auto 0",
-            }}
-          >
+          <p>Loading...</p>
+          <pre style={{ fontSize: "10px", marginTop: 20 }}>
             {JSON.stringify(debugInfo, null, 2)}
           </pre>
         </div>
