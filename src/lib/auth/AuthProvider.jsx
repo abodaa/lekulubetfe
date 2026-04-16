@@ -48,85 +48,57 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        // 🧠 1. Wait for Telegram SDK
-        let tg = null;
-        for (let i = 0; i < 10; i++) {
-          if (window?.Telegram?.WebApp) {
-            tg = window.Telegram.WebApp;
-            break;
+        // 🔐 1. Check existing session
+        const storedSession = localStorage.getItem("sessionId");
+        const storedUser = localStorage.getItem("user");
+
+        if (storedSession && storedUser) {
+          try {
+            const prof = await fetchProfileWithSession(storedSession);
+            if (prof?.user) {
+              console.log("✅ Existing session valid");
+
+              setSessionId(storedSession);
+              setUser(JSON.parse(storedUser));
+              setIsLoading(false);
+              return;
+            } else {
+              console.warn("⚠️ Session invalid, clearing...");
+            }
+          } catch {
+            console.warn("⚠️ Session check failed, clearing...");
           }
-          await new Promise((r) => setTimeout(r, 500));
+
+          localStorage.removeItem("sessionId");
+          localStorage.removeItem("user");
         }
 
-        // 🔍 2. Detect Telegram
-        const isTelegram =
-          tg &&
-          (tg.initDataUnsafe?.user ||
-            tg.platform ||
-            navigator.userAgent.includes("Telegram"));
+        // 🔄 2. Try Telegram login (optional)
+        const tg = window?.Telegram?.WebApp;
+        const initData = tg?.initData;
 
-        console.log("🔍 Telegram check:", {
-          isTelegram,
-          hasWebApp: !!tg,
-          initData: tg?.initData,
-          initDataUnsafe: tg?.initDataUnsafe,
-          platform: tg?.platform,
-        });
+        if (initData && initData.trim() !== "") {
+          console.log("🔐 Logging in via Telegram...");
 
-        if (!isTelegram) {
-          console.error("❌ Not opened inside Telegram");
+          const out = await verifyTelegram(initData);
 
-          setSessionId(null);
-          setUser(null);
+          setSessionId(out.sessionId);
+          localStorage.setItem("sessionId", out.sessionId);
+
+          setUser(out.user);
+          localStorage.setItem("user", JSON.stringify(out.user));
+
           setIsLoading(false);
           return;
         }
 
-        // ⏳ 3. Wait for initData
-        let initData = tg.initData;
+        // ❌ 3. No authentication
+        console.warn("❌ No valid authentication found");
 
-        for (let i = 0; i < 10; i++) {
-          if (initData && initData.trim() !== "") break;
-          await new Promise((r) => setTimeout(r, 500));
-          initData = tg.initData;
-        }
-
-        console.log("📦 initData:", initData);
-
-        if (!initData || initData.trim() === "") {
-          console.error("❌ initData missing");
-
-          setSessionId(null);
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
-
-        // ✅ 4. Verify with backend
-        const out = await verifyTelegram(initData);
-
-        setSessionId(out.sessionId);
-        localStorage.setItem("sessionId", out.sessionId);
-
-        let mergedUser = out.user;
-
-        try {
-          const prof = await fetchProfileWithSession(out.sessionId);
-          if (prof?.user) {
-            mergedUser = {
-              ...mergedUser,
-              firstName: prof.user.firstName,
-              lastName: prof.user.lastName,
-              phone: prof.user.phone,
-              isRegistered: prof.user.isRegistered,
-            };
-          }
-        } catch {}
-
-        setUser(mergedUser);
-        localStorage.setItem("user", JSON.stringify(mergedUser));
+        setSessionId(null);
+        setUser(null);
       } catch (e) {
-        console.error("❌ Auth failed:", e);
+        console.error("❌ Auth error:", e);
         setSessionId(null);
         setUser(null);
       } finally {
@@ -140,7 +112,7 @@ export function AuthProvider({ children }) {
     [sessionId, user, isLoading],
   );
 
-  // 🔄 Loading screen
+  // ⏳ Loading screen
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -149,16 +121,16 @@ export function AuthProvider({ children }) {
     );
   }
 
-  // ❌ Block if not Telegram
+  // 🔒 Block unauthenticated users
   if (!sessionId || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center text-center p-6">
         <div>
           <h1 className="text-xl font-bold mb-4">⚠️ Access Restricted</h1>
           <p>
-            This application can only be accessed through Telegram.
+            You must be logged in to access this app.
             <br />
-            Please open it from the bot.
+            Please open from Telegram or login.
           </p>
         </div>
       </div>
