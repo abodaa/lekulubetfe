@@ -4,25 +4,28 @@ import React, {
   useEffect,
   useMemo,
   useState,
-  useRef,
 } from "react";
-
 import { apiFetch } from "../api/client";
 
 const AuthContext = createContext({
   sessionId: null,
   user: null,
   setSessionId: () => {},
+  isLoading: true,
 });
 
-async function verifyTelegram(initData) {
-  const apiBase = "http://localhost:3001";
+const isDev = import.meta.env.DEV;
+const allowDevAuth = isDev && import.meta.env.VITE_ALLOW_DEV_AUTH === "true";
 
-  console.log("🔐 Verifying Telegram auth:", {
-    apiBase,
-    hasInitData: !!initData,
-    initDataLength: initData?.length,
-  });
+/**
+ * Telegram verify API
+ */
+async function verifyTelegram(initData) {
+  const apiBase =
+    import.meta.env.VITE_API_URL ||
+    (window.location.hostname === "localhost"
+      ? "http://localhost:3001"
+      : "https://markbingo.com");
 
   const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
     method: "POST",
@@ -30,36 +33,16 @@ async function verifyTelegram(initData) {
     body: JSON.stringify({ initData }),
   });
 
-  console.log("📡 Auth response:", res.status);
-
   if (!res.ok) {
-    const errorText = await res.text();
-    console.error("❌ Auth failed:", errorText);
-    throw new Error("verify_failed");
+    throw new Error(await res.text());
   }
 
   return res.json();
 }
 
 /**
- * Safe JWT check (won't crash if not JWT)
+ * Fetch profile via session
  */
-function isTokenExpired(token) {
-  if (!token) return true;
-
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return false; // not JWT → treat as sessionId
-
-    const payload = JSON.parse(atob(parts[1]));
-    const now = Math.floor(Date.now() / 1000);
-
-    return payload.exp < now;
-  } catch {
-    return false;
-  }
-}
-
 async function fetchProfileWithSession(sessionId) {
   if (!sessionId) return null;
   try {
@@ -69,166 +52,149 @@ async function fetchProfileWithSession(sessionId) {
   }
 }
 
+/**
+ * Mock Telegram for local dev
+ */
+if (isDev && !window.Telegram?.WebApp) {
+  console.warn("🔧 Mock Telegram WebApp enabled");
+
+  window.Telegram = {
+    WebApp: {
+      initData: "",
+      platform: "web",
+      version: "dev",
+      ready: () => {},
+    },
+  };
+}
+
 export function AuthProvider({ children }) {
-  const [sessionId, setSessionId] = useState(() =>
-    localStorage.getItem("sessionId"),
-  );
-
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("user")) || null;
-    } catch {
-      return null;
-    }
-  });
-
+  const [sessionId, setSessionId] = useState(null);
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const didRun = useRef(false); // ✅ prevents double execution
+  const tg = window?.Telegram?.WebApp;
+  const initData = tg?.initData?.trim() || "";
+  const isTelegramUser = initData.length > 20;
 
   /**
-   * Unified initData resolver (FIXED)
+   * AUTH FLOW
    */
-  const getInitData = () => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const searchParams = new URLSearchParams(window.location.search);
-
-    const tg = window?.Telegram?.WebApp?.initData;
-
-    return (
-      (tg && tg.trim()) ||
-      hashParams.get("tgWebAppData")?.trim() ||
-      searchParams.get("tgWebAppData")?.trim() ||
-      null
-    );
-  };
-
   useEffect(() => {
-    if (didRun.current) return;
-    didRun.current = true;
-
     (async () => {
       try {
-        console.log("🚀 Auth init started");
-
-        const initData = getInitData();
+        console.log("🚀 Auth starting...");
 
         /**
-         * 1. TELEGRAM AUTH (HIGHEST PRIORITY)
+         * 1. Restore session first
          */
-        if (initData) {
-          console.log("🔵 Telegram initData found → authenticating");
+        const storedSession = localStorage.getItem("sessionId");
 
+        if (storedSession) {
+          const prof = await fetchProfileWithSession(storedSession);
+
+          if (prof?.user) {
+            setSessionId(storedSession);
+            setUser(prof.user);
+            setIsLoading(false);
+            return;
+          }
+
+          localStorage.removeItem("sessionId");
+          localStorage.removeItem("user");
+        }
+
+        /**
+         * 2. Telegram login (REAL USER)
+         */
+        if (isTelegramUser) {
           const out = await verifyTelegram(initData);
 
           setSessionId(out.sessionId);
+          setUser(out.user);
+
           localStorage.setItem("sessionId", out.sessionId);
-
-          let mergedUser = out.user;
-
-          try {
-            const prof = await fetchProfileWithSession(out.sessionId);
-            if (prof?.user) {
-              mergedUser = {
-                ...mergedUser,
-                firstName: prof.user.firstName,
-                lastName: prof.user.lastName,
-                phone: prof.user.phone,
-                isRegistered: prof.user.isRegistered,
-              };
-            }
-          } catch {
-            console.warn("⚠️ Failed to fetch profile with new session");
-          }
-
-          setUser(mergedUser);
-          localStorage.setItem("user", JSON.stringify(mergedUser));
+          localStorage.setItem("user", JSON.stringify(out.user));
 
           setIsLoading(false);
-          return; // 🔥 STOP HERE
+          return;
         }
 
         /**
-         * 2. SESSION RESTORE
+         * 3. DEV MODE (optional bypass)
          */
-        if (sessionId && user) {
-          console.log("🟡 Restoring session...");
+        if (allowDevAuth) {
+          console.warn("🔧 DEV AUTH ENABLED");
 
-          if (isTokenExpired(sessionId)) {
-            console.log("❌ Session expired");
+          const mockUser = {
+            id: "dev-user",
+            username: "developer",
+            first_name: "Dev",
+          };
 
-            localStorage.removeItem("sessionId");
-            localStorage.removeItem("user");
+          const mockSession = "dev-session";
 
-            setSessionId(null);
-            setUser(null);
-          } else {
-            const prof = await fetchProfileWithSession(sessionId);
+          setSessionId(mockSession);
+          setUser(mockUser);
 
-            if (prof?.user) {
-              setUser((prev) => ({
-                ...prev,
-                ...prof.user,
-              }));
+          localStorage.setItem("sessionId", mockSession);
+          localStorage.setItem("user", JSON.stringify(mockUser));
 
-              setIsLoading(false);
-              return;
-            }
-          }
+          setIsLoading(false);
+          return;
         }
 
         /**
-         * 3. FINAL FALLBACK (NO BYPASS, NO GUEST)
+         * 4. GUEST MODE (IMPORTANT CHANGE)
+         * Allow browser access safely
          */
-        console.warn("⚠️ No valid Telegram session found");
+        console.warn("👤 Guest mode activated");
 
-        setSessionId(null);
-        setUser(null);
-      } catch (e) {
-        console.error("Auth error:", e);
+        const guestUser = {
+          id: "guest",
+          username: "guest",
+          first_name: "Guest",
+          isGuest: true,
+        };
 
-        setSessionId(null);
-        setUser(null);
-      } finally {
+        const guestSession = "guest-session";
+
+        setSessionId(guestSession);
+        setUser(guestUser);
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error("Auth error:", err);
         setIsLoading(false);
       }
     })();
-  }, []); // ✅ IMPORTANT: keep empty dependency
+  }, []);
 
   const value = useMemo(
     () => ({ sessionId, user, setSessionId, isLoading }),
     [sessionId, user, isLoading],
   );
 
-  console.log("AuthProvider render:", {
-    sessionId: !!sessionId,
-    user: !!user,
-    isLoading,
-  });
+  const debugInfo = {
+    telegram: !!window?.Telegram,
+    isTelegramUser,
+    initDataLength: initData.length,
+    hasSession: !!sessionId,
+    isGuest: user?.isGuest,
+    devMode: allowDevAuth,
+  };
 
   /**
    * LOADING UI
    */
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p>Authenticating...</p>
-        </div>
-      </div>
-    );
-  }
-
-  /**
-   * BLOCK UI
-   */
-  if (!sessionId || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-center p-6">
-        <div>
-          <h1 className="text-xl font-bold mb-4">Access Restricted</h1>
-
-          <p>This app must be opened from Telegram.</p>
+          <p>Loading...</p>
+          <pre style={{ fontSize: "10px", marginTop: 20 }}>
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
         </div>
       </div>
     );
