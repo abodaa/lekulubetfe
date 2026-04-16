@@ -21,11 +21,7 @@ const allowDevAuth = isDev && import.meta.env.VITE_ALLOW_DEV_AUTH === "true";
  * Telegram verify API
  */
 async function verifyTelegram(initData) {
-  const apiBase =
-    import.meta.env.VITE_API_URL ||
-    (window.location.hostname === "localhost"
-      ? "http://localhost:3001"
-      : "https://markbingo.com");
+  const apiBase = "http://localhost:3001";
 
   const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
     method: "POST",
