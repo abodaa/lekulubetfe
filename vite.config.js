@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,10 +11,10 @@ export default defineConfig({
   define: {
     // Default to production domain over HTTPS; can be overridden by env vars
     "import.meta.env.VITE_API_URL": JSON.stringify(
-      process.env.VITE_API_URL || "http://localhost:3001",
+      process.env.VITE_API_URL || "https://bingo-2fe4.onrender.com",
     ),
     "import.meta.env.VITE_WS_URL": JSON.stringify(
-      process.env.VITE_WS_URL || "wss://localhost:3001",
+      process.env.VITE_WS_URL || "wss://bingo-2fe4.onrender.com",
     ),
   },
 });
