@@ -2605,7 +2605,7 @@ body {
 /* Mobile-first Cartela Selection Layout - Joy Bingo style: 9 per row, reduced gap to avoid overflow */
 .cartela-numbers-grid {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
+  grid-template-columns: repeat(10, 1fr);
   gap: 6px;
   padding: 10px 12px;
   margin: 0 12px 20px;
