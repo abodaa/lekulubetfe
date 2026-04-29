@@ -5,7 +5,7 @@ async function reauthenticateAndGetSession() {
           import.meta.env.VITE_API_URL ||
           (window.location.hostname === "localhost"
             ? "http://localhost:3001"
-            : "http://localhost:3001");
+            : "https://lekulubingoback.onrender.com");
         const initData = window?.Telegram?.WebApp?.initData;
 
         // Try Telegram auth first
@@ -34,12 +34,10 @@ async function reauthenticateAndGetSession() {
 }
 
 export function getApiBase() {
-    return (
-      import.meta.env.VITE_API_URL ||
-      (window.location.hostname === "localhost"
-        ? "http://localhost:3001"
-        : "http://localhost:3001")
-    );
+    return import.meta.env.VITE_API_URL ||
+        (window.location.hostname === 'localhost'
+            ? 'http://localhost:3001'
+            : 'https://lekulubingoback.onrender.com');
 }
 
 export async function apiFetch(path, { method = 'GET', body, sessionId, headers = {}, timeoutMs = 10000 } = {}) {

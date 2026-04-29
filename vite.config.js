@@ -11,10 +11,10 @@ export default defineConfig({
   define: {
     // Default to production domain over HTTPS; can be overridden by env vars
     "import.meta.env.VITE_API_URL": JSON.stringify(
-      process.env.VITE_API_URL || "http://localhost:3001",
+      process.env.VITE_API_URL || "https://lekulubingoback.onrender.com",
     ),
     "import.meta.env.VITE_WS_URL": JSON.stringify(
-      process.env.VITE_WS_URL || "ws://localhost:3001",
+      process.env.VITE_WS_URL || "ws://https://lekulubingoback.onrender.com",
     ),
   },
 });
