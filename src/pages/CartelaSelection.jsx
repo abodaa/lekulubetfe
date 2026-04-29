@@ -285,57 +285,104 @@ export default function CartelaSelection({
 
   const handleCardSelect = async (cardNumber) => {
     const cardNum = Number(cardNumber);
+
     if (walletLoading) {
-      showError("Loading wallet...");
+      showError("Loading wallet information. Please wait a moment.");
       return;
     }
+
     const selectedNumbers = Array.isArray(gameState.yourSelections)
       ? gameState.yourSelections
       : [];
 
-    if (gameState.phase !== "registration" && gameState.phase !== "waiting") {
-      showError("Please wait until registration opens.");
+    if (gameState.phase !== "registration") {
+      const waitMsg =
+        "Please wait until the current game finishes. You can select cartela when registration starts again.";
+      setAlertBanners((prev) => {
+        if (prev.includes(waitMsg)) return prev;
+        return [...prev, waitMsg];
+      });
+      showError(waitMsg);
       return;
     }
-    if (gameState.phase === "waiting") {
-      showError("Connecting to game room... Please wait.");
-      return;
-    }
+
     if (!connected || wsReadyState !== WebSocket.OPEN) {
-      showError("Not connected. Please refresh.");
+      showError("Not connected to game server. Please refresh and try again.");
       return;
     }
 
     if (selectedNumbers.includes(cardNum)) {
-      deselectCartella(cardNum);
-      showSuccess(`Cartella #${cardNum} deselected!`);
+      try {
+        deselectCartella(cardNum);
+        showSuccess(`Cartella #${cardNum} deselected!`);
+      } catch (err) {
+        showError("Failed to deselect cartella.");
+      }
       return;
     }
+
     if (selectedNumbers.length >= 1) {
       const currentCard = selectedNumbers[0];
       if (currentCard === cardNum) return;
-      deselectCartella(currentCard);
-      selectCartella(cardNum);
-      showSuccess(`Cartella #${cardNum} selected!`);
+
+      const isTakenByOthers = gameState.takenCards.some(
+        (taken) => Number(taken) === cardNum,
+      );
+      if (isTakenByOthers) {
+        const takenMsg =
+          "This cartella is already taken. Please choose another.";
+        setAlertBanners((prev) =>
+          prev.includes(takenMsg) ? prev : [...prev, takenMsg],
+        );
+        showError(takenMsg);
+        return;
+      }
+
+      try {
+        deselectCartella(currentCard);
+        selectCartella(cardNum);
+        showSuccess(`Switched to Cartella #${cardNum}!`);
+      } catch (err) {
+        showError("Failed to switch cartella.");
+      }
       return;
     }
 
     const totalBalance = (wallet.main || 0) + (wallet.play || 0);
-    if (totalBalance < Number(stake)) {
-      showError("Insufficient fund");
+    const needed = Number(stake);
+
+    if (totalBalance < needed) {
+      const msg = `Insufficient balance. You have ${totalBalance.toLocaleString()} ETB but need ${needed} ETB.`;
+      setAlertBanners((prev) => [...prev, msg]);
+      showError(msg);
       return;
     }
 
-    const isTaken = gameState.takenCards.some(
+    const isTakenByOthers = gameState.takenCards.some(
       (taken) => Number(taken) === cardNum,
     );
-    if (isTaken) {
-      showError("ተይዟል ሌላ ይምረጡ");
+    if (isTakenByOthers && !selectedNumbers.includes(cardNum)) {
+      const takenMsg = "This cartella is already taken. Please choose another.";
+      setAlertBanners((prev) => {
+        if (prev.includes(takenMsg)) return prev;
+        return [...prev, takenMsg];
+      });
+      showError(takenMsg);
       return;
     }
 
-    selectCartella(cardNum);
-    showSuccess(`Cartella #${cardNum} selected!`);
+    try {
+      const success = selectCartella(cardNum);
+      if (success) {
+        showSuccess(
+          `Cartella #${cardNum} selected! Waiting for game to start...`,
+        );
+      } else {
+        showError("Failed to select cartella. Please try again.");
+      }
+    } catch (err) {
+      showError("Failed to select cartella. Please try again.");
+    }
   };
 
   const timerSeconds =
@@ -379,6 +426,14 @@ export default function CartelaSelection({
             </div>
             <div className="timer-box">
               <div className="timer-countdown">{timerSeconds}s</div>
+              <div className="timer-status">
+                {gameState.phase === "registration" &&
+                  `Registration open... (${gameState.playersCount} players)`}
+                {gameState.phase === "waiting" && "Waiting for room..."}
+                {gameState.phase === "starting" && "Starting game..."}
+                {gameState.phase === "running" && "Game in progress!"}
+                {gameState.phase === "announce" && "Game finished!"}
+              </div>
             </div>
           </div>
         </header>
@@ -498,15 +553,23 @@ export default function CartelaSelection({
               {Array.from({ length: totalCartellas }, (_, i) => i + 1).map(
                 (cartelaNumber) => {
                   const cartelaNum = Number(cartelaNumber);
-                  const isTaken = gameState.takenCards.some(
-                    (taken) => Number(taken) === cartelaNum,
-                  );
+                  const hasCards =
+                    Array.isArray(gameState.yourCards) &&
+                    gameState.yourCards.length > 0;
+                  const shouldShowTakenCards =
+                    gameState.phase === "registration" || hasCards;
+                  const isTaken = shouldShowTakenCards
+                    ? gameState.takenCards.some(
+                        (taken) => Number(taken) === cartelaNum,
+                      )
+                    : false;
                   const isSelected = selectedNumbers.includes(cartelaNum);
+                  const takenByMe = selectedNumbers.includes(cartelaNum);
                   return (
                     <button
                       key={cartelaNumber}
                       onClick={() => handleCardSelect(cartelaNum)}
-                      className={`cartela-number-btn-light ${isTaken ? (isSelected ? "cartela-selected-light" : "cartela-taken-light") : isSelected ? "cartela-selected-light" : "cartela-normal-light"}`}
+                      className={`cartela-number-btn-light ${isTaken ? (takenByMe ? "cartela-selected-light" : "cartela-taken-light") : isSelected ? "cartela-selected-light" : "cartela-normal-light"}`}
                     >
                       {cartelaNumber}
                     </button>
@@ -517,29 +580,32 @@ export default function CartelaSelection({
           </div>
         </div>
 
-        {selectedCards.length > 0 && (
-          <div style={{ marginTop: "40px" }}>
-            <div className="rounded-lg p-2">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  width: "100%",
-                }}
-              >
-                {selectedCards.slice(0, 1).map(({ number, card }) => (
-                  <CartellaCard
-                    key={number}
-                    id={number}
-                    card={card}
-                    called={gameState.calledNumbers || []}
-                    isPreview={true}
-                  />
-                ))}
+        {selectedCards.length > 0 &&
+          (gameState.phase === "registration" ||
+            (Array.isArray(gameState.yourCards) &&
+              gameState.yourCards.length > 0)) && (
+            <div style={{ marginTop: "40px" }}>
+              <div className="rounded-lg p-2">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    width: "100%",
+                  }}
+                >
+                  {selectedCards.slice(0, 1).map(({ number, card }) => (
+                    <CartellaCard
+                      key={number}
+                      id={number}
+                      card={card}
+                      called={gameState.calledNumbers || []}
+                      isPreview={true}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </main>
     </div>
   );
