@@ -11,10 +11,10 @@ export default defineConfig({
   define: {
     // Default to production domain over HTTPS; can be overridden by env vars
     "import.meta.env.VITE_API_URL": JSON.stringify(
-      process.env.VITE_API_URL || "https://bingo-2fe4.onrender.com",
+      process.env.VITE_API_URL || "http://localhost:3001",
     ),
     "import.meta.env.VITE_WS_URL": JSON.stringify(
-      process.env.VITE_WS_URL || "wss://bingo-2fe4.onrender.com",
+      process.env.VITE_WS_URL || "ws://localhost:3001",
     ),
   },
 });
