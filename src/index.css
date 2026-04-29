@@ -2707,7 +2707,7 @@ body {
 /* Mobile responsive adjustments */
 @media (max-width: 480px) {
   .cartela-numbers-grid {
-    grid-template-columns: repeat(9, 1fr);
+    grid-template-columns: repeat(10, 1fr);
     gap: 5px;
     padding: 8px 10px;
     margin: 0 10px 20px;
