@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import Game from './pages/Game';
-import Rules from './components/Rules';
-import Scores from './pages/Scores';
-import History from './pages/History';
-import Wallet from './pages/Wallet';
-import Profile from './pages/Profile';
-import CartelaSelection from './pages/CartelaSelection.jsx';
-import GameLayout from './pages/GameLayout.jsx';
-import Winner from './pages/Winner.jsx';
-import { AuthProvider } from './lib/auth/AuthProvider.jsx';
-import { ToastProvider, useToast } from './contexts/ToastContext.jsx';
-import { WebSocketProvider, useWebSocket } from './contexts/WebSocketContext.jsx';
-import AdminLayout from './admin/AdminLayout.jsx';
+import React, { useState, useEffect } from "react";
+import Game from "./pages/Game";
+import Rules from "./components/Rules";
+import Scores from "./pages/Scores";
+import History from "./pages/History";
+import Wallet from "./pages/Wallet";
+import Profile from "./pages/Profile";
+import CartelaSelection from "./pages/CartelaSelection.jsx";
+import GameLayout from "./pages/GameLayout.jsx";
+import Winner from "./pages/Winner.jsx";
+import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
+import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
+import {
+  WebSocketProvider,
+  useWebSocket,
+} from "./contexts/WebSocketContext.jsx";
+import AdminLayout from "./admin/AdminLayout.jsx";
 
 // Inner component that has access to WebSocket context
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('game');
+  const [currentPage, setCurrentPage] = useState("game");
   const [selectedStake, setSelectedStake] = useState(null);
   const [selectedCartelas, setSelectedCartelas] = useState([]); // up to 2
   const [currentGameId, setCurrentGameId] = useState(null);
@@ -28,13 +31,13 @@ function AppContent() {
 
   // Clear localStorage stake on mount to always start fresh
   useEffect(() => {
-    localStorage.removeItem('selectedStake');
+    localStorage.removeItem("selectedStake");
   }, []);
 
   // Error monitoring and debugging
   useEffect(() => {
     const logState = () => {
-      console.log('🔍 App State Debug:', {
+      console.log("🔍 App State Debug:", {
         currentPage,
         selectedStake,
         selectedCartelas,
@@ -44,9 +47,11 @@ function AppContent() {
           phase: gameState.phase,
           gameId: gameState.gameId,
           playersCount: gameState.playersCount,
-          yourCards: Array.isArray(gameState.yourCards) ? gameState.yourCards.length : 0
+          yourCards: Array.isArray(gameState.yourCards)
+            ? gameState.yourCards.length
+            : 0,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     };
 
@@ -57,17 +62,24 @@ function AppContent() {
     logState();
 
     return () => clearInterval(interval);
-  }, [currentPage, selectedStake, selectedCartelas, currentGameId, connected, gameState]);
+  }, [
+    currentPage,
+    selectedStake,
+    selectedCartelas,
+    currentGameId,
+    connected,
+    gameState,
+  ]);
 
   // Specific check for authentication and initial load
   useEffect(() => {
-    console.log('🚀 App initialized with:', {
+    console.log("🚀 App initialized with:", {
       currentPage,
       selectedStake,
       connected,
       hasGameState: !!gameState,
       gamePhase: gameState?.phase,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }, []); // Run only once on mount
 
@@ -86,7 +98,7 @@ function AppContent() {
 
   // Smart navigation function to determine the correct game page based on current state
   const determineGamePage = () => {
-    console.log('Determining game page based on state:', {
+    console.log("Determining game page based on state:", {
       gameState: {
         phase: gameState.phase,
         gameId: gameState.gameId,
@@ -94,131 +106,165 @@ function AppContent() {
       },
       selectedStake,
       selectedCartelas,
-      connected
+      connected,
     });
 
     // If we have an active game (only when there are players; otherwise game may be cancelled):
     // - Players who have cartellas go to game layout.
     // - Users without cards can still go to game layout in watch mode.
-    const hasPlayers = typeof gameState.playersCount === 'number' && gameState.playersCount >= 2;
-    if (gameState.phase === 'running' && gameState.gameId && hasPlayers) {
+    const hasPlayers =
+      typeof gameState.playersCount === "number" && gameState.playersCount >= 2;
+    if (gameState.phase === "running" && gameState.gameId && hasPlayers) {
       const hasCards =
-        (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+        (Array.isArray(gameState.yourCards) &&
+          gameState.yourCards.length > 0) ||
         selectedCartelas.length > 0;
 
       if (hasCards) {
-        console.log('→ Routing to game-layout (active game with cartella)');
-        return 'game-layout';
+        console.log("→ Routing to game-layout (active game with cartella)");
+        return "game-layout";
       }
 
-      console.log('→ Routing to game-layout (watch mode - running game, no cartella for this user)');
-      return 'game-layout';
+      console.log(
+        "→ Routing to game-layout (watch mode - running game, no cartella for this user)",
+      );
+      return "game-layout";
     }
 
     // If registration just closed and game is about to start with players, show game layout
-    if (gameState.phase === 'starting' && gameState.gameId && hasPlayers) {
-      console.log('→ Routing to game-layout (starting game)');
-      return 'game-layout';
+    if (gameState.phase === "starting" && gameState.gameId && hasPlayers) {
+      console.log("→ Routing to game-layout (starting game)");
+      return "game-layout";
     }
 
     // If we have a game in announce phase (finished), go to winner page
-    if (gameState.phase === 'announce' && gameState.gameId) {
-      console.log('→ Routing to winner (game finished)');
-      return 'winner';
+    if (gameState.phase === "announce" && gameState.gameId) {
+      console.log("→ Routing to winner (game finished)");
+      return "winner";
     }
 
     // If we have a stake and game is in registration, go to cartela selection
-    if (selectedStake && gameState.phase === 'registration' && gameState.gameId) {
-      console.log('→ Routing to cartela-selection (registration open)');
-      return 'cartela-selection';
+    if (
+      selectedStake &&
+      gameState.phase === "registration" &&
+      gameState.gameId
+    ) {
+      console.log("→ Routing to cartela-selection (registration open)");
+      return "cartela-selection";
     }
 
     // If stake selected but game didn't start (e.g. not enough players) — stay on cartela selection
-    if (selectedStake && (gameState.phase === 'starting' || gameState.phase === 'running') && gameState.gameId && !hasPlayers) {
-      console.log('→ Routing to cartela-selection (game cancelled / not enough players)');
-      return 'cartela-selection';
+    if (
+      selectedStake &&
+      (gameState.phase === "starting" || gameState.phase === "running") &&
+      gameState.gameId &&
+      !hasPlayers
+    ) {
+      console.log(
+        "→ Routing to cartela-selection (game cancelled / not enough players)",
+      );
+      return "cartela-selection";
     }
 
     // If we have a stake but no active game, go to cartela selection
-    if (selectedStake && (!gameState.gameId || gameState.phase === 'waiting')) {
-      console.log('→ Routing to cartela-selection (stake selected, no active game)');
-      return 'cartela-selection';
+    if (selectedStake && (!gameState.gameId || gameState.phase === "waiting")) {
+      console.log(
+        "→ Routing to cartela-selection (stake selected, no active game)",
+      );
+      return "cartela-selection";
     }
 
     // If we have a stake but WebSocket not connected yet, still go to cartela selection
     if (selectedStake && !connected) {
-      console.log('→ Routing to cartela-selection (stake selected, WebSocket not connected yet)');
-      return 'cartela-selection';
+      console.log(
+        "→ Routing to cartela-selection (stake selected, WebSocket not connected yet)",
+      );
+      return "cartela-selection";
     }
 
     // Default: go to main game page (stake selection)
-    console.log('→ Routing to game (default - stake selection)');
-    return 'game';
+    console.log("→ Routing to game (default - stake selection)");
+    return "game";
   };
 
   // Listen for custom gameStarted event as backup navigation trigger
   useEffect(() => {
     const handleGameStarted = (event) => {
-      console.log('🎯 gameStarted custom event received:', event.detail);
+      console.log("🎯 gameStarted custom event received:", event.detail);
       if (!selectedStake) return;
-      
-      // Navigate to game-layout when a game starts AND there are enough players.
-      const playersCount = (event.detail && typeof event.detail.playersCount === 'number')
-        ? event.detail.playersCount
-        : gameState.playersCount;
-      const hasPlayers = typeof playersCount === 'number' && playersCount >= 2;
 
-      if (event.detail.phase === 'running' && event.detail.gameId && hasPlayers && currentPage !== 'game-layout') {
-        console.log('🚀 FORCE NAVIGATING via custom event to game-layout');
+      // Navigate to game-layout when a game starts AND there are enough players.
+      const playersCount =
+        event.detail && typeof event.detail.playersCount === "number"
+          ? event.detail.playersCount
+          : gameState.playersCount;
+      const hasPlayers = typeof playersCount === "number" && playersCount >= 2;
+
+      if (
+        event.detail.phase === "running" &&
+        event.detail.gameId &&
+        hasPlayers &&
+        currentPage !== "game-layout"
+      ) {
+        console.log("🚀 FORCE NAVIGATING via custom event to game-layout");
         // Update selectedCartelas from gameState if available
-        if (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
-          const cardNumbers = gameState.yourCards.map(card => card.cardNumber || card).filter(num => num != null);
+        if (
+          Array.isArray(gameState.yourCards) &&
+          gameState.yourCards.length > 0
+        ) {
+          const cardNumbers = gameState.yourCards
+            .map((card) => card.cardNumber || card)
+            .filter((num) => num != null);
           if (cardNumbers.length > 0) {
             setSelectedCartelas(cardNumbers);
           }
         }
-        setCurrentPage('game-layout');
+        setCurrentPage("game-layout");
       }
     };
-    
-    window.addEventListener('gameStarted', handleGameStarted);
-    return () => window.removeEventListener('gameStarted', handleGameStarted);
+
+    window.addEventListener("gameStarted", handleGameStarted);
+    return () => window.removeEventListener("gameStarted", handleGameStarted);
   }, [selectedStake, currentPage, gameState.yourCards, gameState.playersCount]);
 
   // Auto-navigate based on game state changes
   useEffect(() => {
-    console.log('🔄 Auto-navigation useEffect triggered:', {
+    console.log("🔄 Auto-navigation useEffect triggered:", {
       selectedStake,
       phase: gameState.phase,
       gameId: gameState.gameId,
       currentPage,
-      hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
-      yourSelections: gameState.yourSelections
+      hasCards:
+        Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
+      yourSelections: gameState.yourSelections,
     });
-    
+
     if (!selectedStake) {
-      console.log('⏭️ Skipping auto-navigation: no stake selected');
+      console.log("⏭️ Skipping auto-navigation: no stake selected");
       return; // Only auto-navigate if we have a stake selected
     }
-    
+
     const targetPage = determineGamePage();
-    console.log('🎯 Determined target page:', targetPage, {
+    console.log("🎯 Determined target page:", targetPage, {
       phase: gameState.phase,
       gameId: gameState.gameId,
-      currentPage
+      currentPage,
     });
-    
+
     // Navigate to game layout only when a real game is starting/running WITH enough players.
-    const hasPlayers = typeof gameState.playersCount === 'number' && gameState.playersCount >= 2;
+    const hasPlayers =
+      typeof gameState.playersCount === "number" && gameState.playersCount >= 2;
     const isGameStartingOrRunning =
-      (gameState.phase === 'starting' || gameState.phase === 'running') && gameState.gameId && hasPlayers;
-    const isGameFinished = gameState.phase === 'announce' && gameState.gameId;
-    
-    const shouldNavigate = 
-      (isGameStartingOrRunning && currentPage !== 'game-layout') ||
-      (isGameFinished && currentPage !== 'winner');
-    
-    console.log('🤔 Should navigate?', shouldNavigate, {
+      (gameState.phase === "starting" || gameState.phase === "running") &&
+      gameState.gameId &&
+      hasPlayers;
+    const isGameFinished = gameState.phase === "announce" && gameState.gameId;
+
+    const shouldNavigate =
+      (isGameStartingOrRunning && currentPage !== "game-layout") ||
+      (isGameFinished && currentPage !== "winner");
+
+    console.log("🤔 Should navigate?", shouldNavigate, {
       phase: gameState.phase,
       hasGameId: !!gameState.gameId,
       gameId: gameState.gameId,
@@ -226,65 +272,90 @@ function AppContent() {
       currentPage,
       isGameStartingOrRunning,
       isGameFinished,
-      hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
-      winnersCount: gameState.winners?.length || 0
+      hasCards:
+        Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
+      winnersCount: gameState.winners?.length || 0,
     });
-    
+
     if (shouldNavigate) {
-      console.log('✅ NAVIGATING! Auto-navigating based on game state:', {
+      console.log("✅ NAVIGATING! Auto-navigating based on game state:", {
         from: currentPage,
-        to: isGameStartingOrRunning ? 'game-layout' : 'winner',
+        to: isGameStartingOrRunning ? "game-layout" : "winner",
         phase: gameState.phase,
         gameId: gameState.gameId,
-        hasCards: Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
+        hasCards:
+          Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0,
         yourSelections: gameState.yourSelections,
-        winnersCount: gameState.winners?.length || 0
+        winnersCount: gameState.winners?.length || 0,
       });
-      
+
       // Update selectedCartelas if we have cards from gameState (for display purposes)
       // But don't block navigation if cards aren't loaded yet - GameLayout will handle loading
       if (isGameStartingOrRunning) {
-        if (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
-          const cardNumbers = gameState.yourCards.map(card => card.cardNumber || card).filter(num => num != null);
+        if (
+          Array.isArray(gameState.yourCards) &&
+          gameState.yourCards.length > 0
+        ) {
+          const cardNumbers = gameState.yourCards
+            .map((card) => card.cardNumber || card)
+            .filter((num) => num != null);
           if (cardNumbers.length > 0) {
-            console.log('📋 Setting selectedCartelas from gameState:', cardNumbers);
+            console.log(
+              "📋 Setting selectedCartelas from gameState:",
+              cardNumbers,
+            );
             setSelectedCartelas(cardNumbers);
           }
-        } else if (Array.isArray(gameState.yourSelections) && gameState.yourSelections.length > 0) {
+        } else if (
+          Array.isArray(gameState.yourSelections) &&
+          gameState.yourSelections.length > 0
+        ) {
           // Fallback to yourSelections if yourCards not loaded yet
-          console.log('📋 Setting selectedCartelas from yourSelections:', gameState.yourSelections);
+          console.log(
+            "📋 Setting selectedCartelas from yourSelections:",
+            gameState.yourSelections,
+          );
           setSelectedCartelas(gameState.yourSelections);
         }
         // If no cards/selections, that's fine - GameLayout will show watch mode
       }
-      
-      setCurrentPage(isGameStartingOrRunning ? 'game-layout' : 'winner');
+
+      setCurrentPage(isGameStartingOrRunning ? "game-layout" : "winner");
     } else {
-      console.log('⏸️ Not navigating - conditions not met');
+      console.log("⏸️ Not navigating - conditions not met");
     }
-  }, [gameState.phase, gameState.gameId, gameState.playersCount, gameState.yourCards, gameState.yourSelections, gameState.winners, selectedStake, currentPage]);
+  }, [
+    gameState.phase,
+    gameState.gameId,
+    gameState.playersCount,
+    gameState.yourCards,
+    gameState.yourSelections,
+    gameState.winners,
+    selectedStake,
+    currentPage,
+  ]);
 
   // Handle query parameter routing for admin panel and stake
   useEffect(() => {
     const checkUrlParams = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const isAdmin = urlParams.get('admin') === 'true';
-      const stakeParam = urlParams.get('stake');
+      const isAdmin = urlParams.get("admin") === "true";
+      const stakeParam = urlParams.get("stake");
 
-      console.log('URL parameters check:', { isAdmin, stakeParam }); // Debug log
+      console.log("URL parameters check:", { isAdmin, stakeParam }); // Debug log
 
       if (isAdmin) {
-        setCurrentPage('admin');
+        setCurrentPage("admin");
       } else {
-        setCurrentPage('game');
+        setCurrentPage("game");
 
         // If stake parameter is provided, store it
         if (stakeParam) {
           const stakeValue = parseInt(stakeParam);
-          if (stakeValue && [10].includes(stakeValue)) {
-            console.log('Setting stake from URL parameter:', stakeValue);
+          if (stakeValue && [10, 20, 50].includes(stakeValue)) {
+            console.log("Setting stake from URL parameter:", stakeValue);
             setSelectedStake(stakeValue);
-            localStorage.setItem('selectedStake', stakeValue.toString());
+            localStorage.setItem("selectedStake", stakeValue.toString());
           }
         }
       }
@@ -298,20 +369,23 @@ function AppContent() {
       checkUrlParams();
     };
 
-    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener("popstate", handleUrlChange);
 
     return () => {
-      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener("popstate", handleUrlChange);
     };
   }, []);
 
   // Trigger smart navigation when stake is set from URL parameters
   useEffect(() => {
-    if (selectedStake && currentPage === 'game') {
-      console.log('Stake set from URL, triggering smart navigation:', selectedStake);
+    if (selectedStake && currentPage === "game") {
+      console.log(
+        "Stake set from URL, triggering smart navigation:",
+        selectedStake,
+      );
       const targetPage = determineGamePage();
-      if (targetPage !== 'game') {
-        console.log('Auto-navigating to:', targetPage);
+      if (targetPage !== "game") {
+        console.log("Auto-navigating to:", targetPage);
         setCurrentPage(targetPage);
       }
     }
@@ -319,50 +393,65 @@ function AppContent() {
 
   const handleStakeSelected = (stake) => {
     setSelectedStake(stake);
-    setCurrentPage('cartela-selection');
+    setCurrentPage("cartela-selection");
   };
 
   // Reset function to go back to main game page
   const handleResetToGame = () => {
-    console.log('Resetting to main game page');
+    console.log("Resetting to main game page");
     setSelectedStake(null);
     setSelectedCartelas([]);
     setCurrentGameId(null);
-    setCurrentPage('game');
+    setCurrentPage("game");
   };
 
-
-
   const handleNavigate = (page, forceDirect = false) => {
-    console.log('Navigating from', currentPage, 'to', page, 'with stake:', selectedStake, 'cartelas:', selectedCartelas, 'forceDirect:', forceDirect);
+    console.log(
+      "Navigating from",
+      currentPage,
+      "to",
+      page,
+      "with stake:",
+      selectedStake,
+      "cartelas:",
+      selectedCartelas,
+      "forceDirect:",
+      forceDirect,
+    );
 
     // Add smooth transition
     setIsNavigating(true);
 
     // Small delay for smooth transition
     setTimeout(() => {
-      if (page === 'game' && !forceDirect) {
+      if (page === "game" && !forceDirect) {
         // Smart navigation: route to current game state instead of always resetting
         const targetPage = determineGamePage();
-        console.log('Smart navigation: routing to', targetPage, 'instead of resetting');
+        console.log(
+          "Smart navigation: routing to",
+          targetPage,
+          "instead of resetting",
+        );
 
         // Show a brief message about smart navigation
-        if (targetPage !== 'game') {
-          console.log(`🎯 Smart navigation: Taking you to ${targetPage} based on your current game state`);
+        if (targetPage !== "game") {
+          console.log(
+            `🎯 Smart navigation: Taking you to ${targetPage} based on your current game state`,
+          );
 
           // Show user-friendly toast message
           const messages = {
-            'game-layout': '🎮 Returning to your active game!',
-            'cartela-selection': '🎫 Taking you to cartella selection',
-            'winner': '🏆 Showing game results'
+            "game-layout": "🎮 Returning to your active game!",
+            "cartela-selection": "🎫 Taking you to cartella selection",
+            winner: "🏆 Showing game results",
           };
-          showSuccess(messages[targetPage] || 'Taking you to your game');
+          showSuccess(messages[targetPage] || "Taking you to your game");
         }
 
         setCurrentPage(targetPage);
       } else {
         // Direct navigation - go exactly where requested
-        console.log('Direct navigation to:', page);
+        console.log("Direct navigation to:", page);
         setCurrentPage(page);
       }
       setIsNavigating(false);
@@ -370,11 +459,17 @@ function AppContent() {
   };
 
   const renderPage = () => {
-    console.log('Rendering page:', currentPage, 'with stake:', selectedStake);
+    console.log("Rendering page:", currentPage, "with stake:", selectedStake);
     switch (currentPage) {
-      case 'game':
-        return <Game onNavigate={handleNavigate} onStakeSelected={handleStakeSelected} selectedStake={selectedStake} />;
-      case 'cartela-selection':
+      case "game":
+        return (
+          <Game
+            onNavigate={handleNavigate}
+            onStakeSelected={handleStakeSelected}
+            selectedStake={selectedStake}
+          />
+        );
+      case "cartela-selection":
         return (
           <CartelaSelection
             onNavigate={handleNavigate}
@@ -382,15 +477,17 @@ function AppContent() {
             stake={selectedStake}
             onCartelaSelected={(cartelaNumbers) => {
               // When cartela(s) are selected, go to the live game layout
-              setSelectedCartelas(Array.isArray(cartelaNumbers) ? cartelaNumbers : []);
-              setCurrentPage('game-layout');
+              setSelectedCartelas(
+                Array.isArray(cartelaNumbers) ? cartelaNumbers : [],
+              );
+              setCurrentPage("game-layout");
             }}
             onGameIdUpdate={(gameId) => setCurrentGameId(gameId)}
           />
         );
-      case 'admin':
+      case "admin":
         return <AdminLayout onNavigate={handleNavigate} />;
-      case 'game-layout':
+      case "game-layout":
         return (
           <GameLayout
             onNavigate={handleNavigate}
@@ -399,21 +496,32 @@ function AppContent() {
             selectedCartelas={selectedCartelas}
           />
         );
-      case 'rules':
+      case "rules":
         return <Rules onNavigate={handleNavigate} />;
-      case 'scores':
+      case "scores":
         return <Scores onNavigate={handleNavigate} />;
-      case 'history':
+      case "history":
         return <History onNavigate={handleNavigate} />;
-      case 'wallet':
+      case "wallet":
         return <Wallet onNavigate={handleNavigate} />;
-      case 'profile':
+      case "profile":
         return <Profile onNavigate={handleNavigate} />;
-      case 'winner':
-        return <Winner onNavigate={handleNavigate} onResetToGame={handleResetToGame} />;
+      case "winner":
+        return (
+          <Winner
+            onNavigate={handleNavigate}
+            onResetToGame={handleResetToGame}
+          />
+        );
       default:
-        console.log('Default case - rendering Game component');
-        return <Game onNavigate={handleNavigate} onStakeSelected={handleStakeSelected} selectedStake={selectedStake} />;
+        console.log("Default case - rendering Game component");
+        return (
+          <Game
+            onNavigate={handleNavigate}
+            onStakeSelected={handleStakeSelected}
+            selectedStake={selectedStake}
+          />
+        );
     }
   };
 
@@ -421,38 +529,51 @@ function AppContent() {
   const pageContent = renderPage();
 
   // If no stake is selected, always show the main game page
-  if (!selectedStake && currentPage === 'game') {
-    console.log('🎮 No stake selected, showing main game page');
+  if (!selectedStake && currentPage === "game") {
+    console.log("🎮 No stake selected, showing main game page");
   }
 
   // WebSocket connects in the background; avoid full-screen loading here to prevent visual flicker
 
   // Safety check - ensure we always have content to render
   if (!pageContent) {
-    console.error('❌ No page content to render!', {
+    console.error("❌ No page content to render!", {
       currentPage,
       selectedStake,
       connected,
       gameState: {
         phase: gameState.phase,
-        gameId: gameState.gameId
-      }
+        gameId: gameState.gameId,
+      },
     });
   }
 
   return (
     <div className="App">
       {pageContent || (
-        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#e6e6fa' }}>
+        <div
+          className="min-h-screen flex items-center justify-center"
+          style={{ backgroundColor: "#e6e6fa" }}
+        >
           <div className="text-center text-white">
             <div className="text-6xl mb-4">⚠️</div>
             <h1 className="text-2xl font-bold mb-4">Loading Error</h1>
-            <p className="text-white/80 mb-6">Something went wrong. Please refresh the page.</p>
+            <p className="text-white/80 mb-6">
+              Something went wrong. Please refresh the page.
+            </p>
             <div className="bg-red-900/30 rounded-lg p-4 mb-4 text-left text-sm">
-              <p><strong>Current Page:</strong> {currentPage}</p>
-              <p><strong>Selected Stake:</strong> {selectedStake || 'none'}</p>
-              <p><strong>Connected:</strong> {connected ? 'yes' : 'no'}</p>
-              <p><strong>Game Phase:</strong> {gameState.phase}</p>
+              <p>
+                <strong>Current Page:</strong> {currentPage}
+              </p>
+              <p>
+                <strong>Selected Stake:</strong> {selectedStake || "none"}
+              </p>
+              <p>
+                <strong>Connected:</strong> {connected ? "yes" : "no"}
+              </p>
+              <p>
+                <strong>Game Phase:</strong> {gameState.phase}
+              </p>
             </div>
             <button
               onClick={() => window.location.reload()}
@@ -465,7 +586,7 @@ function AppContent() {
       )}
 
       {/* Debug Panel - Temporary for debugging */}
-      {false && (
+      {/* {false && (
         <div className="fixed bottom-4 right-4 bg-black/80 text-white text-xs p-2 rounded max-w-xs z-50">
           <div><strong>Debug Info:</strong></div>
           <div>Page: {currentPage}</div>
@@ -476,7 +597,7 @@ function AppContent() {
           <div>Game ID: {gameState.gameId || 'none'}</div>
           <div>URL: {window.location.href}</div>
         </div>
-      )}
+      )} */}
 
       {/* Navigation Loading Overlay */}
       {isNavigating && (

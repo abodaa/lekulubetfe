@@ -195,404 +195,548 @@ export function WebSocketProvider({ children }) {
                     }
 
                     switch (event.type) {
-                        case 'pong':
-                            // Heartbeat
-                            break;
+                      case "pong":
+                        // Heartbeat
+                        break;
 
-                        case 'general_update':
-                            setGameState(prev => ({
-                                ...prev,
-                                ...event.payload
-                            }));
-                            break;
+                      case "general_update":
+                        setGameState((prev) => ({
+                          ...prev,
+                          ...event.payload,
+                        }));
+                        break;
 
-                        case 'snapshot': {
-                            setGameState(prev => {
-                                const snapshotPhase = event.payload.phase || 'waiting';
-                                const snapshotGameId = event.payload.gameId;
-                                
-                                // If we're in a running game with cards, completely ignore snapshots for different gameIds
-                                const isCurrentlyRunning = prev.phase === 'running';
-                                const hasCards = Array.isArray(prev.yourCards) && prev.yourCards.length > 0;
-                                const isSameGame = prev.gameId === snapshotGameId;
-                                
-                                // Completely ignore snapshot if we're running with cards and it's for a different game
-                                if (isCurrentlyRunning && hasCards && !isSameGame) {
-                                    console.log('📸 Snapshot IGNORED - running game with cards, different gameId:', {
-                                        snapshotGameId,
-                                        currentGameId: prev.gameId,
-                                        currentPhase: prev.phase,
-                                        snapshotPhase
-                                    });
-                                    return prev; // Don't update anything
+                      case "snapshot": {
+                        setGameState((prev) => {
+                          const snapshotPhase =
+                            event.payload.phase || "waiting";
+                          const snapshotGameId = event.payload.gameId;
+
+                          // If we're in a running game with cards, completely ignore snapshots for different gameIds
+                          const isCurrentlyRunning = prev.phase === "running";
+                          const hasCards =
+                            Array.isArray(prev.yourCards) &&
+                            prev.yourCards.length > 0;
+                          const isSameGame = prev.gameId === snapshotGameId;
+
+                          // Completely ignore snapshot if we're running with cards and it's for a different game
+                          if (isCurrentlyRunning && hasCards && !isSameGame) {
+                            console.log(
+                              "📸 Snapshot IGNORED - running game with cards, different gameId:",
+                              {
+                                snapshotGameId,
+                                currentGameId: prev.gameId,
+                                currentPhase: prev.phase,
+                                snapshotPhase,
+                              },
+                            );
+                            return prev; // Don't update anything
+                          }
+
+                          // Otherwise, process the snapshot normally
+                          const phase = snapshotPhase;
+                          const gameId = snapshotGameId;
+
+                          const registrationEndTime =
+                            event.payload.nextStartAt ||
+                            event.payload.registrationEndTime;
+                          const remainingSeconds = registrationEndTime
+                            ? Math.max(
+                                0,
+                                Math.ceil(
+                                  (registrationEndTime - Date.now()) / 1000,
+                                ),
+                              )
+                            : 0;
+
+                          // CRITICAL: Preserve yourCards if we're in a running game and snapshot doesn't provide cards
+                          // This prevents snapshot from overriding game_started cards
+                          const shouldPreserveCards =
+                            phase === "running" &&
+                            isSameGame &&
+                            hasCards &&
+                            (!event.payload.cards ||
+                              event.payload.cards.length === 0);
+
+                          console.log("📸 Snapshot processed:", {
+                            snapshotPhase,
+                            snapshotGameId,
+                            currentPhase: prev.phase,
+                            currentGameId: prev.gameId,
+                            isCurrentlyRunning,
+                            hasCards,
+                            isSameGame,
+                            finalPhase: phase,
+                            finalGameId: gameId,
+                            shouldPreserveCards,
+                            snapshotHasCards: event.payload.cards?.length > 0,
+                          });
+
+                          // Build the new state carefully to avoid overriding game_started data
+                          // CRITICAL: Don't spread ...event.payload first as it might override yourCards
+                          // Instead, selectively merge fields
+                          const snapshotCards = event.payload.cards;
+                          const snapshotSelections =
+                            event.payload.yourSelections;
+
+                          // Determine final values for cards and selections
+                          let finalCards = prev.yourCards || [];
+                          let finalSelections = prev.yourSelections || [];
+
+                          if (phase === "running") {
+                            // If snapshot has cards, use them (user rejoined and got their cards)
+                            if (snapshotCards && snapshotCards.length > 0) {
+                              finalCards = snapshotCards;
+                              console.log(
+                                "📸 Using cards from snapshot:",
+                                snapshotCards.length,
+                              );
+                            } else if (shouldPreserveCards) {
+                              // Preserve existing cards from game_started
+                              finalCards = prev.yourCards || [];
+                              console.log(
+                                "📸 Preserving existing cards from game_started:",
+                                finalCards.length,
+                              );
+                            } else {
+                              // No cards in snapshot and no existing cards - might be watch mode
+                              finalCards = [];
+                            }
+
+                            // Similar logic for selections
+                            if (
+                              snapshotSelections &&
+                              snapshotSelections.length > 0
+                            ) {
+                              finalSelections = snapshotSelections;
+                            } else if (shouldPreserveCards) {
+                              finalSelections = prev.yourSelections || [];
+                            }
+                          }
+
+                          const newState = {
+                            ...prev,
+                            // Only spread safe fields from payload (not yourCards/yourSelections)
+                            playersCount:
+                              event.payload.playersCount ??
+                              prev.playersCount ??
+                              0,
+                            prizePool:
+                              event.payload.prizePool ?? prev.prizePool ?? 0,
+                            takenCards:
+                              event.payload.takenCards || prev.takenCards || [],
+                            availableCards:
+                              event.payload.availableCards ||
+                              prev.availableCards ||
+                              [],
+                            phase,
+                            gameId,
+                            calledNumbers:
+                              event.payload.calledNumbers ||
+                              event.payload.called ||
+                              prev.calledNumbers ||
+                              [],
+                            countdown:
+                              phase === "registration"
+                                ? remainingSeconds
+                                : event.payload.countdown ||
+                                  prev.countdown ||
+                                  0,
+                            registrationEndTime,
+                            // Use our carefully determined final values
+                            yourCards:
+                              phase === "registration" ? [] : finalCards,
+                            yourSelections:
+                              phase === "registration" ? [] : finalSelections,
+                            ...(phase === "registration"
+                              ? {
+                                  currentNumber: null,
+                                  winners: [],
                                 }
-                                
-                                // Otherwise, process the snapshot normally
-                                const phase = snapshotPhase;
-                                const gameId = snapshotGameId;
-                                
-                                const registrationEndTime = event.payload.nextStartAt || event.payload.registrationEndTime;
-                                const remainingSeconds = registrationEndTime ? Math.max(0, Math.ceil((registrationEndTime - Date.now()) / 1000)) : 0;
-                                
-                                // CRITICAL: Preserve yourCards if we're in a running game and snapshot doesn't provide cards
-                                // This prevents snapshot from overriding game_started cards
-                                const shouldPreserveCards = phase === 'running' && 
-                                                          isSameGame && 
-                                                          hasCards && 
-                                                          (!event.payload.cards || event.payload.cards.length === 0);
-                                
-                                console.log('📸 Snapshot processed:', {
-                                    snapshotPhase,
-                                    snapshotGameId,
-                                    currentPhase: prev.phase,
-                                    currentGameId: prev.gameId,
-                                    isCurrentlyRunning,
-                                    hasCards,
-                                    isSameGame,
-                                    finalPhase: phase,
-                                    finalGameId: gameId,
-                                    shouldPreserveCards,
-                                    snapshotHasCards: event.payload.cards?.length > 0
-                                });
-                                
-                                // Build the new state carefully to avoid overriding game_started data
-                                // CRITICAL: Don't spread ...event.payload first as it might override yourCards
-                                // Instead, selectively merge fields
-                                const snapshotCards = event.payload.cards;
-                                const snapshotSelections = event.payload.yourSelections;
-                                
-                                // Determine final values for cards and selections
-                                let finalCards = prev.yourCards || [];
-                                let finalSelections = prev.yourSelections || [];
-                                
-                                if (phase === 'running') {
-                                    // If snapshot has cards, use them (user rejoined and got their cards)
-                                    if (snapshotCards && snapshotCards.length > 0) {
-                                        finalCards = snapshotCards;
-                                        console.log('📸 Using cards from snapshot:', snapshotCards.length);
-                                    } else if (shouldPreserveCards) {
-                                        // Preserve existing cards from game_started
-                                        finalCards = prev.yourCards || [];
-                                        console.log('📸 Preserving existing cards from game_started:', finalCards.length);
-                                    } else {
-                                        // No cards in snapshot and no existing cards - might be watch mode
-                                        finalCards = [];
-                                    }
-                                    
-                                    // Similar logic for selections
-                                    if (snapshotSelections && snapshotSelections.length > 0) {
-                                        finalSelections = snapshotSelections;
-                                    } else if (shouldPreserveCards) {
-                                        finalSelections = prev.yourSelections || [];
-                                    }
-                                }
-                                
-                                const newState = {
-                                    ...prev,
-                                    // Only spread safe fields from payload (not yourCards/yourSelections)
-                                    playersCount: event.payload.playersCount ?? prev.playersCount ?? 0,
-                                    prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
-                                    takenCards: event.payload.takenCards || prev.takenCards || [],
-                                    availableCards: event.payload.availableCards || prev.availableCards || [],
-                                    phase,
-                                    gameId,
-                                    calledNumbers: event.payload.calledNumbers || event.payload.called || prev.calledNumbers || [],
-                                    countdown: phase === 'registration' ? remainingSeconds : (event.payload.countdown || prev.countdown || 0),
-                                    registrationEndTime,
-                                    // Use our carefully determined final values
-                                    yourCards: phase === 'registration' ? [] : finalCards,
-                                    yourSelections: phase === 'registration' ? [] : finalSelections,
-                                    ...(phase === 'registration' ? {
-                                        currentNumber: null,
-                                        winners: []
-                                    } : {})
-                                };
-                                
-                                console.log('📸 Snapshot state merge result:', {
-                                    preservedCards: shouldPreserveCards,
-                                    finalCardsCount: newState.yourCards?.length || 0,
-                                    finalSelectionsCount: newState.yourSelections?.length || 0,
-                                    snapshotHadCards: snapshotCards?.length > 0,
-                                    snapshotHadSelections: snapshotSelections?.length > 0,
-                                    prevHadCards: prev.yourCards?.length > 0
-                                });
-                                
-                                return newState;
-                            });
-                            break;
-                        }
+                              : {}),
+                          };
 
-                        case 'registration_open': {
-                            const registrationEndTime = event.payload.endsAt;
-                            const remainingSeconds = registrationEndTime ? Math.max(0, Math.ceil((registrationEndTime - Date.now()) / 1000)) : 0;
-                            setGameState(prev => ({
-                                ...prev,
-                                phase: 'registration',
-                                gameId: event.payload.gameId,
-                                playersCount: event.payload.playersCount || 0,
-                                countdown: remainingSeconds,
-                                registrationEndTime,
-                                yourCards: [],
-                                yourSelections: [],
-                                calledNumbers: [],
-                                currentNumber: null,
-                                winners: [],
-                                takenCards: event.payload.takenCards || [],
-                                availableCards: event.payload.availableCards || [],
-                                prizePool: 0
-                            }));
-                            break;
-                        }
+                          console.log("📸 Snapshot state merge result:", {
+                            preservedCards: shouldPreserveCards,
+                            finalCardsCount: newState.yourCards?.length || 0,
+                            finalSelectionsCount:
+                              newState.yourSelections?.length || 0,
+                            snapshotHadCards: snapshotCards?.length > 0,
+                            snapshotHadSelections:
+                              snapshotSelections?.length > 0,
+                            prevHadCards: prev.yourCards?.length > 0,
+                          });
 
-                        case 'registration_extended': {
-                            const registrationEndTime = event.payload.endsAt;
-                            const remainingSeconds = registrationEndTime ? Math.max(0, Math.ceil((registrationEndTime - Date.now()) / 1000)) : 0;
-                            setGameState(prev => ({
-                                ...prev,
-                                // Stay in / return to registration for the same game
-                                phase: 'registration',
-                                gameId: event.payload.gameId || prev.gameId,
-                                playersCount: event.payload.playersCount ?? prev.playersCount ?? 0,
-                                countdown: remainingSeconds,
-                                registrationEndTime,
-                                // Preserve existing selections/cards/takenCards, but allow backend to update prize pool
-                                takenCards: event.payload.takenCards || prev.takenCards || [],
-                                prizePool: event.payload.prizePool ?? prev.prizePool ?? 0
-                            }));
-                            break;
-                        }
+                          return newState;
+                        });
+                        break;
+                      }
 
-                        case 'registration_closed': {
-                            // Backend signaled registration ended; game is about to start.
-                            // Move to a "starting" phase so the UI can navigate to GameLayout
-                            // even before the first number arrives.
-                            setGameState(prev => ({
-                                ...prev,
-                                phase: 'starting',
-                                gameId: event.payload?.gameId || prev.gameId,
-                                countdown: 0
-                            }));
-                            break;
-                        }
+                      case "registration_open": {
+                        const registrationEndTime = event.payload.endsAt;
+                        const remainingSeconds = registrationEndTime
+                          ? Math.max(
+                              0,
+                              Math.ceil(
+                                (registrationEndTime - Date.now()) / 1000,
+                              ),
+                            )
+                          : 0;
+                        setGameState((prev) => ({
+                          ...prev,
+                          phase: "registration",
+                          gameId: event.payload.gameId,
+                          playersCount: event.payload.playersCount || 0,
+                          countdown: remainingSeconds,
+                          registrationEndTime,
+                          yourCards: [],
+                          yourSelections: [],
+                          calledNumbers: [],
+                          currentNumber: null,
+                          winners: [],
+                          takenCards: event.payload.takenCards || [],
+                          availableCards: event.payload.availableCards || [],
+                          prizePool: 0,
+                        }));
+                        break;
+                      }
 
-                        case 'game_started':
-                            console.log('🎮 game_started received:', {
-                                gameId: event.payload.gameId,
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool,
-                                cardsCount: event.payload.cards?.length || 0,
-                                cards: event.payload.cards
-                            });
-                            setGameState(prev => {
-                                // If we're already in a running game with cards for a different game, ignore this
-                                if (prev.phase === 'running' && 
-                                    Array.isArray(prev.yourCards) && prev.yourCards.length > 0 &&
-                                    prev.gameId !== event.payload.gameId) {
-                                    console.log('🎮 game_started IGNORED - already in different running game:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId,
-                                        currentPhase: prev.phase
-                                    });
-                                    return prev;
-                                }
-                                
-                                // Extract card numbers from cards array for yourSelections
-                                const cards = event.payload.cards || [];
-                                const cardNumbers = cards.map(card => card.cardNumber || card).filter(num => num != null);
-                                
-                                const newState = {
-                                ...prev,
-                                    phase: 'running', // Keep 'running' to match App.jsx and CartelaSelection.jsx
-                                gameId: event.payload.gameId,
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool,
-                                calledNumbers: event.payload.calledNumbers || event.payload.called || [],
-                                yourCards: cards,
-                                yourSelections: cardNumbers,
-                                };
-                                console.log('🎮 Game state updated to running:', {
-                                    gameId: newState.gameId,
-                                    phase: newState.phase,
-                                    cardsCount: newState.yourCards?.length || 0,
-                                    selectionsCount: newState.yourSelections?.length || 0,
-                                    selections: newState.yourSelections
-                                });
-                                
-                                // Dispatch custom event to trigger navigation in App.jsx
-                                // This ensures navigation happens even if useEffect doesn't trigger
-                                window.dispatchEvent(new CustomEvent('gameStarted', {
-                                    detail: {
-                                        gameId: newState.gameId,
-                                        phase: newState.phase,
-                                        playersCount: newState.playersCount,
-                                        hasCards: newState.yourCards?.length > 0
-                                    }
-                                }));
-                                
-                                return newState;
-                            });
-                            setPendingGameStart(null);
-                            break;
+                      case "registration_extended": {
+                        const registrationEndTime = event.payload.endsAt;
+                        const remainingSeconds = registrationEndTime
+                          ? Math.max(
+                              0,
+                              Math.ceil(
+                                (registrationEndTime - Date.now()) / 1000,
+                              ),
+                            )
+                          : 0;
+                        setGameState((prev) => ({
+                          ...prev,
+                          // Stay in / return to registration for the same game
+                          phase: "registration",
+                          gameId: event.payload.gameId || prev.gameId,
+                          playersCount:
+                            event.payload.playersCount ??
+                            prev.playersCount ??
+                            0,
+                          countdown: remainingSeconds,
+                          registrationEndTime,
+                          // Preserve existing selections/cards/takenCards, but allow backend to update prize pool
+                          takenCards:
+                            event.payload.takenCards || prev.takenCards || [],
+                          prizePool:
+                            event.payload.prizePool ?? prev.prizePool ?? 0,
+                        }));
+                        break;
+                      }
 
-                        case 'number_called':
-                            // Only process if it's for the current game
-                            setGameState(prev => {
-                                if (event.payload.gameId && event.payload.gameId !== prev.gameId) {
-                                    console.log('🔢 number_called IGNORED - different gameId:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId,
-                                        number: event.payload.number
-                                    });
-                                    return prev; // Don't update state
-                                }
-                                return {
-                                ...prev,
-                                currentNumber: event.payload.number,
-                                calledNumbers: event.payload.calledNumbers || event.payload.called || []
-                                };
-                            });
-                            break;
+                      case "registration_closed": {
+                        // Backend signaled registration ended; game is about to start.
+                        // Move to a "starting" phase so the UI can navigate to GameLayout
+                        // even before the first number arrives.
+                        setGameState((prev) => ({
+                          ...prev,
+                          phase: "starting",
+                          gameId: event.payload?.gameId || prev.gameId,
+                          countdown: 0,
+                        }));
+                        break;
+                      }
 
-                        case 'players_update':
-                            // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            setGameState(prev => {
-                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                    console.log('👥 players_update IGNORED - different gameId:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId
-                                    });
-                                    return prev; // Don't update state
-                                }
-                                return {
-                                ...prev,
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool
-                                };
-                            });
-                            break;
+                      case "game_started":
+                        console.log("🎮 game_started received:", {
+                          gameId: event.payload.gameId,
+                          playersCount: event.payload.playersCount,
+                          prizePool: event.payload.prizePool,
+                          cardsCount: event.payload.cards?.length || 0,
+                          cards: event.payload.cards,
+                        });
+                        setGameState((prev) => {
+                          // If we're already in a running game with cards for a different game, ignore this
+                          if (
+                            prev.phase === "running" &&
+                            Array.isArray(prev.yourCards) &&
+                            prev.yourCards.length > 0 &&
+                            prev.gameId !== event.payload.gameId
+                          ) {
+                            console.log(
+                              "🎮 game_started IGNORED - already in different running game:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                                currentPhase: prev.phase,
+                              },
+                            );
+                            return prev;
+                          }
 
-                        case 'registration_update':
-                            // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            setGameState(prev => {
-                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                    console.log('📝 registration_update IGNORED - different gameId:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId
-                                    });
-                                    return prev; // Don't update state
-                                }
-                                return {
-                                ...prev,
-                                takenCards: event.payload.takenCards || [],
-                                prizePool: event.payload.prizePool
-                                };
-                            });
-                            break;
+                          // Extract card numbers from cards array for yourSelections
+                          const cards = event.payload.cards || [];
+                          const cardNumbers = cards
+                            .map((card) => card.cardNumber || card)
+                            .filter((num) => num != null);
 
-                        case 'selection_confirmed':
-                            // Only process if it's for the current game (or no gameId specified - assume it's for current)
-                            setGameState(prev => {
-                                if (event.payload?.gameId && event.payload.gameId !== prev.gameId) {
-                                    console.log('✅ selection_confirmed IGNORED - different gameId:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId
-                                    });
-                                    return prev; // Don't update state
-                                }
-                                return {
-                                ...prev,
-                                yourSelections: event.payload.selections || prev.yourSelections || [],
-                                playersCount: event.payload.playersCount,
-                                prizePool: event.payload.prizePool
-                                };
-                            });
-                            break;
+                          const newState = {
+                            ...prev,
+                            phase: "running", // Keep 'running' to match App.jsx and CartelaSelection.jsx
+                            gameId: event.payload.gameId,
+                            playersCount: event.payload.playersCount,
+                            prizePool: event.payload.prizePool,
+                            calledNumbers:
+                              event.payload.calledNumbers ||
+                              event.payload.called ||
+                              [],
+                            yourCards: cards,
+                            yourSelections: cardNumbers,
+                          };
+                          console.log("🎮 Game state updated to running:", {
+                            gameId: newState.gameId,
+                            phase: newState.phase,
+                            cardsCount: newState.yourCards?.length || 0,
+                            selectionsCount:
+                              newState.yourSelections?.length || 0,
+                            selections: newState.yourSelections,
+                          });
 
-                        case 'card_selected':
-                        case 'select_card':
-                            setGameState(prev => ({
-                                ...prev,
-                                yourSelections: event.payload.selections || prev.yourSelections || [],
-                                takenCards: event.payload.takenCards || prev.takenCards,
-                                playersCount: event.payload.playersCount || prev.playersCount
-                            }));
-                            break;
+                          // Dispatch custom event to trigger navigation in App.jsx
+                          // This ensures navigation happens even if useEffect doesn't trigger
+                          window.dispatchEvent(
+                            new CustomEvent("gameStarted", {
+                              detail: {
+                                gameId: newState.gameId,
+                                phase: newState.phase,
+                                playersCount: newState.playersCount,
+                                hasCards: newState.yourCards?.length > 0,
+                              },
+                            }),
+                          );
 
-                        case 'selection_cleared':
-                            setGameState(prev => ({
-                                ...prev,
-                                yourSelections: event.payload.selections || [],
-                                playersCount: event.payload.playersCount ?? prev.playersCount,
-                                prizePool: event.payload.prizePool ?? prev.prizePool
-                            }));
-                            break;
+                          return newState;
+                        });
+                        setPendingGameStart(null);
+                        break;
 
-                        case 'bingo_accepted':
-                            // Store winners but keep phase as running until game_finished arrives.
-                            // This lets the backend control the exact timing of the announce phase.
-                            setGameState(prev => ({
-                                ...prev,
-                                winners: event.payload.winners || prev.winners || []
-                            }));
-                            break;
+                      case "number_called":
+                        // Only process if it's for the current game
+                        setGameState((prev) => {
+                          if (
+                            event.payload.gameId &&
+                            event.payload.gameId !== prev.gameId
+                          ) {
+                            console.log(
+                              "🔢 number_called IGNORED - different gameId:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                                number: event.payload.number,
+                              },
+                            );
+                            return prev; // Don't update state
+                          }
+                          return {
+                            ...prev,
+                            currentNumber: event.payload.number,
+                            calledNumbers:
+                              event.payload.calledNumbers ||
+                              event.payload.called ||
+                              [],
+                          };
+                        });
+                        break;
 
-                        case 'bingo_rejected':
-                            // Invalid BINGO claim: dispatch so GameLayout can clear manual marks and show error
-                            window.dispatchEvent(new CustomEvent('bingoRejected', { detail: event.payload || {} }));
-                            break;
+                      case "players_update":
+                        // Only process if it's for the current game (or no gameId specified - assume it's for current)
+                        setGameState((prev) => {
+                          if (
+                            event.payload?.gameId &&
+                            event.payload.gameId !== prev.gameId
+                          ) {
+                            console.log(
+                              "👥 players_update IGNORED - different gameId:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                              },
+                            );
+                            return prev; // Don't update state
+                          }
+                          return {
+                            ...prev,
+                            playersCount: event.payload.playersCount,
+                            prizePool: event.payload.prizePool,
+                          };
+                        });
+                        break;
 
-                        case 'game_finished':
-                        case 'game_ended':
-                            // Process game_finished message
-                            setGameState(prev => {
-                                // Only ignore if we have both gameIds and they don't match
-                                // If prev.gameId is null/undefined, accept the message (user might have just connected)
-                                if (event.payload?.gameId && prev.gameId && event.payload.gameId !== prev.gameId) {
-                                    console.log('🏁 game_finished IGNORED - different gameId:', {
-                                        eventGameId: event.payload.gameId,
-                                        currentGameId: prev.gameId
-                                    });
-                                    return prev; // Don't update state
-                                }
-                                
-                                console.log('🏁 game_finished PROCESSING:', {
-                                    eventGameId: event.payload?.gameId,
-                                    prevGameId: prev.gameId,
-                                    winnersCount: event.payload?.winners?.length || 0,
-                                    phase: 'announce'
-                                });
-                                
-                                return {
-                                ...prev,
-                                phase: 'announce',
-                                gameId: event.payload?.gameId || prev.gameId, // Explicitly set gameId
-                                winners: (event.payload && (event.payload.winners || event.payload.winner || [])) || prev.winners || [],
-                                calledNumbers: (event.payload && (event.payload.calledNumbers || event.payload.called)) || prev.calledNumbers,
-                                currentNumber: null,
-                                yourCards: [],
-                                yourSelections: [],
-                                nextRegistrationStart: event.payload?.nextStartAt || null // Store when next registration will start
-                                };
-                            });
-                            // Do not auto-rejoin immediately here. We'll rejoin when:
-                            // 1) Backend opens registration (we receive snapshot/registration_open), or
-                            // 2) User navigates to cartella selection screen.
-                            break;
+                      case "registration_update":
+                        // Only process if it's for the current game (or no gameId specified - assume it's for current)
+                        setGameState((prev) => {
+                          if (
+                            event.payload?.gameId &&
+                            event.payload.gameId !== prev.gameId
+                          ) {
+                            console.log(
+                              "📝 registration_update IGNORED - different gameId:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                              },
+                            );
+                            return prev; // Don't update state
+                          }
+                          return {
+                            ...prev,
+                            takenCards: event.payload.takenCards || [],
+                            prizePool: event.payload.prizePool,
+                          };
+                        });
+                        break;
 
-                        case 'wallet_update':
-                            setGameState(prev => ({
-                                ...prev,
-                                walletUpdate: {
-                                    main: event.payload.main,
-                                    play: event.payload.play,
-                                    source: event.payload.source
-                                }
-                            }));
-                            window.dispatchEvent(new CustomEvent('walletUpdate', { detail: event }));
-                            break;
+                      case "selection_confirmed":
+                        // Only process if it's for the current game (or no gameId specified - assume it's for current)
+                        setGameState((prev) => {
+                          if (
+                            event.payload?.gameId &&
+                            event.payload.gameId !== prev.gameId
+                          ) {
+                            console.log(
+                              "✅ selection_confirmed IGNORED - different gameId:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                              },
+                            );
+                            return prev; // Don't update state
+                          }
+                          return {
+                            ...prev,
+                            yourSelections:
+                              event.payload.selections ||
+                              prev.yourSelections ||
+                              [],
+                            playersCount: event.payload.playersCount,
+                            prizePool: event.payload.prizePool,
+                          };
+                        });
+                        break;
 
-                        default:
-                            console.log('Unhandled WS event:', event.type);
+                      case "card_selected":
+                      case "select_card":
+                        setGameState((prev) => ({
+                          ...prev,
+                          yourSelections:
+                            event.payload.selections ||
+                            prev.yourSelections ||
+                            [],
+                          takenCards:
+                            event.payload.takenCards || prev.takenCards,
+                          playersCount:
+                            event.payload.playersCount || prev.playersCount,
+                        }));
+                        break;
+
+                      case "selection_cleared":
+                        setGameState((prev) => ({
+                          ...prev,
+                          yourSelections: event.payload.selections || [],
+                          playersCount:
+                            event.payload.playersCount ?? prev.playersCount,
+                          prizePool: event.payload.prizePool ?? prev.prizePool,
+                        }));
+                        break;
+
+                      case "bingo_accepted":
+                        // Store winners but keep phase as running until game_finished arrives.
+                        // This lets the backend control the exact timing of the announce phase.
+                        setGameState((prev) => ({
+                          ...prev,
+                          winners: event.payload.winners || prev.winners || [],
+                        }));
+                        break;
+
+                      case "bingo_rejected":
+                        // Invalid BINGO claim: dispatch so GameLayout can clear manual marks and show error
+                        window.dispatchEvent(
+                          new CustomEvent("bingoRejected", {
+                            detail: event.payload || {},
+                          }),
+                        );
+                        break;
+
+                      case "game_finished":
+                      case "game_ended":
+                        // Process game_finished message
+                        setGameState((prev) => {
+                          // Only ignore if we have both gameIds and they don't match
+                          // If prev.gameId is null/undefined, accept the message (user might have just connected)
+                          if (
+                            event.payload?.gameId &&
+                            prev.gameId &&
+                            event.payload.gameId !== prev.gameId
+                          ) {
+                            console.log(
+                              "🏁 game_finished IGNORED - different gameId:",
+                              {
+                                eventGameId: event.payload.gameId,
+                                currentGameId: prev.gameId,
+                              },
+                            );
+                            return prev; // Don't update state
+                          }
+
+                          console.log("🏁 game_finished PROCESSING:", {
+                            eventGameId: event.payload?.gameId,
+                            prevGameId: prev.gameId,
+                            winnersCount: event.payload?.winners?.length || 0,
+                            phase: "announce",
+                          });
+
+                          return {
+                            ...prev,
+                            phase: "announce",
+                            gameId: event.payload?.gameId || prev.gameId, // Explicitly set gameId
+                            winners:
+                              (event.payload &&
+                                (event.payload.winners ||
+                                  event.payload.winner ||
+                                  [])) ||
+                              prev.winners ||
+                              [],
+                            calledNumbers:
+                              (event.payload &&
+                                (event.payload.calledNumbers ||
+                                  event.payload.called)) ||
+                              prev.calledNumbers,
+                            currentNumber: null,
+                            yourCards: [],
+                            yourSelections: [],
+                            nextRegistrationStart:
+                              event.payload?.nextStartAt || null, // Store when next registration will start
+                          };
+                        });
+                        // Do not auto-rejoin immediately here. We'll rejoin when:
+                        // 1) Backend opens registration (we receive snapshot/registration_open), or
+                        // 2) User navigates to cartella selection screen.
+                        break;
+
+                      case "wallet_update":
+                        setGameState((prev) => ({
+                          ...prev,
+                          walletUpdate: {
+                            main: event.payload.main,
+                            play: event.payload.play,
+                            coins: event.payload.coins,
+                            source: event.payload.source,
+                          },
+                        }));
+                        window.dispatchEvent(
+                          new CustomEvent("walletUpdate", { detail: event }),
+                        );
+                        break;
+
+                      default:
+                        console.log("Unhandled WS event:", event.type);
                     }
                 } catch (error) {
                     console.error('Error parsing WebSocket message:', error);
