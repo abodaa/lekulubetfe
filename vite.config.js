@@ -14,7 +14,7 @@ export default defineConfig({
       process.env.VITE_API_URL || "https://lekulubingoback.onrender.com",
     ),
     "import.meta.env.VITE_WS_URL": JSON.stringify(
-      process.env.VITE_WS_URL || "ws://https://lekulubingoback.onrender.com",
+      process.env.VITE_WS_URL || "wss://lekulubingoback.onrender.com",
     ),
   },
 });
