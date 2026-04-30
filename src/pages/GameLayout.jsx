@@ -199,7 +199,7 @@ export default function GameLayout({
     // Handle manual number marking/unmarking
     const handleNumberToggle = useCallback((cardNumber, number) => {
         if (isAutoMarkOn) return; // Don't allow manual marking when auto-mark is ON
-        if (missedClaimWindow) return; // After missing BINGO window, no further manual marks this game
+        // if (missedClaimWindow) return; // After missing BINGO window, no further manual marks this game
 
         setManuallyMarkedNumbers(prev => {
             const cardMarks = prev[cardNumber] || new Set();
@@ -216,7 +216,7 @@ export default function GameLayout({
                 [cardNumber]: newCardMarks
             };
         });
-    }, [isAutoMarkOn, missedClaimWindow]);
+    }, [isAutoMarkOn]);
 
     // Manual BINGO claim button handler (single cartela)
     const handleManualBingo = useCallback(() => {
@@ -224,12 +224,12 @@ export default function GameLayout({
             return;
         }
 
-        if (missedClaimWindow) {
-            setAlertBanners(prev =>
-                prev.includes(MISSED_BINGO_MSG) ? prev : [...prev, MISSED_BINGO_MSG]
-            );
-            return;
-        }
+        // if (missedClaimWindow) {
+        //     setAlertBanners(prev =>
+        //         prev.includes(MISSED_BINGO_MSG) ? prev : [...prev, MISSED_BINGO_MSG]
+        //     );
+        //     return;
+        // }
 
         if (claimedBingoRef.current || isManualClaiming) {
             return;
