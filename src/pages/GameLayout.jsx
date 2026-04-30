@@ -98,10 +98,10 @@ export default function GameLayout({
     : [];
 
   // Sound control
-  const [isSoundOn, setIsSoundOn] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(true);
 
   // Auto-mark control (green or light purple)
-  const [isAutoMarkOn, setIsAutoMarkOn] = useState(false);
+  const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
 
   // Track if user has manually toggled auto-mark off (to prevent auto-enabling again)
   const userManuallyDisabledRef = useRef(false);
