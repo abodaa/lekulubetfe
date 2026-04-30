@@ -417,30 +417,30 @@ export default function GameLayout({
   }, [gameState.phase]);
 
   // Handle invalid BINGO claim: clear all manual marks as punishment, allow retry
- useEffect(() => {
-   const handleBingoRejected = (event) => {
-     claimedBingoRef.current = false;
-     const reason = event?.detail?.reason || "invalid_claim";
+  useEffect(() => {
+    const handleBingoRejected = (event) => {
+      claimedBingoRef.current = false;
+      const reason = event?.detail?.reason || "invalid_claim";
 
-     if (reason === "invalid_claim") {
-       // Wrong marks → clear cells
-       setManuallyMarkedNumbers({});
-       setAlertBanners((prev) => [
-         ...prev,
-         "Invalid BINGO! Marks cleared. Try again.",
-       ]);
-     } else if (reason === "stale_claim") {
-       // Missed claim → keep marks
-       setAlertBanners((prev) => [
-         ...prev,
-         "Pattern already passed. Wait for next call.",
-       ]);
-     }
-   };
-   window.addEventListener("bingoRejected", handleBingoRejected);
-   return () =>
-     window.removeEventListener("bingoRejected", handleBingoRejected);
- }, []);
+      if (reason === "invalid_claim") {
+        // Wrong marks → clear cells
+        setManuallyMarkedNumbers({});
+        setAlertBanners((prev) => [
+          ...prev,
+          "Invalid BINGO! Marks cleared. Try again.",
+        ]);
+      } else if (reason === "stale_claim") {
+        // Missed claim → keep marks
+        setAlertBanners((prev) => [
+          ...prev,
+          "Pattern already passed. Wait for next call.",
+        ]);
+      }
+    };
+    window.addEventListener("bingoRejected", handleBingoRejected);
+    return () =>
+      window.removeEventListener("bingoRejected", handleBingoRejected);
+  }, []);
 
   // Auto-dismiss alerts after 3 seconds
   useEffect(() => {
@@ -938,7 +938,15 @@ export default function GameLayout({
                 </span>
               )}
             </div>
-
+            {/* Sound Toggle */}
+            <button
+              onClick={() => setIsSoundOn(!isSoundOn)}
+              className="sound-toggle-btn"
+              title={isSoundOn ? "Sound ON" : "Sound OFF"}
+            >
+              {isSoundOn ? "🔊" : "🔇"}
+            </button>
+            {/* Auto Mark toggle */}
             <button
               onClick={() => {
                 if (isAutoMarkOn) {
