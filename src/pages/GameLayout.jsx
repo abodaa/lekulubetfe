@@ -253,6 +253,7 @@ export default function GameLayout({
       setIsManualClaiming(true);
       claimedBingoRef.current = true;
 
+      // NEVER send markedNumbers — let server validate against all called numbers
       let payload = {};
       if (yourCards.length === 1) {
         const { cardNumber } = yourCards[0] || {};
@@ -262,14 +263,14 @@ export default function GameLayout({
       const result = claimBingo(payload);
       if (!result) {
         claimedBingoRef.current = false;
-        showError("Failed to send BINGO claim. Please try again.");
+        showError("Failed to send BINGO claim.");
       } else {
         showSuccess("BINGO claim sent! Waiting for confirmation...");
       }
     } catch (error) {
       claimedBingoRef.current = false;
       console.log(error);
-      showError("Failed to send BINGO claim. Please try again.");
+      showError("Failed to send BINGO claim.");
     } finally {
       setIsManualClaiming(false);
     }
