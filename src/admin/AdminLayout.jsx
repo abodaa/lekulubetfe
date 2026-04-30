@@ -125,11 +125,11 @@ export default function AdminLayout({ onNavigate }) {
                     <div className="mt-20">
                         {/* Animated Mark Bingo Logo */}
                         <div className="relative mb-6">
-                            <img
+                            {/* <img
                                 src="/lb.png"
-                                alt="Mark Bingo Logo"
+                                alt="Lekulu bingo Logo"
                                 className="w-16 h-16 mx-auto animate-pulse"
-                            />
+                            /> */}
                             {/* Search animation overlay */}
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -184,7 +184,7 @@ export default function AdminLayout({ onNavigate }) {
                 <div className="app-header">
                     <div className="app-logo">
                         <div className="logo-circle">
-                            <img src="/lb.png" alt="Mark Bingo Logo" className="logo-image" />
+                            {/* <img src="/lb.png" alt="Lekulu bingo Logo" className="logo-image" /> */}
                         </div>
                         <span className="app-title">Admin</span>
                     </div>
