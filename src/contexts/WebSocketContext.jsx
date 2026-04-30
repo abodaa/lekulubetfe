@@ -73,6 +73,8 @@ export function WebSocketProvider({ children }) {
     [connected],
   );
 
+  // Countdown timer effect - uses server-sent countdownSeconds when available,
+  // falls back to local calculation from registrationEndTime
   useEffect(() => {
     let intervalId = null;
 
@@ -246,12 +248,17 @@ export function WebSocketProvider({ children }) {
                 const registrationEndTime =
                   event.payload.nextStartAt ||
                   event.payload.registrationEndTime;
-                const remainingSeconds = registrationEndTime
-                  ? Math.max(
-                      0,
-                      Math.ceil((registrationEndTime - Date.now()) / 1000),
-                    )
-                  : 0;
+
+                // Use server-sent countdownSeconds if available, otherwise calculate locally
+                const serverCountdown =
+                  event.payload.countdownSeconds != null
+                    ? event.payload.countdownSeconds
+                    : registrationEndTime
+                      ? Math.max(
+                          0,
+                          Math.ceil((registrationEndTime - Date.now()) / 1000),
+                        )
+                      : 0;
 
                 const shouldPreserveCards =
                   phase === "running" &&
@@ -295,10 +302,7 @@ export function WebSocketProvider({ children }) {
                     event.payload.called ||
                     prev.calledNumbers ||
                     [],
-                  countdown:
-                    phase === "registration"
-                      ? remainingSeconds
-                      : event.payload.countdown || prev.countdown || 0,
+                  countdown: serverCountdown,
                   registrationEndTime,
                   yourCards: phase === "registration" ? [] : finalCards,
                   yourSelections:
@@ -317,18 +321,22 @@ export function WebSocketProvider({ children }) {
 
             case "registration_open": {
               const registrationEndTime = event.payload.endsAt;
-              const remainingSeconds = registrationEndTime
-                ? Math.max(
-                    0,
-                    Math.ceil((registrationEndTime - Date.now()) / 1000),
-                  )
-                : 0;
+              // Use server-sent countdownSeconds if available
+              const serverCountdown =
+                event.payload.countdownSeconds != null
+                  ? event.payload.countdownSeconds
+                  : registrationEndTime
+                    ? Math.max(
+                        0,
+                        Math.ceil((registrationEndTime - Date.now()) / 1000),
+                      )
+                    : 0;
               setGameState((prev) => ({
                 ...prev,
                 phase: "registration",
                 gameId: event.payload.gameId,
                 playersCount: event.payload.playersCount || 0,
-                countdown: remainingSeconds,
+                countdown: serverCountdown,
                 registrationEndTime,
                 yourCards: [],
                 yourSelections: [],
@@ -345,19 +353,23 @@ export function WebSocketProvider({ children }) {
 
             case "registration_extended": {
               const registrationEndTime = event.payload.endsAt;
-              const remainingSeconds = registrationEndTime
-                ? Math.max(
-                    0,
-                    Math.ceil((registrationEndTime - Date.now()) / 1000),
-                  )
-                : 0;
+              // Use server-sent countdownSeconds if available
+              const serverCountdown =
+                event.payload.countdownSeconds != null
+                  ? event.payload.countdownSeconds
+                  : registrationEndTime
+                    ? Math.max(
+                        0,
+                        Math.ceil((registrationEndTime - Date.now()) / 1000),
+                      )
+                    : 0;
               setGameState((prev) => ({
                 ...prev,
                 phase: "registration",
                 gameId: event.payload.gameId || prev.gameId,
                 playersCount:
                   event.payload.playersCount ?? prev.playersCount ?? 0,
-                countdown: remainingSeconds,
+                countdown: serverCountdown,
                 registrationEndTime,
                 takenCards: event.payload.takenCards || prev.takenCards || [],
                 prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,

@@ -385,15 +385,7 @@ export default function CartelaSelection({
     }
   };
 
-  const timerSeconds =
-    gameState.phase === "registration" && gameState.registrationEndTime
-      ? Math.max(
-          0,
-          Math.ceil((gameState.registrationEndTime - Date.now()) / 1000),
-        )
-      : gameState.phase === "waiting"
-        ? "--"
-        : gameState.countdown || 0;
+  const timerSeconds = gameState.countdown || 0;
 
   const selectedNumbers = Array.isArray(gameState.yourSelections)
     ? gameState.yourSelections
