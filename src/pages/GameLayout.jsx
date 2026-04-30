@@ -1023,7 +1023,7 @@ export default function GameLayout({
                         showHeader={true}
                         isAutoMarkOn={isAutoMarkOn}
                         onNumberToggle={
-                          !isAutoMarkOn && !missedClaimWindow
+                          !isAutoMarkOn
                             ? (number) => handleNumberToggle(cardNumber, number)
                             : undefined
                         }
