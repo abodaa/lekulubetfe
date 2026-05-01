@@ -285,7 +285,6 @@ export default function CartelaSelection({
 
   const handleCardSelect = async (cardNumber) => {
     const cardNum = Number(cardNumber);
-
     if (walletLoading) {
       showError("Loading wallet information. Please wait a moment.");
       return;
@@ -324,20 +323,18 @@ export default function CartelaSelection({
     if (selectedNumbers.length >= 1) {
       const currentCard = selectedNumbers[0];
       if (currentCard === cardNum) return;
-
       const isTakenByOthers = gameState.takenCards.some(
         (taken) => Number(taken) === cardNum,
       );
       if (isTakenByOthers) {
-        const takenMsg =
-          "This cartella is already taken. Please choose another.";
         setAlertBanners((prev) =>
-          prev.includes(takenMsg) ? prev : [...prev, takenMsg],
+          prev.includes("This cartella is already taken")
+            ? prev
+            : [...prev, "This cartella is already taken."],
         );
-        showError(takenMsg);
+        showError("This cartella is already taken.");
         return;
       }
-
       try {
         deselectCartella(currentCard);
         selectCartella(cardNum);
@@ -350,7 +347,6 @@ export default function CartelaSelection({
 
     const totalBalance = (wallet.main || 0) + (wallet.play || 0);
     const needed = Number(stake);
-
     if (totalBalance < needed) {
       const msg = `Insufficient balance. You have ${totalBalance.toLocaleString()} ETB but need ${needed} ETB.`;
       setAlertBanners((prev) => [...prev, msg]);
@@ -362,30 +358,32 @@ export default function CartelaSelection({
       (taken) => Number(taken) === cardNum,
     );
     if (isTakenByOthers && !selectedNumbers.includes(cardNum)) {
-      const takenMsg = "This cartella is already taken. Please choose another.";
       setAlertBanners((prev) => {
-        if (prev.includes(takenMsg)) return prev;
-        return [...prev, takenMsg];
+        if (prev.includes("This cartella is already taken")) return prev;
+        return [...prev, "This cartella is already taken."];
       });
-      showError(takenMsg);
+      showError("This cartella is already taken.");
       return;
     }
 
     try {
       const success = selectCartella(cardNum);
-      if (success) {
+      if (success)
         showSuccess(
           `Cartella #${cardNum} selected! Waiting for game to start...`,
         );
-      } else {
-        showError("Failed to select cartella. Please try again.");
-      }
+      else showError("Failed to select cartella.");
     } catch (err) {
-      showError("Failed to select cartella. Please try again.");
+      showError("Failed to select cartella.");
     }
   };
 
-  const timerSeconds = gameState.countdown || 0;
+  const timerSeconds =
+    gameState.phase === "registration"
+      ? gameState.countdown || 0
+      : gameState.phase === "waiting"
+        ? "--"
+        : gameState.countdown || 0;
 
   const selectedNumbers = Array.isArray(gameState.yourSelections)
     ? gameState.yourSelections
@@ -394,110 +392,61 @@ export default function CartelaSelection({
     .map((n) => ({ number: n, card: cards[n - 1] }))
     .filter((x) => x.card);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
+  const totalBalance = (wallet.main || 0) + (wallet.play || 0);
 
+  // Loading state
   if (loading || !cardsReady) {
     return (
-      <div className="app-container joy-bingo-bg">
-        <header className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <div className="wallet-box">
-                <div className="wallet-label">Wallet</div>
-                <div className="wallet-value text-blue-400">
-                  {walletLoading
-                    ? "..."
-                    : (
-                        (wallet.main || 0) + (wallet.play || 0)
-                      ).toLocaleString()}
-                </div>
-              </div>
-              <div className="wallet-box">
-                <div className="wallet-label">Stake</div>
-                <div className="wallet-value">{stake}</div>
-              </div>
-            </div>
-            <div className="timer-box">
-              <div className="timer-countdown">{timerSeconds}s</div>
-              <div className="timer-status">
-                {gameState.phase === "registration" &&
-                  `Registration open... (${gameState.playersCount} players)`}
-                {gameState.phase === "waiting" && "Waiting for room..."}
-                {gameState.phase === "starting" && "Starting game..."}
-                {gameState.phase === "running" && "Game in progress!"}
-                {gameState.phase === "announce" && "Game finished!"}
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="p-4 flex items-center justify-center min-h-96">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
-            <p className="text-purple-600 font-medium mt-3">Loading...</p>
-          </div>
-        </main>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white/80 text-lg font-medium">
+            Loading cartellas...
+          </p>
+          <p className="text-white/40 text-sm mt-1">Stake: {stake} ETB</p>
+        </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="app-container joy-bingo-bg">
-        <header className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <div className="wallet-box">
-                <div className="wallet-label">Wallet</div>
-                <div className="wallet-value text-blue-400">
-                  {walletLoading
-                    ? "..."
-                    : (
-                        (wallet.main || 0) + (wallet.play || 0)
-                      ).toLocaleString()}
-                </div>
-              </div>
-              <div className="wallet-box">
-                <div className="wallet-label">Stake</div>
-                <div className="wallet-value">{stake}</div>
-              </div>
-            </div>
-            <div className="timer-box">
-              <div className="timer-countdown">{timerSeconds}s</div>
-            </div>
-          </div>
-        </header>
-        <main className="p-4 flex flex-col items-center justify-center min-h-64">
-          <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg max-w-md">
-            <div className="flex items-center gap-2 text-yellow-400">
-              <span className="text-lg">⚠️</span>
-              <div>
-                <div className="font-semibold">{error}</div>
-              </div>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-white text-xl font-bold mb-2">
+            Connection Error
+          </h2>
+          <p className="text-white/60 mb-6">{error}</p>
           <button
             onClick={() => setRetryCount((c) => c + 1)}
-            className="px-5 py-2.5 rounded-lg bg-purple-600 text-white font-medium"
+            className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition-all"
           >
-            Retry
+            🔄 Retry
           </button>
-        </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="app-container relative joy-bingo-bg">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+      {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
-            <div key={i} className="alert-banner-appeal animate-slide-in">
-              <div className="alert-icon-wrapper">⚠️</div>
-              <div className="alert-message-text">{msg}</div>
+            <div
+              key={i}
+              className="bg-gray-900/90 backdrop-blur border border-gray-700/50 rounded-xl px-4 py-3 text-white text-sm flex items-center gap-3 shadow-lg animate-slide-down"
+            >
+              <span className="text-lg">⚠️</span>
+              <span className="flex-1">{msg}</span>
               <button
                 onClick={() =>
                   setAlertBanners((prev) => prev.filter((_, j) => j !== i))
                 }
-                className="alert-dismiss-btn"
+                className="text-gray-400 hover:text-white text-lg"
               >
                 ✕
               </button>
@@ -506,85 +455,152 @@ export default function CartelaSelection({
         </div>
       )}
 
-      <header className="p-4 mb-0">
-        <div
-          className="game-info-bar-light flex items-stretch rounded-lg flex-nowrap"
-          style={{ marginBottom: "1rem" }}
-        >
-          <div className="info-box info-box-timer flex-1 flex items-center justify-center">
-            <span className="timer-value">{timerSeconds}s</span>
-          </div>
-          <div className="info-box flex-1">
-            <div className="info-label">Wallet</div>
-            <div className="info-value">
-              {walletLoading
-                ? "..."
-                : ((wallet.main || 0) + (wallet.play || 0)).toLocaleString()}
+      <div className="max-w-md mx-auto w-full flex flex-col flex-1">
+        {/* Header */}
+        <header className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            {/* Timer */}
+            <div
+              className={`px-4 py-2 rounded-xl text-center min-w-[80px] ${
+                gameState.phase === "registration"
+                  ? "bg-yellow-500/20 border border-yellow-500/30"
+                  : "bg-white/5 border border-white/10"
+              }`}
+            >
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Timer
+              </div>
+              <div
+                className={`text-2xl font-extrabold font-mono ${
+                  gameState.phase === "registration"
+                    ? "text-yellow-300"
+                    : "text-white/60"
+                }`}
+              >
+                {timerSeconds}
+              </div>
             </div>
-          </div>
-          <div className="info-box flex-1">
-            <div className="info-label">Stake</div>
-            <div className="info-value">{stake}</div>
-          </div>
-          {gameState.phase === "registration" && (
-            <div className="info-box flex-1">
-              <div className="info-label">Players</div>
-              <div className="info-value">{gameState.playersCount || 0}</div>
-            </div>
-          )}
-        </div>
-      </header>
 
-      <main className="p-4 mt-2 pb-6 flex flex-col gap-4">
-        <div className="mx-4 mb-6">
-          <div
-            className="cartela-grid-scrollable rounded-lg p-4 max-h-[320px] min-h-[260px] overflow-y-auto"
-            style={{ background: "#cfade0" }}
-          >
-            <div className="cartela-numbers-grid">
-              {Array.from({ length: totalCartellas }, (_, i) => i + 1).map(
-                (cartelaNumber) => {
-                  const cartelaNum = Number(cartelaNumber);
-                  const hasCards =
-                    Array.isArray(gameState.yourCards) &&
-                    gameState.yourCards.length > 0;
-                  const shouldShowTakenCards =
-                    gameState.phase === "registration" || hasCards;
-                  const isTaken = shouldShowTakenCards
-                    ? gameState.takenCards.some(
-                        (taken) => Number(taken) === cartelaNum,
-                      )
-                    : false;
-                  const isSelected = selectedNumbers.includes(cartelaNum);
-                  const takenByMe = selectedNumbers.includes(cartelaNum);
-                  return (
-                    <button
-                      key={cartelaNumber}
-                      onClick={() => handleCardSelect(cartelaNum)}
-                      className={`cartela-number-btn-light ${isTaken ? (takenByMe ? "cartela-selected-light" : "cartela-taken-light") : isSelected ? "cartela-selected-light" : "cartela-normal-light"}`}
-                    >
-                      {cartelaNumber}
-                    </button>
-                  );
-                },
-              )}
+            {/* Status */}
+            <div className="text-right">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Status
+              </div>
+              <div
+                className={`text-sm font-bold ${
+                  gameState.phase === "registration"
+                    ? "text-green-300"
+                    : gameState.phase === "waiting"
+                      ? "text-yellow-300"
+                      : gameState.phase === "running"
+                        ? "text-blue-300"
+                        : "text-white/60"
+                }`}
+              >
+                {gameState.phase === "registration" && "Registration Open"}
+                {gameState.phase === "waiting" && "Waiting for room..."}
+                {gameState.phase === "starting" && "Starting..."}
+                {gameState.phase === "running" && "Game in progress"}
+                {gameState.phase === "announce" && "Game finished"}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Stats Bar */}
+        <div className="px-4 pb-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Wallet
+              </div>
+              <div className="text-white font-bold text-sm">
+                {walletLoading ? "..." : totalBalance.toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Stake
+              </div>
+              <div className="text-white font-bold text-sm">{stake}</div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Players
+              </div>
+              <div className="text-white font-bold text-sm">
+                {gameState.playersCount || 0}
+              </div>
             </div>
           </div>
         </div>
 
-        {selectedCards.length > 0 &&
-          (gameState.phase === "registration" ||
-            (Array.isArray(gameState.yourCards) &&
-              gameState.yourCards.length > 0)) && (
-            <div style={{ marginTop: "40px" }}>
-              <div className="rounded-lg p-2">
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    width: "100%",
-                  }}
-                >
+        {/* Card Selection Grid */}
+        <main className="flex-1 px-4 pb-4 overflow-y-auto">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white/80 text-sm font-semibold">
+                Select Your Cartella
+              </h3>
+              <span className="text-white/40 text-xs">
+                {totalCartellas} cards
+              </span>
+            </div>
+            <div className="bg-white/5 backdrop-blur rounded-2xl p-4 border border-white/10 max-h-[380px] overflow-y-auto">
+              <div className="grid grid-cols-10 gap-1.5">
+                {Array.from({ length: totalCartellas }, (_, i) => i + 1).map(
+                  (cartelaNumber) => {
+                    const cartelaNum = Number(cartelaNumber);
+                    const hasCards =
+                      Array.isArray(gameState.yourCards) &&
+                      gameState.yourCards.length > 0;
+                    const shouldShowTakenCards =
+                      gameState.phase === "registration" || hasCards;
+                    const isTaken = shouldShowTakenCards
+                      ? gameState.takenCards.some(
+                          (taken) => Number(taken) === cartelaNum,
+                        )
+                      : false;
+                    const isSelected = selectedNumbers.includes(cartelaNum);
+                    const takenByMe = isSelected;
+
+                    return (
+                      <button
+                        key={cartelaNumber}
+                        onClick={() => handleCardSelect(cartelaNum)}
+                        disabled={gameState.phase !== "registration"}
+                        className={`aspect-square rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
+                          isTaken
+                            ? takenByMe
+                              ? "bg-green-500/30 text-green-300 border-2 border-green-400 scale-105"
+                              : "bg-red-500/20 text-red-300/50 border border-red-500/20 cursor-not-allowed"
+                            : isSelected
+                              ? "bg-green-500/30 text-green-300 border-2 border-green-400 scale-105"
+                              : gameState.phase === "registration"
+                                ? "bg-white/10 text-white/70 hover:bg-white/20 hover:scale-105 border border-white/10 cursor-pointer"
+                                : "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
+                        }`}
+                      >
+                        {cartelaNumber}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Cartella Preview */}
+          {selectedCards.length > 0 && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <h3 className="text-white/80 text-sm font-semibold">
+                  Your Cartella
+                </h3>
+              </div>
+              <div className="bg-white/5 backdrop-blur rounded-2xl p-3 border border-green-500/20">
+                <div className="flex justify-center">
                   {selectedCards.slice(0, 1).map(({ number, card }) => (
                     <CartellaCard
                       key={number}
@@ -595,10 +611,43 @@ export default function CartelaSelection({
                     />
                   ))}
                 </div>
+                <div className="text-center mt-2">
+                  <span className="text-white/50 text-xs">
+                    Cartella #{selectedNumbers[0]}
+                  </span>
+                </div>
               </div>
             </div>
           )}
-      </main>
+
+          {/* Waiting Message */}
+          {gameState.phase !== "registration" &&
+            gameState.phase !== "waiting" &&
+            !selectedNumbers.length && (
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 text-center">
+                <div className="text-3xl mb-2">⏳</div>
+                <p className="text-yellow-300/80 text-sm font-medium">
+                  Game in progress
+                </p>
+                <p className="text-white/40 text-xs mt-1">
+                  Registration will open after this game ends.
+                </p>
+              </div>
+            )}
+
+          {gameState.phase === "waiting" && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center">
+              <div className="animate-spin w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-2" />
+              <p className="text-blue-300/80 text-sm font-medium">
+                Connecting to room...
+              </p>
+              <p className="text-white/40 text-xs mt-1">
+                Preparing game for stake {stake} ETB
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

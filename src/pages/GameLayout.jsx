@@ -86,7 +86,7 @@ export default function GameLayout({
     ? gameState.yourCards
     : [];
 
-  const [isSoundOn, setIsSoundOn] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(true);
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   //   const userManuallyDisabledRef = useRef(false);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
