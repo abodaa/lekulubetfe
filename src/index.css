@@ -69,6 +69,18 @@ body {
   color: #111827; /* near-black for strong contrast on light background */
 }
 
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+.animate-shrink {
+  animation: shrink linear forwards;
+}
+
 .app-container {
   min-height: 100vh;
   padding-bottom: 6rem;
