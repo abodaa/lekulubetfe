@@ -353,7 +353,7 @@ export function AuthProvider({ children }) {
               <img
                 src="/lb.png"
                 alt="Lekulu Bingo"
-                className="w-12 h-12 object-contain animate-pulse"
+                className="w-12 h-12 object-contain rounded-full animate-pulse"
               />
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
