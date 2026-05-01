@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { apiFetch } from "../api/client";
+import { IoReload } from "react-icons/io5";
 
 const AuthContext = createContext({
   sessionId: null,
@@ -406,7 +407,7 @@ export function AuthProvider({ children }) {
             </p>
             <div className="space-y-3">
               {[
-                { step: "1", text: "Open the Lekulu Bingo bot in Telegram" },
+                { step: "1", text: "Open the @lekuluBingo bot in Telegram" },
                 { step: "2", text: 'Click the "Play" button' },
                 { step: "3", text: "The web app will open automatically" },
               ].map(({ step, text }) => (
@@ -423,9 +424,9 @@ export function AuthProvider({ children }) {
           {/* Refresh button */}
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium border border-white/20 transition-all"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium border border-white/20 transition-all"
           >
-            🔄 Try Again
+            <IoReload /> Try Again
           </button>
         </div>
       </div>
