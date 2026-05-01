@@ -122,26 +122,23 @@ export default function CartellaCard({
   selectedNumber = null,
   isPreview = false,
   showWinningPattern = false,
-  /** When set, cells in the winning pattern at this call snapshot are shown in red (missed BINGO window). */
   missedWinningCalledNumbers = null,
   isAutoMarkOn = true,
   onNumberToggle = null,
   showHeader = false,
 }) {
-  // Use card prop if provided, otherwise fallback to null
   const grid = card || null;
-  if (!grid) return <div className="text-xs opacity-60">Loading...</div>;
+  if (!grid) return <div className="text-xs text-white/40">Loading...</div>;
 
   const letters = ["B", "I", "N", "G", "O"];
   const letterColors = [
-    "cartela-letter-b",
-    "cartela-letter-i",
-    "cartela-letter-n",
-    "cartela-letter-g",
-    "cartela-letter-o",
+    "bg-blue-500/30 text-blue-200 border-blue-400/30",
+    "bg-green-500/30 text-green-200 border-green-400/30",
+    "bg-purple-500/30 text-purple-200 border-purple-400/30",
+    "bg-red-500/30 text-red-200 border-red-400/30",
+    "bg-yellow-500/30 text-yellow-200 border-yellow-400/30",
   ];
 
-  // Detect winning pattern if needed
   const winningPattern = showWinningPattern
     ? detectWinningPattern(grid, called)
     : new Set();
@@ -149,7 +146,6 @@ export default function CartellaCard({
     ? detectWinningPattern(grid, missedWinningCalledNumbers)
     : new Set();
 
-  // Mark a cell only if that cell's number was actually drawn (1–75). Free center (0) is never "drawn".
   const rawDrawn = Array.isArray(called) ? called : [];
   const drawnSet = new Set(
     rawDrawn
@@ -157,7 +153,6 @@ export default function CartellaCard({
       .filter((x) => Number.isInteger(x) && x >= 1 && x <= 75),
   );
 
-  // Handle cell click for manual marking
   const handleCellClick = (number) => {
     if (!isAutoMarkOn && onNumberToggle && number !== 0) {
       onNumberToggle(number);
@@ -166,82 +161,96 @@ export default function CartellaCard({
 
   return (
     <div
-      className={`cartela-card ${isPreview ? "cartela-preview" : "cartela-full"}`}
+      className={`${isPreview ? "max-w-[280px]" : "max-w-[320px]"} w-full mx-auto`}
     >
-      <div className="cartela-grid">
-        {/* BINGO Header (only when explicitly enabled, e.g. in GameLayout) */}
-        {showHeader && (
-          <div className="cartela-letters">
-            {letters.map((letter, index) => (
-              <div
-                key={letter}
-                className={`cartela-letter ${letterColors[index]}`}
-              >
-                {letter}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Numbers Grid */}
-        <div className="cartela-numbers">
-          {grid.map((row, rowIndex) => (
-            <div key={rowIndex} className="cartela-row">
-              {row.map((number, colIndex) => {
-                const n = Number(number);
-                const isFree = n === 0;
-                const isCalled = !isFree && drawnSet.has(n);
-                const isSelected = selectedNumber && number === selectedNumber;
-                const isWinningCell = winningPattern.has(
-                  `${rowIndex}-${colIndex}`,
-                );
-                const isMissedWinCell = missedWinPattern.has(
-                  `${rowIndex}-${colIndex}`,
-                );
-
-                // Priority: missed winning (red) > winning pattern > selected > called > normal
-                let cellClass = "cartela-normal";
-                if (isFree) {
-                  cellClass = "cartela-free";
-                  if (isMissedWinCell) {
-                    cellClass += " cartela-missed-winning";
-                  } else if (isWinningCell) {
-                    cellClass += " cartela-winning";
-                  }
-                } else if (isMissedWinCell) {
-                  cellClass = "cartela-missed-winning";
-                } else if (isWinningCell) {
-                  cellClass = "cartela-winning";
-                } else if (isSelected) {
-                  cellClass = "cartela-selected";
-                } else if (isCalled) {
-                  // Winner screen: drawn but not part of the winning line → yellow; in-game → green
-                  cellClass = showWinningPattern
-                    ? "cartela-called-secondary"
-                    : "cartela-called";
-                }
-
-                // Make cell clickable if auto-mark is OFF and it's not a free space
-                const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
-
-                return (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`cartela-cell ${cellClass} ${isClickable ? "cartela-clickable" : ""}`}
-                    onClick={() => handleCellClick(number)}
-                    style={isClickable ? { cursor: "pointer" } : {}}
-                    title={isClickable ? "Click to mark/unmark" : ""}
-                  >
-                    {isFree ? (
-                      <span className="cartela-star">FREE</span>
-                    ) : (
-                      <span className="cartela-number">{number}</span>
-                    )}
-                  </div>
-                );
-              })}
+      {/* BINGO Header */}
+      {showHeader && (
+        <div className="grid grid-cols-5 gap-1 mb-1.5">
+          {letters.map((letter, index) => (
+            <div
+              key={letter}
+              className={`text-center text-sm font-extrabold py-1.5 rounded-lg border ${letterColors[index]}`}
+            >
+              {letter}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Numbers Grid */}
+      <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden">
+        <div className="grid grid-cols-5">
+          {grid.map((row, rowIndex) =>
+            row.map((number, colIndex) => {
+              const n = Number(number);
+              const isFree = n === 0;
+              const isCalled = !isFree && drawnSet.has(n);
+              const isSelected = selectedNumber && number === selectedNumber;
+              const isWinningCell = winningPattern.has(
+                `${rowIndex}-${colIndex}`,
+              );
+              const isMissedWinCell = missedWinPattern.has(
+                `${rowIndex}-${colIndex}`,
+              );
+              const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
+
+              let cellStyle =
+                "bg-transparent text-white/40 border border-white/5";
+
+              if (isFree) {
+                if (isMissedWinCell) {
+                  cellStyle =
+                    "bg-red-500/40 text-red-200 border border-red-400/50 font-bold";
+                } else if (isWinningCell) {
+                  cellStyle =
+                    "bg-green-500/40 text-green-200 border border-green-400/50 font-bold";
+                } else {
+                  cellStyle =
+                    "bg-amber-500/20 text-amber-300 border border-amber-400/30 font-bold";
+                }
+              } else if (isMissedWinCell) {
+                cellStyle =
+                  "bg-red-500/40 text-red-200 border border-red-400/50 font-bold";
+              } else if (isWinningCell) {
+                cellStyle =
+                  "bg-green-500/40 text-green-200 border border-green-400/50 font-bold";
+              } else if (isSelected) {
+                cellStyle =
+                  "bg-blue-500/40 text-blue-200 border border-blue-400/50";
+              } else if (isCalled) {
+                if (showWinningPattern) {
+                  cellStyle =
+                    "bg-yellow-500/20 text-yellow-300/60 border border-yellow-400/20";
+                } else {
+                  cellStyle =
+                    "bg-emerald-500/30 text-emerald-200 border border-emerald-400/40";
+                }
+              }
+
+              return (
+                <div
+                  key={`${rowIndex}-${colIndex}`}
+                  onClick={() => handleCellClick(number)}
+                  className={`
+                    aspect-square flex items-center justify-center text-xs sm:text-sm font-medium
+                    transition-all duration-200 rounded-md m-0.5
+                    ${cellStyle}
+                    ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}
+                    ${isFree ? "text-[10px]" : ""}
+                  `}
+                  title={
+                    isClickable
+                      ? "Click to mark/unmark"
+                      : isFree
+                        ? "FREE"
+                        : `Number ${number}`
+                  }
+                >
+                  {isFree ? "★" : number}
+                </div>
+              );
+            }),
+          )}
         </div>
       </div>
     </div>
