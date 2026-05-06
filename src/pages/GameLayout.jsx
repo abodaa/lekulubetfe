@@ -327,6 +327,24 @@ export default function GameLayout({
     }
   }, [gameState.phase]);
 
+  // Auto-claim BINGO when winning pattern is detected in auto-mark mode
+  useEffect(() => {
+    if (gameState.phase !== "running") return;
+    if (!isAutoMarkOn) return;
+    if (yourCards.length !== 1) return;
+    if (claimedBingoRef.current) return;
+
+    const card = yourCards[0]?.card;
+    if (!card || calledNumbers.length === 0) return;
+
+    const hasWin = checkBingoPattern(card, calledNumbers);
+
+    if (hasWin) {
+      console.log("🎯 Auto-BINGO detected! Claiming...");
+      handleManualBingo();
+    }
+  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
+
   useEffect(() => {
     const handleBingoRejected = (event) => {
       claimedBingoRef.current = false;
