@@ -477,7 +477,7 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1.5">
-            <div className="bg-amber-500/15 rounded-lg p-1.5 text-center border border-amber-500/20">
+            <div className="bg-amber-500/15 rounded-lg p-1 text-center border border-amber-500/20">
               <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
                 Derash
               </div>
@@ -485,7 +485,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 {currentPrizePool || 0}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-1.5 text-center border border-white/10">
+            <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Players
               </div>
@@ -493,7 +493,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 {currentPlayersCount || 0}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-1.5 text-center border border-white/10">
+            <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Stake
               </div>
@@ -501,7 +501,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 {stake || 0}
               </div>
             </div>
-            <div className="bg-white/5 rounded-lg p-1.5 text-center border border-white/10">
+            <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Calls
               </div>
@@ -546,7 +546,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Previously Called Numbers with animation */}
         {calledNumbers.length > 0 && (
-          <div className="px-3 pb-1 flex-shrink-0">
+          <div className="px-3 pb-1 flex-shrink-0 my-1">
             <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
             </div>
@@ -603,7 +603,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         }}
                         whileHover={{ scale: 1.1 }}
                         className={`
-                  rounded-full px-2 py-2 flex items-center justify-center 
+                  rounded-full w-5 h-5 flex items-center justify-center 
                   text-[11px] font-extrabold font-mono border shadow-lg 
                   ${colors[letter]}
                   ${
