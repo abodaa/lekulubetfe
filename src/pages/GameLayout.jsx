@@ -544,46 +544,49 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
 
         {/* Previously Called Numbers with animation */}
-        {calledNumbers.length === 0 ? (
-          <div className=" text-white text-sm col-span-full text-center py-2">
-            No calls yet
-          </div>
-        ) : (
-          <div className="flex justify-center gap-1.5 flex-wrap">
-            {calledNumbers
-              .slice(-6)
-              .reverse()
-              .map((n, i) => {
-                const letter =
-                  n <= 15
-                    ? "B"
-                    : n <= 30
-                      ? "I"
-                      : n <= 45
-                        ? "N"
-                        : n <= 60
-                          ? "G"
-                          : "O";
-                // const colors = {
-                //   B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                //   I: "bg-green-500/30 text-green-200 border-green-400/40",
-                //   N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                //   G: "bg-red-500/30 text-red-200 border-red-400/40",
-                //   O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                // };
-                return (
-                  <div
-                    key={`${n}-${i}`}
-                    className={`rounded-lg px-2 py-1 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in text-white`}
-                    style={{ animationDelay: `${i * 0.08}s` }}
-                  >
-                    {letter}
-                    {n}
-                  </div>
-                );
-              })}
+        {calledNumbers.length > 1 && (
+          <div className="px-3 pb-1 flex-shrink-0">
+            <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+              Recently Called
+            </div>
+            <div className="flex justify-center gap-1.5 flex-wrap">
+              {calledNumbers
+                .slice(-6, -1)
+                .reverse()
+                .map((n, i) => {
+                  const letter =
+                    n <= 15
+                      ? "B"
+                      : n <= 30
+                        ? "I"
+                        : n <= 45
+                          ? "N"
+                          : n <= 60
+                            ? "G"
+                            : "O";
+                  const colors = {
+                    B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                    I: "bg-green-500/30 text-green-200 border-green-400/40",
+                    N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                    G: "bg-red-500/30 text-red-200 border-red-400/40",
+                    O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                  };
+                  return (
+                    <div
+                      key={`${n}-${i}`}
+                      //   className={`rounded-lg px-2 py-1 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in ${colors[letter]}`}
+                      //   style={{ animationDelay: `${i * 0.08}s` }}
+                      className="text-red-600"
+                    >
+                      {letter}
+                      {n}
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
+
         {/* Number Board - Vertical BINGO */}
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
