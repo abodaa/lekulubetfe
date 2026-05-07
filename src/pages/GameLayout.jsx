@@ -9,6 +9,8 @@ import {
 } from "../lib/audio/numberSounds";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
+import { motion, AnimatePresence } from "framer-motion";
+
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -550,38 +552,100 @@ export default function GameLayout({ stake, onNavigate }) {
               Recently Called
             </div>
             <div className="flex justify-center gap-1.5 flex-wrap">
-              {calledNumbers
-                .slice(-6, -1)
-                .reverse()
-                .map((n, i) => {
-                  const letter =
-                    n <= 15
-                      ? "B"
-                      : n <= 30
-                        ? "I"
-                        : n <= 45
-                          ? "N"
-                          : n <= 60
-                            ? "G"
-                            : "O";
-                  const colors = {
-                    B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                    I: "bg-green-500/30 text-green-200 border-green-400/40",
-                    N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                    G: "bg-red-500/30 text-red-200 border-red-400/40",
-                    O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                  };
-                  return (
-                    <div
-                      key={`${n}-${i}`}
-                      className={`rounded-full px-2 py-2 flex items-center justify-center text-[11px] font-extrabold font-mono border shadow-lg ${colors[letter]}`}
-                      //   style={{ animationDelay: `${i * 0.08}s` }}
-                    >
-                      {letter}
-                      {n}
-                    </div>
-                  );
-                })}
+              <AnimatePresence>
+                {calledNumbers
+                  .slice(-6)
+                  .reverse()
+                  .map((n, i) => {
+                    const letter =
+                      n <= 15
+                        ? "B"
+                        : n <= 30
+                          ? "I"
+                          : n <= 45
+                            ? "N"
+                            : n <= 60
+                              ? "G"
+                              : "O";
+
+                    const colors = {
+                      B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                      I: "bg-green-500/30 text-green-200 border-green-400/40",
+                      N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                      G: "bg-red-500/30 text-red-200 border-red-400/40",
+                      O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                    };
+
+                    const isMostRecent = i === 0;
+
+                    return (
+                      <motion.div
+                        key={n}
+                        initial={{ opacity: 0, x: -20, scale: 0.5 }}
+                        animate={{
+                          opacity: 1,
+                          x: 0,
+                          scale: 1,
+                          transition: {
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                            delay: i * 0.1,
+                          },
+                        }}
+                        exit={{ opacity: 0, x: 20, scale: 0.5 }}
+                        whileHover={{ scale: 1.15, y: -2 }}
+                        className={`
+              relative rounded-full px-3 py-2 flex items-center justify-center 
+              text-xs font-extrabold font-mono border shadow-lg
+              ${colors[letter]}
+              ${isMostRecent ? "bg-opacity-80 border-yellow-400/80" : ""}
+            `}
+                      >
+                        {/* Glow effect for most recent */}
+                        {isMostRecent && (
+                          <motion.div
+                            className="absolute inset-0 rounded-full bg-yellow-400/20 -z-10"
+                            initial={{ scale: 0.8, opacity: 0.5 }}
+                            animate={{
+                              scale: [1, 1.3, 1],
+                              opacity: [0.5, 0.2, 0.5],
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              repeatType: "reverse",
+                            }}
+                          />
+                        )}
+
+                        {/* Pulsing badge for newest */}
+                        {isMostRecent && (
+                          <motion.div
+                            className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"
+                            animate={{ scale: [1, 1.5, 1] }}
+                            transition={{ duration: 1, repeat: Infinity }}
+                          />
+                        )}
+
+                        <motion.span
+                          animate={
+                            isMostRecent
+                              ? {
+                                  scale: [1, 1.1, 1],
+                                  fontWeight: isMostRecent ? "bold" : "normal",
+                                }
+                              : {}
+                          }
+                          transition={{ duration: 0.5 }}
+                        >
+                          {letter}
+                          {n}
+                        </motion.span>
+                      </motion.div>
+                    );
+                  })}
+              </AnimatePresence>
             </div>
           </div>
         )}
