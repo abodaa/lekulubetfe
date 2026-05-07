@@ -195,7 +195,7 @@ export default function CartellaCard({
               const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
 
               let cellStyle =
-                "bg-transparent text-white/40 border border-white/5";
+                "bg-transparent text-white border border-white/5";
 
               if (isFree) {
                 if (isMissedWinCell) {
