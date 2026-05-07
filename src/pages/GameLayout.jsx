@@ -11,7 +11,6 @@ import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
 
-
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -554,7 +553,7 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex justify-center gap-1.5 flex-wrap">
               <AnimatePresence>
                 {calledNumbers
-                  .slice(-6)
+                  .slice(-6, -1)
                   .reverse()
                   .map((n, i) => {
                     const letter =
@@ -596,7 +595,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         exit={{ opacity: 0, x: 20, scale: 0.5 }}
                         whileHover={{ scale: 1.15, y: -2 }}
                         className={`
-              relative rounded-full px-3 py-2 flex items-center justify-center 
+              relative rounded-full px-2 py-2 flex items-center justify-center 
               text-xs font-extrabold font-mono border shadow-lg
               ${colors[letter]}
               ${isMostRecent ? "bg-opacity-80 border-yellow-400/80" : ""}
