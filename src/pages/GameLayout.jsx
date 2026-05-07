@@ -519,7 +519,7 @@ export default function GameLayout({ stake, onNavigate }) {
               <div className="text-white/90 text-[10px] uppercase tracking-widest text-center font-bold">
                 Current Call
               </div>
-              <div className="text-white font-black text-2xl text-center drop-shadow-lg">
+              <div className="text-white font-black text-base text-center drop-shadow-lg">
                 {currentNumber <= 15
                   ? "B"
                   : currentNumber <= 30
