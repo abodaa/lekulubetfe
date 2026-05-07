@@ -178,7 +178,7 @@ export default function CartellaCard({
       )}
 
       {/* Numbers Grid */}
-      <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden">
+      <div className="bg-white/5 backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden">
         <div className="grid grid-cols-5">
           {grid.map((row, rowIndex) =>
             row.map((number, colIndex) => {
