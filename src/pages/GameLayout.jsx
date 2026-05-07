@@ -577,8 +577,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       className={`rounded-lg px-2 py-1 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in ${colors[letter]}`}
                       style={{ animationDelay: `${i * 0.08}s` }}
                     >
-                      {letter}
-                      {n}
+                      1
                     </div>
                   );
                 })}
