@@ -689,7 +689,7 @@ export default function GameLayout({ stake, onNavigate }) {
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center overflow-y-auto">
             {hasSingleCartela ? (
-              <div className="w-full max-w-[230px] mx-auto">
+              <div className="w-full max-w-[300px] mx-auto">
                 {yourCards.map(({ cardNumber, card }) => {
                   const markedNumbers = isAutoMarkOn
                     ? calledNumbers
