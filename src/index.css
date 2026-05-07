@@ -81,6 +81,25 @@ body {
   animation: shrink linear forwards;
 }
 
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-pop-in {
+  animation: popIn 0.35s ease-out forwards;
+  opacity: 0;
+}
+
 .app-container {
   min-height: 100vh;
   padding-bottom: 6rem;
