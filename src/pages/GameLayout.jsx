@@ -513,13 +513,13 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
 
         {/* Current Call - Big */}
-        <div className="px-3 pb-1 flex-shrink-0 flex justify-center">
+        {/* <div className="px-3 pb-1 flex-shrink-0 flex justify-center">
           {currentNumber ? (
             <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-5 py-2 shadow-lg shadow-orange-500/40 animate-pulse">
               <div className="text-white/90 text-[10px] uppercase tracking-widest text-center font-bold">
                 Current Call
               </div>
-              <div className="text-white font-black text-base text-center drop-shadow-lg">
+              <div className="text-white font-black text-2xl text-center drop-shadow-lg">
                 {currentNumber <= 15
                   ? "B"
                   : currentNumber <= 30
@@ -542,83 +542,106 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Previously Called Numbers with animation */}
-        {calledNumbers.length > 1 && (
+        {calledNumbers.length > 0 && (
           <div className="px-3 pb-1 flex-shrink-0">
-            <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
-              Recently Called
-            </div>
-            <div className="flex justify-center gap-1.5 flex-wrap relative">
-              <AnimatePresence mode="popLayout">
-                {calledNumbers
-                  .slice(-6, -1)
-                  .reverse()
-                  .map((n, i) => {
-                    const letter =
-                      n <= 15
+            {/* Currently Called Indicator - Compact */}
+            {currentNumber && (
+              <div className="mb-2">
+                <div className="text-white/40 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+                  Currently Called
+                </div>
+                <motion.div
+                  key={currentNumber}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{
+                    type: "spring",
+                    damping: 12,
+                    stiffness: 300,
+                  }}
+                  className="flex justify-center"
+                >
+                  <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-4 py-2 shadow-lg shadow-orange-500/40">
+                    <div className="text-white font-black text-xl text-center drop-shadow-lg">
+                      {currentNumber <= 15
                         ? "B"
-                        : n <= 30
+                        : currentNumber <= 30
                           ? "I"
-                          : n <= 45
+                          : currentNumber <= 45
                             ? "N"
-                            : n <= 60
+                            : currentNumber <= 60
                               ? "G"
-                              : "O";
+                              : "O"}
+                      -{currentNumber}
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
 
-                    const colors = {
-                      B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                      I: "bg-green-500/30 text-green-200 border-green-400/40",
-                      N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                      G: "bg-red-500/30 text-red-200 border-red-400/40",
-                      O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                    };
+            {/* Recently Called Section */}
+            {calledNumbers.length > 1 && (
+              <>
+                <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+                  Recently Called
+                </div>
+                <div className="flex justify-center gap-1.5 flex-wrap relative">
+                  <AnimatePresence mode="popLayout">
+                    {calledNumbers
+                      .slice(-6, -1)
+                      .reverse()
+                      .map((n, i) => {
+                        const letter =
+                          n <= 15
+                            ? "B"
+                            : n <= 30
+                              ? "I"
+                              : n <= 45
+                                ? "N"
+                                : n <= 60
+                                  ? "G"
+                                  : "O";
 
-                    const isNewestShown = i === 0;
+                        const colors = {
+                          B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                          I: "bg-green-500/30 text-green-200 border-green-400/40",
+                          N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                          G: "bg-red-500/30 text-red-200 border-red-400/40",
+                          O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                        };
 
-                    return (
-                      <motion.div
-                        key={n} // Use the number itself as key, not index
-                        layout
-                        initial={{ opacity: 0, scale: 0.3, y: 20 }}
-                        animate={{
-                          opacity: 1,
-                          scale: isNewestShown ? [0.3, 1.1, 1] : 1,
-                          y: 0,
-                          transition: {
-                            type: "spring",
-                            damping: 12,
-                            stiffness: 200,
-                            delay: i * 0.08,
-                          },
-                        }}
-                        exit={{ opacity: 0, scale: 0.3, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                        whileHover={{
-                          scale: 1.1,
-                          transition: { duration: 0.2 },
-                        }}
-                        className={`
-              rounded-full px-2 py-2 flex items-center justify-center 
-              text-[11px] font-extrabold font-mono border shadow-lg 
-              ${colors[letter]}
-              ${isNewestShown ? "ring-1 ring-blue-400/50 ring-offset-1 ring-offset-[var(--cardbackground)]" : ""}
-            `}
-                      >
-                        <motion.span
-                          initial={isNewestShown ? { scale: 0 } : {}}
-                          animate={isNewestShown ? { scale: 1 } : {}}
-                          transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                          {letter}
-                          {n}
-                        </motion.span>
-                      </motion.div>
-                    );
-                  })}
-              </AnimatePresence>
-            </div>
+                        return (
+                          <motion.div
+                            key={`${n}-${calledNumbers.length - i}`}
+                            layout
+                            initial={{ opacity: 0, scale: 0.3 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.3 }}
+                            transition={{
+                              type: "spring",
+                              damping: 20,
+                              stiffness: 300,
+                              delay: i * 0.06,
+                            }}
+                            whileHover={{ scale: 1.1 }}
+                            className={`
+                      rounded-full px-2 py-2 flex items-center justify-center 
+                      text-[11px] font-extrabold font-mono border shadow-lg 
+                      ${colors[letter]}
+                    `}
+                          >
+                            {letter}
+                            {n}
+                          </motion.div>
+                        );
+                      })}
+                  </AnimatePresence>
+                </div>
+              </>
+            )}
           </div>
         )}
 
