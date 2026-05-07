@@ -547,7 +547,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Previously Called Numbers with animation */}
         {calledNumbers.length > 0 ? (
-          <div className="px-3 pb-1 flex-shrink-0 my-1">
+          <div className="px-3 pb-1 flex-shrink-0 my-2">
             {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
             </div> */}
@@ -628,7 +628,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2, type: "spring" }}
                           >
-                            <div className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                            <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
                               <CgLivePhoto className="inline-block w-3 h-3" />
                             </div>
                           </motion.div>
