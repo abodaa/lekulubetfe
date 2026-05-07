@@ -478,35 +478,35 @@ export default function GameLayout({ stake, onNavigate }) {
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1.5">
             <div className="bg-amber-500/15 rounded-lg p-1 text-center border border-amber-500/20">
-              <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
+              {/* <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
                 Derash
-              </div>
+              </div> */}
               <div className="text-amber-200 font-black text-sm">
-                {currentPrizePool || 0}
+                Derash: {currentPrizePool || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
+              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Players
-              </div>
+              </div> */}
               <div className="text-blue-300 font-extrabold text-sm">
-                {currentPlayersCount || 0}
+                Players: {currentPlayersCount || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
+              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Stake
-              </div>
+              </div> */}
               <div className="text-green-300 font-extrabold text-sm">
-                {stake || 0}
+                Stake: {stake || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
+              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Calls
-              </div>
+              </div> */}
               <div className="text-pink-300 font-extrabold text-sm">
-                {calledNumbers.length}/75
+                Calls: {calledNumbers.length}/75
               </div>
             </div>
           </div>
@@ -604,7 +604,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         whileHover={{ scale: 1.1 }}
                         className={`
                   rounded-full w-8 h-8 flex items-center justify-center 
-                  text-[11px] font-extrabold font-mono border shadow-lg 
+                  text-[11px] font-extrabold font-mono border
                   ${colors[letter]}
                   ${
                     isCurrent
@@ -651,7 +651,9 @@ export default function GameLayout({ stake, onNavigate }) {
             </div>
           </div>
         ) : (
-          <p className="text-white text-sm">Starting ...</p>
+          <p className="text-white/20 text-[10px] uppercase tracking-widest font-bold mb-1 text-center">
+            {startCountdown > 0 ? startCountdown : "..."}
+          </p>
         )}
 
         {/* Number Board - Vertical BINGO */}
