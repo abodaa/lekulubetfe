@@ -652,8 +652,8 @@ export default function GameLayout({ stake, onNavigate }) {
             </div>
           </div>
         ) : (
-          <p className="text-white/20 text-[10px] uppercase tracking-widest font-bold mb-1 text-center">
-            {startCountdown > 0 ? startCountdown : "..."}
+          <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
+            Starts in {startCountdown > 0 ? startCountdown : "..."} secs
           </p>
         )}
 
