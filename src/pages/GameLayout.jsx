@@ -574,9 +574,8 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <div
                       key={`${n}-${i}`}
-                      //   className={`rounded-lg px-2 py-1 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in ${colors[letter]}`}
-                      //   style={{ animationDelay: `${i * 0.08}s` }}
-                      className="text-green-600/25 bg-green-900 rounded-full px-2 py-2 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in"
+                      className={`rounded-full px-2 py-2 flex items-center justify-center text-[11px] font-extrabold font-mono border shadow-lg ${colors[letter]}`}
+                      style={{ animationDelay: `${i * 0.08}s` }}
                     >
                       {letter}
                       {n}
