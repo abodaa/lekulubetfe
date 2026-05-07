@@ -243,14 +243,6 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
-      const winners = gameState.winners || [];
-      if (winners.length > 0) {
-        showSuccess(
-          winners.some((w) => w.userId === sessionId)
-            ? "🎉 You won!"
-            : "🏆 Game Over!",
-        );
-      }
       onNavigate?.("winner");
     }
   }, [
@@ -412,7 +404,7 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-        {/* Top Bar */}
+        {/* Top Bar - Compact inline stats */}
         <div className="px-2 pt-1.5 pb-0.5 flex-shrink-0">
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1">
@@ -440,28 +432,27 @@ export default function GameLayout({ stake, onNavigate }) {
                 {isAutoMarkOn ? "🟢" : "✋"}
               </button>
             </div>
-            <div className="flex items-center gap-1 text-[9px]">
-              <span className="text-white/40 font-bold">Game</span>
-              <span className="text-white/70 font-bold">
-                {currentGameId ? currentGameId.replace("LB", "#") : "---"}
+            <div className="flex items-center gap-1 text-[10px]">
+              <span className="text-white/40 font-bold">
+                Game {currentGameId ? currentGameId.replace("LB", "#") : "---"}
               </span>
               <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">Derash</span>
+              <span className="text-white/40 font-bold">Derash</span>{" "}
               <span className="text-amber-300 font-extrabold">
                 {currentPrizePool || 0}
               </span>
               <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">Call</span>
+              <span className="text-white/40 font-bold">Call</span>{" "}
               <span className="text-pink-300 font-extrabold">
                 {calledNumbers.length}
               </span>
               <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">P</span>
+              <span className="text-white/40 font-bold">P</span>{" "}
               <span className="text-blue-300 font-extrabold">
                 {currentPlayersCount || 0}
               </span>
               <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">S</span>
+              <span className="text-white/40 font-bold">S</span>{" "}
               <span className="text-green-300 font-extrabold">
                 {stake || 0}
               </span>
@@ -470,10 +461,13 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
 
         {/* Current Call */}
-        <div className="px-2 pb-0.5 flex-shrink-0 flex justify-center">
+        <div className="px-2 pb-1 flex-shrink-0 flex justify-center">
           {currentNumber ? (
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg px-4 py-1.5 shadow-lg shadow-orange-500/40">
-              <div className="text-white font-black text-xl text-center drop-shadow-lg">
+            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-5 py-2 shadow-lg shadow-orange-500/40">
+              <div className="text-white/90 text-[10px] uppercase tracking-widest text-center font-bold">
+                Current Call
+              </div>
+              <div className="text-white font-black text-2xl text-center drop-shadow-lg">
                 {currentNumber <= 15
                   ? "B"
                   : currentNumber <= 30
@@ -487,62 +481,68 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
             </div>
           ) : (
-            <div className="bg-white/5 rounded-lg px-4 py-1.5 border border-white/10">
-              <div className="text-white/30 text-[10px] font-bold">
-                Starting in {startCountdown > 0 ? startCountdown : "..."}
+            <div className="bg-white/5 rounded-xl px-5 py-2 border border-white/10">
+              <div className="text-white/30 text-[10px] uppercase tracking-widest text-center font-bold">
+                Starting in
+              </div>
+              <div className="text-white/40 font-black text-2xl text-center">
+                {startCountdown > 0 ? startCountdown : "..."}
               </div>
             </div>
           )}
         </div>
 
-        {/* Number Board - Vertical BINGO with rows of 15 */}
-        <div className="px-2 pb-0.5 flex-shrink-0">
+        {/* Number Board - 5 rows: B (1-15), I (16-30), N (31-45), G (46-60), O (61-75) */}
+        <div className="px-2 pb-1 flex-shrink-0">
           <div className="bg-white/5 backdrop-blur rounded-lg border border-white/10 overflow-hidden">
             <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="text-center text-[10px] font-black py-0.5 bg-blue-600/60 text-blue-100 w-[8%]">
-                    B
-                  </th>
-                  {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => {
-                    const isCalled = calledNumbers.includes(n);
-                    const isCurrent = currentNumber === n;
-                    return (
-                      <th
-                        key={n}
-                        className={`text-center text-[9px] py-0.5 font-bold ${isCurrent ? "bg-orange-500 text-white font-extrabold rounded" : isCalled ? "bg-white/20 text-white font-extrabold" : "text-white/20"}`}
-                      >
-                        {n}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
               <tbody>
-                {[1, 2, 3, 4].map((rowIdx) => (
-                  <tr key={rowIdx}>
+                {[
+                  {
+                    letter: "B",
+                    color: "bg-blue-600/70 text-blue-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 1),
+                  },
+                  {
+                    letter: "I",
+                    color: "bg-green-600/70 text-green-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 16),
+                  },
+                  {
+                    letter: "N",
+                    color: "bg-purple-600/70 text-purple-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 31),
+                  },
+                  {
+                    letter: "G",
+                    color: "bg-red-600/70 text-red-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 46),
+                  },
+                  {
+                    letter: "O",
+                    color: "bg-yellow-600/70 text-yellow-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 61),
+                  },
+                ].map(({ letter, color, nums }) => (
+                  <tr key={letter}>
                     <td
-                      className={`text-center text-[10px] font-black py-0.5 ${
-                        [
-                          "bg-green-600/60 text-green-100",
-                          "bg-purple-600/60 text-purple-100",
-                          "bg-red-600/60 text-red-100",
-                          "bg-yellow-600/60 text-yellow-100",
-                        ][rowIdx]
-                      }`}
+                      className={`text-center text-xs font-black py-1 w-[10%] ${color}`}
                     >
-                      {["I", "N", "G", "O"][rowIdx]}
+                      {letter}
                     </td>
-                    {Array.from(
-                      { length: 15 },
-                      (_, i) => (rowIdx + 1) * 15 + i + 1,
-                    ).map((n) => {
+                    {nums.map((n) => {
                       const isCalled = calledNumbers.includes(n);
                       const isCurrent = currentNumber === n;
                       return (
                         <td
                           key={n}
-                          className={`text-center text-[9px] py-0.5 font-bold ${isCurrent ? "bg-orange-500 text-white font-extrabold rounded shadow-lg shadow-orange-500/50" : isCalled ? "bg-white/20 text-white font-extrabold" : "text-white/15"}`}
+                          className={`text-center text-[11px] py-0.5 font-bold ${
+                            isCurrent
+                              ? "bg-orange-500 text-white font-extrabold rounded shadow-lg shadow-orange-500/50"
+                              : isCalled
+                                ? "bg-white/20 text-white font-extrabold"
+                                : "text-white/20"
+                          }`}
                         >
                           {n}
                         </td>
@@ -555,11 +555,11 @@ export default function GameLayout({ stake, onNavigate }) {
           </div>
         </div>
 
-        {/* Cartella + BINGO */}
+        {/* Cartella + BINGO Button */}
         <main className="flex-1 px-2 pb-1.5 overflow-y-auto flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center">
             {hasSingleCartela ? (
-              <div className="w-full max-w-[200px] mx-auto">
+              <div className="w-full max-w-[210px] mx-auto">
                 {yourCards.map(({ cardNumber, card }) => {
                   const markedNumbers = isAutoMarkOn
                     ? calledNumbers
@@ -615,7 +615,7 @@ export default function GameLayout({ stake, onNavigate }) {
               <button
                 onClick={handleManualBingo}
                 disabled={isManualClaiming || !connected}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-base uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-base uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isManualClaiming ? "⏳" : "BINGO!"}
               </button>
