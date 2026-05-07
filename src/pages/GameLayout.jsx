@@ -7,10 +7,18 @@ import {
   playNumberSound,
   preloadNumberSounds,
 } from "../lib/audio/numberSounds";
+// import BottomNav from "../components/BottomNav";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 
-export default function GameLayout({ stake, onNavigate }) {
+// const MISSED_BINGO_MSG = "ይቅርታ የማሸነፍ እድልዎ አልፏል";
+
+export default function GameLayout({
+  stake,
+  //   selectedCartelas,
+  onNavigate,
+  //   onResetToGame,
+}) {
   const { sessionId } = useAuth();
   const { showSuccess, showError } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
@@ -19,43 +27,56 @@ export default function GameLayout({ stake, onNavigate }) {
   const alertTimersRef = useRef(new Map());
 
   const checkBingoPattern = (cartella, calledNumbers) => {
-    if (!cartella || !Array.isArray(cartella) || !Array.isArray(calledNumbers))
+    if (
+      !cartella ||
+      !Array.isArray(cartella) ||
+      !Array.isArray(calledNumbers)
+    ) {
       return false;
+    }
     for (let i = 0; i < 5; i++) {
-      if (cartella[i].every((num) => num === 0 || calledNumbers.includes(num)))
+      if (
+        cartella[i].every((num) => num === 0 || calledNumbers.includes(num))
+      ) {
         return true;
+      }
     }
     for (let j = 0; j < 5; j++) {
       if (
         cartella.every((row) => row[j] === 0 || calledNumbers.includes(row[j]))
-      )
+      ) {
         return true;
+      }
     }
     if (
       cartella.every((row, i) => row[i] === 0 || calledNumbers.includes(row[i]))
-    )
+    ) {
       return true;
+    }
     if (
       cartella.every(
         (row, i) => row[4 - i] === 0 || calledNumbers.includes(row[4 - i]),
       )
-    )
+    ) {
       return true;
-    const tl = cartella[0][0],
-      tr = cartella[0][4],
-      bl = cartella[4][0],
-      br = cartella[4][4];
+    }
+    const topLeft = cartella[0][0];
+    const topRight = cartella[0][4];
+    const bottomLeft = cartella[4][0];
+    const bottomRight = cartella[4][4];
     if (
-      (tl === 0 || calledNumbers.includes(tl)) &&
-      (tr === 0 || calledNumbers.includes(tr)) &&
-      (bl === 0 || calledNumbers.includes(bl)) &&
-      (br === 0 || calledNumbers.includes(br))
-    )
+      (topLeft === 0 || calledNumbers.includes(topLeft)) &&
+      (topRight === 0 || calledNumbers.includes(topRight)) &&
+      (bottomLeft === 0 || calledNumbers.includes(bottomLeft)) &&
+      (bottomRight === 0 || calledNumbers.includes(bottomRight))
+    ) {
       return true;
+    }
     return false;
   };
 
   const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
+
   const currentPlayersCount = gameState.playersCount || 0;
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
@@ -65,50 +86,63 @@ export default function GameLayout({ stake, onNavigate }) {
     ? gameState.yourCards
     : [];
 
-  const [isSoundOn, setIsSoundOn] = useState(true);
+  const [isSoundOn, setIsSoundOn] = useState(false);
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
+  //   const userManuallyDisabledRef = useRef(false);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [isManualClaiming, setIsManualClaiming] = useState(false);
   const [startCountdown, setStartCountdown] = useState(0);
 
   useEffect(() => {
-    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
+    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0) {
       setManuallyMarkedNumbers({});
+    }
   }, [isAutoMarkOn]);
+
   const claimedBingoRef = useRef(false);
   const lastGameIdRef = useRef(null);
+
   const [missedClaimWindow, setMissedClaimWindow] = useState(false);
   const [missedPatternCalledSnapshot, setMissedPatternCalledSnapshot] =
     useState(null);
   const calledLenEvalRef = useRef(-1);
 
   useEffect(() => {
-    if (stake && sessionId) connectToStake(stake);
+    if (stake && sessionId) {
+      connectToStake(stake);
+    }
   }, [stake, sessionId, connectToStake]);
 
   useEffect(() => {
-    const h = () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && stake && sessionId) {
         setTimeout(() => {
-          if (!connected) connectToStake(stake);
+          if (!connected) {
+            connectToStake(stake);
+          }
         }, 100);
       }
     };
-    document.addEventListener("visibilitychange", h);
-    return () => document.removeEventListener("visibilitychange", h);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [stake, sessionId, connected, connectToStake]);
 
   useEffect(() => {
     const id = setTimeout(() => {
       try {
         preloadNumberSounds();
-      } catch {}
+      } catch {
+        console.warn("Failed to preload number sounds");
+      }
     }, 1000);
     return () => clearTimeout(id);
   }, []);
+
   useEffect(() => {
-    if (isSoundOn && typeof currentNumber === "number")
+    if (isSoundOn && typeof currentNumber === "number") {
       playNumberSound(currentNumber).catch(() => {});
+    }
   }, [currentNumber, isSoundOn]);
 
   useEffect(() => {
@@ -136,12 +170,10 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (len > calledLenEvalRef.current) {
       for (let i = calledLenEvalRef.current + 1; i <= len; i++) {
-        if (
-          checkBingoPattern(card, calledNumbers.slice(0, i - 1)) &&
-          !claimedBingoRef.current
-        ) {
+        const prevCalled = calledNumbers.slice(0, i - 1);
+        if (checkBingoPattern(card, prevCalled) && !claimedBingoRef.current) {
           setMissedClaimWindow(true);
-          setMissedPatternCalledSnapshot([...calledNumbers.slice(0, i - 1)]);
+          setMissedPatternCalledSnapshot([...prevCalled]);
           break;
         }
       }
@@ -155,9 +187,11 @@ export default function GameLayout({ stake, onNavigate }) {
       setManuallyMarkedNumbers((prev) => {
         const cardMarks = prev[cardNumber] || new Set();
         const newCardMarks = new Set(cardMarks);
-        newCardMarks.has(number)
-          ? newCardMarks.delete(number)
-          : newCardMarks.add(number);
+        if (newCardMarks.has(number)) {
+          newCardMarks.delete(number);
+        } else {
+          newCardMarks.add(number);
+        }
         return { ...prev, [cardNumber]: newCardMarks };
       });
     },
@@ -165,8 +199,12 @@ export default function GameLayout({ stake, onNavigate }) {
   );
 
   const handleManualBingo = useCallback(() => {
-    if (!connected || gameState.phase !== "running" || !currentGameId) return;
-    if (claimedBingoRef.current || isManualClaiming) return;
+    if (!connected || gameState.phase !== "running" || !currentGameId) {
+      return;
+    }
+    if (claimedBingoRef.current || isManualClaiming) {
+      return;
+    }
     try {
       setIsManualClaiming(true);
       claimedBingoRef.current = true;
@@ -177,12 +215,16 @@ export default function GameLayout({ stake, onNavigate }) {
       }
       const result = claimBingo(payload);
       if (!result) {
+        console.warn("Manual BINGO claim send failed");
         claimedBingoRef.current = false;
-        showError("Failed to send BINGO claim.");
-      } else showSuccess("BINGO claim sent!");
-    } catch {
+        showError("Failed to send BINGO claim. Please try again.");
+      } else {
+        showSuccess("BINGO claim sent! Waiting for confirmation...");
+      }
+    } catch (error) {
+      console.error("Error sending manual BINGO claim:", error);
       claimedBingoRef.current = false;
-      showError("Failed to send BINGO claim.");
+      showError("Failed to send BINGO claim. Please try again.");
     } finally {
       setIsManualClaiming(false);
     }
@@ -198,47 +240,38 @@ export default function GameLayout({ stake, onNavigate }) {
   ]);
 
   useEffect(() => {
-    if (
-      gameState.phase !== "running" ||
-      !isAutoMarkOn ||
-      yourCards.length !== 1 ||
-      claimedBingoRef.current
-    )
-      return;
-    const card = yourCards[0]?.card;
-    if (!card || calledNumbers.length === 0) return;
-    if (checkBingoPattern(card, calledNumbers)) handleManualBingo();
-  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
-
-  useEffect(() => {
     if (gameState.phase !== "running") {
       setStartCountdown(0);
       return;
     }
-    if (gameState.phase === "running" && calledNumbers.length === 0)
+    if (gameState.phase === "running" && calledNumbers.length === 0) {
       setStartCountdown(3);
+    }
   }, [gameState.phase, calledNumbers.length, currentGameId]);
+
   useEffect(() => {
     if (startCountdown <= 0) return;
-    const t = setTimeout(
-      () => setStartCountdown((prev) => (prev > 0 ? prev - 1 : 0)),
-      1000,
-    );
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => {
+      setStartCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [startCountdown]);
 
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      showSuccess("🔄 Refreshing...");
-      await new Promise((r) => setTimeout(r, 100));
+      showSuccess("🔄 Refreshing game data...");
+      await new Promise((resolve) => setTimeout(resolve, 100));
       if (stake && sessionId) {
         connectToStake(stake);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
-      showSuccess("✅ Refreshed!");
-    } catch {
-      showError("❌ Refresh failed.");
+      showSuccess("✅ Game data refreshed successfully!");
+    } catch (error) {
+      console.log(error);
+      showError(
+        "❌ Failed to refresh game data. Please check your connection.",
+      );
     } finally {
       setIsRefreshing(false);
     }
@@ -248,12 +281,18 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase === "announce" && !isRefreshing) {
       const winners = gameState.winners || [];
       if (winners.length > 0) {
-        const names = winners.map((w) => w.name || "Player").join(", ");
-        showSuccess(
-          winners.some((w) => w.userId === sessionId)
-            ? "🎉 You won!"
-            : `🏆 Winner: ${names}`,
-        );
+        const winnerNames = winners.map((w) => w.name || "Player").join(", ");
+        if (winners.some((w) => w.userId === sessionId)) {
+          showSuccess(
+            `🎉 Congratulations! You won! ${winners.length > 1 ? `(Shared with ${winners.length - 1} other${winners.length > 2 ? "s" : ""})` : ""}`,
+          );
+        } else {
+          showSuccess(
+            `🏆 Game Over! Winner${winners.length > 1 ? "s" : ""}: ${winnerNames}`,
+          );
+        }
+      } else {
+        showSuccess("🏆 Game Over!");
       }
       onNavigate?.("winner");
     }
@@ -268,10 +307,15 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (!currentGameId) {
-      const t = setTimeout(() => setShowTimeout(true), 5000);
-      return () => clearTimeout(t);
-    } else setShowTimeout(false);
+      const timeout = setTimeout(() => {
+        setShowTimeout(true);
+      }, 5000);
+      return () => clearTimeout(timeout);
+    } else {
+      setShowTimeout(false);
+    }
   }, [currentGameId]);
+
   useEffect(() => {
     if (gameState.phase === "registration") {
       setShowTimeout(false);
@@ -283,45 +327,68 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [gameState.phase]);
 
+  // Auto-claim BINGO when winning pattern is detected in auto-mark mode
   useEffect(() => {
-    const h = (event) => {
+    if (gameState.phase !== "running") return;
+    if (!isAutoMarkOn) return;
+    if (yourCards.length !== 1) return;
+    if (claimedBingoRef.current) return;
+
+    const card = yourCards[0]?.card;
+    if (!card || calledNumbers.length === 0) return;
+
+    const hasWin = checkBingoPattern(card, calledNumbers);
+
+    if (hasWin) {
+      console.log("🎯 Auto-BINGO detected! Claiming...");
+      handleManualBingo();
+    }
+  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
+
+  useEffect(() => {
+    const handleBingoRejected = (event) => {
       claimedBingoRef.current = false;
       const reason = event?.detail?.reason || "invalid_claim";
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
-        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
+        setAlertBanners((prev) => [
+          ...prev,
+          "Invalid BINGO! Marks cleared. Try again.",
+        ]);
       } else if (reason === "stale_claim") {
         setAlertBanners((prev) => [
           ...prev,
-          "Pattern passed. Wait for next call.",
+          "Pattern already passed. Wait for next call.",
         ]);
       }
     };
-    window.addEventListener("bingoRejected", h);
-    return () => window.removeEventListener("bingoRejected", h);
+    window.addEventListener("bingoRejected", handleBingoRejected);
+    return () =>
+      window.removeEventListener("bingoRejected", handleBingoRejected);
   }, []);
 
   useEffect(() => {
-    const current = new Set(alertBanners);
+    const currentMessages = new Set(alertBanners);
     alertTimersRef.current.forEach((timer, msg) => {
-      if (!current.has(msg)) {
+      if (!currentMessages.has(msg)) {
         clearTimeout(timer);
         alertTimersRef.current.delete(msg);
       }
     });
-    alertBanners.forEach((msg) => {
-      if (!alertTimersRef.current.has(msg)) {
-        const t = setTimeout(() => {
-          setAlertBanners((prev) => prev.filter((m) => m !== msg));
-          alertTimersRef.current.delete(msg);
+    alertBanners.forEach((alertMsg) => {
+      if (!alertTimersRef.current.has(alertMsg)) {
+        const timer = setTimeout(() => {
+          setAlertBanners((prev) => prev.filter((msg) => msg !== alertMsg));
+          alertTimersRef.current.delete(alertMsg);
         }, 3000);
-        alertTimersRef.current.set(msg, t);
+        alertTimersRef.current.set(alertMsg, timer);
       }
     });
   }, [alertBanners]);
+
   useEffect(() => {
     return () => {
-      alertTimersRef.current.forEach((t) => clearTimeout(t));
+      alertTimersRef.current.forEach((timer) => clearTimeout(timer));
       alertTimersRef.current.clear();
     };
   }, []);
@@ -331,25 +398,28 @@ export default function GameLayout({ stake, onNavigate }) {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
-          <p className="text-white/80 text-lg font-bold">Refreshing...</p>
+          <p className="text-white/80 text-lg">Refreshing...</p>
         </div>
       </div>
     );
   }
+
   if (!currentGameId && !connected && !isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
-          <div className="text-white text-lg font-bold mb-2">Connecting...</div>
+          <div className="text-white text-lg mb-2">Connecting to game...</div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
           {showTimeout && (
-            <button
-              onClick={() => onNavigate?.("cartela-selection")}
-              className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold"
-            >
-              Back
-            </button>
+            <div className="mt-4">
+              <button
+                onClick={() => onNavigate?.("cartela-selection")}
+                className="px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold"
+              >
+                Back to Cartella Selection
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -367,13 +437,14 @@ export default function GameLayout({ stake, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+      {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
-          {alertBanners.map((msg, i) => (
+          {alertBanners.map((alertMsg, index) => (
             <div
-              key={i}
+              key={index}
               className="alert-banner-appeal animate-slide-in"
-              style={{ animationDelay: `${i * 0.1}s` }}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="alert-icon-wrapper">
                 <svg
@@ -388,10 +459,10 @@ export default function GameLayout({ stake, onNavigate }) {
                   />
                 </svg>
               </div>
-              <div className="alert-message-text">{msg}</div>
+              <div className="alert-message-text">{alertMsg}</div>
               <button
                 onClick={() =>
-                  setAlertBanners((prev) => prev.filter((_, j) => j !== i))
+                  setAlertBanners((prev) => prev.filter((_, i) => i !== index))
                 }
                 className="alert-dismiss-btn"
                 aria-label="Dismiss"
@@ -415,86 +486,111 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
       )}
 
-      <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-        {/* Top Bar: Status + Stats in one row */}
-        <div className="px-3 pt-2 pb-1 flex-shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            {/* Left: Status Badge + Controls */}
-            <div className="flex items-center gap-1.5">
+      <div className="max-w-md mx-auto w-full flex flex-col flex-1">
+        {/* Header */}
+        <header className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <div
-                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                   gameState.phase === "running"
-                    ? "bg-green-500/30 text-green-200 border-green-400/40"
+                    ? "bg-green-500/20 text-green-300 border border-green-500/30"
                     : gameState.phase === "registration"
-                      ? "bg-yellow-500/30 text-yellow-200 border-yellow-400/40"
-                      : "bg-gray-500/30 text-gray-200 border-gray-400/40"
+                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+                      : "bg-gray-500/20 text-gray-300 border border-gray-500/30"
                 }`}
               >
                 {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
               </div>
               <button
                 onClick={() => setIsSoundOn(!isSoundOn)}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${isSoundOn ? "bg-white/20 text-white" : "bg-white/5 text-white/30"}`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${isSoundOn ? "bg-white/10 text-white" : "bg-white/5 text-white/40"}`}
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
               <button
-                onClick={() => setIsAutoMarkOn(!isAutoMarkOn)}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${isAutoMarkOn ? "bg-green-500/30 text-green-200" : "bg-white/5 text-white/30"}`}
+                onClick={() => {
+                  if (isAutoMarkOn) {
+                    const autoMarks = {};
+                    yourCards.forEach(({ cardNumber, card }) => {
+                      const marks = new Set();
+                      calledNumbers.forEach((num) => {
+                        card.forEach((row) => {
+                          if (row.includes(num)) marks.add(num);
+                        });
+                      });
+                      if (marks.size > 0) autoMarks[cardNumber] = marks;
+                    });
+                    setManuallyMarkedNumbers(autoMarks);
+                  }
+                  setIsAutoMarkOn(!isAutoMarkOn);
+                }}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all ${isAutoMarkOn ? "bg-green-500/20 text-green-300" : "bg-white/5 text-white/40"}`}
               >
                 {isAutoMarkOn ? "🟢" : "✋"}
               </button>
+              <button
+                onClick={handleRefresh}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm bg-white/5 text-white/60 hover:bg-white/10 transition-all"
+              >
+                🔄
+              </button>
             </div>
-            {/* Right: Stats inline */}
-            <div className="flex items-center gap-1.5 text-[10px]">
-              <div className="text-right">
-                <span className="text-white/40 font-bold">Game</span>{" "}
-                <span className="text-white/70 font-bold">
-                  {currentGameId ? currentGameId.replace("LB", "#") : "---"}
-                </span>
+            <div className="text-right">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Game
               </div>
-              <span className="text-white/20">|</span>
-              <div>
-                <span className="text-white/40 font-bold">Call</span>{" "}
-                <span className="text-pink-300 font-extrabold">
-                  {calledNumbers.length}/75
-                </span>
-              </div>
-              <span className="text-white/20">|</span>
-              <div>
-                <span className="text-white/40 font-bold">Players</span>{" "}
-                <span className="text-blue-300 font-extrabold">
-                  {currentPlayersCount || 0}
-                </span>
-              </div>
-              <span className="text-white/20">|</span>
-              <div>
-                <span className="text-white/40 font-bold">Stake</span>{" "}
-                <span className="text-green-300 font-extrabold">
-                  {stake || 0}
-                </span>
+              <div className="text-white/80 text-xs font-mono">
+                {currentGameId ? currentGameId.replace("LB", "#") : "---"}
               </div>
             </div>
           </div>
-          {/* Derash (Prize Pool) centered */}
-          <div className="text-center mt-1">
-            <span className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
-              Derash
-            </span>{" "}
-            <span className="text-amber-300 font-extrabold text-lg">
-              {currentPrizePool || 0}
-            </span>
+        </header>
+
+        {/* Stats Bar */}
+        <div className="px-4 pb-2">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-white/5 rounded-xl p-2 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Prize
+              </div>
+              <div className="text-white font-bold text-sm">
+                {currentPrizePool || 0}
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Players
+              </div>
+              <div className="text-white font-bold text-sm">
+                {currentPlayersCount || 0}
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Stake
+              </div>
+              <div className="text-white font-bold text-sm">{stake || 0}</div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-2 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Calls
+              </div>
+              <div className="text-white font-bold text-sm">
+                {calledNumbers.length}/75
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Current Call - Big centered number */}
-        <div className="px-3 pb-1 flex-shrink-0 flex justify-center">
-          {currentNumber ? (
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-6 py-2.5 shadow-lg shadow-orange-500/40">
-              <div className="text-white/90 text-[9px] uppercase tracking-widest text-center font-bold">
+        {/* Current Call */}
+        {currentNumber && (
+          <div className="px-4 pb-2 flex justify-center">
+            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl px-6 py-3 shadow-lg shadow-orange-500/20 animate-pulse">
+              <div className="text-white/80 text-[10px] uppercase tracking-wider text-center">
                 Current Call
               </div>
-              <div className="text-white font-black text-2xl text-center drop-shadow-lg">
+              <div className="text-white font-extrabold text-2xl text-center">
                 {currentNumber <= 15
                   ? "B"
                   : currentNumber <= 30
@@ -507,76 +603,45 @@ export default function GameLayout({ stake, onNavigate }) {
                 -{currentNumber}
               </div>
             </div>
-          ) : (
-            <div className="bg-white/5 rounded-xl px-6 py-2.5 border border-white/10">
-              <div className="text-white/30 text-[9px] uppercase tracking-widest text-center font-bold">
-                Starting on
-              </div>
-              <div className="text-white/40 font-black text-2xl text-center">
-                {startCountdown > 0 ? startCountdown : "..."}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Number Board - Full table with rows/cols like the image */}
-        <div className="px-3 pb-1 flex-shrink-0">
-          <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {["B", "I", "N", "G", "O"].map((letter, i) => (
-                    <th
-                      key={letter}
-                      className={`text-center text-[11px] font-black py-1.5 ${
-                        [
-                          "text-blue-300 bg-blue-600/40",
-                          "text-green-300 bg-green-600/40",
-                          "text-purple-300 bg-purple-600/40",
-                          "text-red-300 bg-red-600/40",
-                          "text-yellow-300 bg-yellow-600/40",
-                        ][i]
-                      }`}
-                    >
-                      {letter}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: 15 }, (_, rowIdx) => (
-                  <tr key={rowIdx}>
-                    {[0, 1, 2, 3, 4].map((colIdx) => {
-                      const n = colIdx * 15 + rowIdx + 1;
-                      const isCalled = calledNumbers.includes(n);
-                      const isCurrent = currentNumber === n;
-                      return (
-                        <td
-                          key={n}
-                          className={`text-center text-[10px] py-0.5 font-bold border-b border-white/5 ${
-                            isCurrent
-                              ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50"
-                              : isCalled
-                                ? "bg-white/20 text-white font-extrabold"
-                                : "text-white/20"
-                          }`}
-                        >
-                          {n}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        </div>
+        )}
 
-        {/* Cartella + BINGO Button */}
-        <main className="flex-1 px-3 pb-3 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 flex items-center justify-center">
-            {hasSingleCartela ? (
-              <div className="bg-white/5 backdrop-blur rounded-2xl p-3 border border-white/10 w-full max-w-[240px] mx-auto">
+        {/* Previous Calls */}
+        {calledNumbers.length > 1 && (
+          <div className="px-4 pb-2 flex justify-center gap-1.5 flex-wrap">
+            {calledNumbers
+              .slice(-5, -1)
+              .reverse()
+              .map((n, i) => {
+                const letter =
+                  n <= 15
+                    ? "B"
+                    : n <= 30
+                      ? "I"
+                      : n <= 45
+                        ? "N"
+                        : n <= 60
+                          ? "G"
+                          : "O";
+                return (
+                  <div
+                    key={i}
+                    className="bg-white/5 rounded-lg px-2.5 py-1 text-white/50 text-xs font-mono"
+                  >
+                    {letter}
+                    {n}
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 px-4 pb-4 overflow-y-auto">
+          {hasSingleCartela ? (
+            <div className="space-y-4">
+              {/* Cartella Card */}
+              <div className="bg-white/5 backdrop-blur rounded-2xl p-3 border border-white/10">
                 {yourCards.map(({ cardNumber, card }) => {
                   const markedNumbers = isAutoMarkOn
                     ? calledNumbers
@@ -586,7 +651,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <div
                       key={cardNumber}
-                      className="w-full flex flex-col items-center gap-1"
+                      className="w-full flex flex-col items-center gap-3"
                     >
                       <CartellaCard
                         id={cardNumber}
@@ -619,29 +684,82 @@ export default function GameLayout({ stake, onNavigate }) {
                             : null
                         }
                       />
+                      <div className="text-xs font-semibold text-white/50 shrink-0">
+                        Board #{cardNumber}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            ) : isWatchMode ? (
-              <div className="text-center">
-                <div className="text-4xl mb-2">👀</div>
-                <p className="text-white/50 text-sm font-bold">Watch Mode</p>
-              </div>
-            ) : null}
-          </div>
 
-          {hasSingleCartela && gameState.phase === "running" && (
-            <div className="flex-shrink-0 pt-2">
-              <button
-                onClick={handleManualBingo}
-                disabled={isManualClaiming || !connected}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isManualClaiming ? "⏳" : "BINGO!"}
-              </button>
+              {/* BINGO Button */}
+              {gameState.phase === "running" && (
+                <button
+                  onClick={handleManualBingo}
+                  disabled={isManualClaiming || !connected}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-500 to-pink-500 text-white font-extrabold text-xl uppercase tracking-widest shadow-lg shadow-red-500/30 hover:from-red-400 hover:to-pink-400 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isManualClaiming ? "⏳ Sending..." : "BINGO!"}
+                </button>
+              )}
             </div>
-          )}
+          ) : isWatchMode ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="text-6xl mb-4">👀</div>
+                <h3 className="text-white text-lg font-bold mb-2">
+                  Watch Mode
+                </h3>
+                <p className="text-white/60 text-sm">
+                  Game in progress. Wait for next round.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Number Board */}
+          <div className="mt-4 bg-white/5 backdrop-blur rounded-2xl p-3 border border-white/10">
+            <div className="grid grid-cols-5 gap-1">
+              {["B", "I", "N", "G", "O"].map((letter, colIdx) => (
+                <div key={letter} className="space-y-1">
+                  <div
+                    className={`text-center text-xs font-bold py-1 rounded-lg ${
+                      [
+                        "bg-blue-500/20 text-blue-300",
+                        "bg-green-500/20 text-green-300",
+                        "bg-purple-500/20 text-purple-300",
+                        "bg-red-500/20 text-red-300",
+                        "bg-yellow-500/20 text-yellow-300",
+                      ][colIdx]
+                    }`}
+                  >
+                    {letter}
+                  </div>
+                  {Array.from(
+                    { length: 15 },
+                    (_, i) => colIdx * 15 + i + 1,
+                  ).map((n) => {
+                    const isCalled = calledNumbers.includes(n);
+                    const isCurrent = currentNumber === n;
+                    return (
+                      <div
+                        key={n}
+                        className={`text-center text-xs py-1 rounded-md font-mono transition-all ${
+                          isCurrent
+                            ? "bg-orange-500 text-white font-bold scale-110 shadow-lg shadow-orange-500/30"
+                            : isCalled
+                              ? "bg-white/10 text-white/50"
+                              : "text-white/20"
+                        }`}
+                      >
+                        {n}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
         </main>
       </div>
     </div>
