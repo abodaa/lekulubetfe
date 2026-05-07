@@ -564,20 +564,14 @@ export default function GameLayout({ stake, onNavigate }) {
                           : n <= 60
                             ? "G"
                             : "O";
-                  const colors = {
-                    B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                    I: "bg-green-500/30 text-green-200 border-green-400/40",
-                    N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                    G: "bg-red-500/30 text-red-200 border-red-400/40",
-                    O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                  };
                   return (
                     <div
                       key={`${n}-${i}`}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-extrabold font-mono border shadow-lg animate-pop-in ${colors[letter]}`}
+                      className="bg-white/15 rounded-lg px-2.5 py-1 text-white/80 text-xs font-bold font-mono border border-white/20 animate-pop-in"
                       style={{ animationDelay: `${i * 0.08}s` }}
                     >
-                      1
+                      {letter}
+                      {n}
                     </div>
                   );
                 })}
