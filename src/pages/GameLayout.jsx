@@ -10,7 +10,6 @@ import {
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo } from "react";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -73,22 +72,10 @@ export default function GameLayout({ stake, onNavigate }) {
   const [isManualClaiming, setIsManualClaiming] = useState(false);
   const [startCountdown, setStartCountdown] = useState(0);
 
-  // Fixed: Get 5 recent calls (excluding the most current)
-  const recentCalls = useMemo(() => {
-    // Get last 6, exclude the most recent, then reverse to show newest first
-    const callsToShow = calledNumbers.slice(-6, -1);
-    return callsToShow.map((n, idx) => ({
-      id: `call-${n}-${calledNumbers.length - idx}`,
-      number: n,
-      order: idx,
-    }));
-  }, [calledNumbers]);
-
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
       setManuallyMarkedNumbers({});
   }, [isAutoMarkOn]);
-
   const claimedBingoRef = useRef(false);
   const lastGameIdRef = useRef(null);
   const [missedClaimWindow, setMissedClaimWindow] = useState(false);
@@ -120,7 +107,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }, 1000);
     return () => clearTimeout(id);
   }, []);
-
   useEffect(() => {
     if (isSoundOn && typeof currentNumber === "number")
       playNumberSound(currentNumber).catch(() => {});
@@ -233,7 +219,6 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase === "running" && calledNumbers.length === 0)
       setStartCountdown(3);
   }, [gameState.phase, calledNumbers.length, currentGameId]);
-
   useEffect(() => {
     if (startCountdown <= 0) return;
     const t = setTimeout(
@@ -285,7 +270,6 @@ export default function GameLayout({ stake, onNavigate }) {
       return () => clearTimeout(t);
     } else setShowTimeout(false);
   }, [currentGameId]);
-
   useEffect(() => {
     if (gameState.phase === "registration") {
       setShowTimeout(false);
@@ -333,7 +317,6 @@ export default function GameLayout({ stake, onNavigate }) {
       }
     });
   }, [alertBanners]);
-
   useEffect(() => {
     return () => {
       alertTimersRef.current.forEach((t) => clearTimeout(t));
@@ -351,7 +334,6 @@ export default function GameLayout({ stake, onNavigate }) {
       </div>
     );
   }
-
   if (!currentGameId && !connected && !isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -533,13 +515,7 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Current Call - Big */}
         <div className="px-3 pb-1 flex-shrink-0 flex justify-center">
           {currentNumber ? (
-            <motion.div
-              key={currentNumber}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", damping: 12, stiffness: 300 }}
-              className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-5 py-2 shadow-lg shadow-orange-500/40"
-            >
+            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-5 py-2 shadow-lg shadow-orange-500/40 animate-pulse">
               <div className="text-white/90 text-[10px] uppercase tracking-widest text-center font-bold">
                 Current Call
               </div>
@@ -555,7 +531,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         : "O"}
                 -{currentNumber}
               </div>
-            </motion.div>
+            </div>
           ) : (
             <div className="bg-white/5 rounded-xl px-5 py-2 border border-white/10">
               <div className="text-white/30 text-[10px] uppercase tracking-widest text-center font-bold">
@@ -568,63 +544,81 @@ export default function GameLayout({ stake, onNavigate }) {
           )}
         </div>
 
-        {/* Previously Called Numbers - Fixed with smooth animations */}
+        {/* Previously Called Numbers with animation */}
         {calledNumbers.length > 1 && (
-          <div className="flex justify-center gap-1.5 flex-wrap relative px-3 py-1">
-            <AnimatePresence mode="popLayout">
-              {recentCalls.map((call, i) => {
-                const n = call.number;
-                const letter =
-                  n <= 15
-                    ? "B"
-                    : n <= 30
-                      ? "I"
-                      : n <= 45
-                        ? "N"
-                        : n <= 60
-                          ? "G"
-                          : "O";
+          <div className="px-3 pb-1 flex-shrink-0">
+            <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+              Recently Called
+            </div>
+            <div className="flex justify-center gap-1.5 flex-wrap relative">
+              <AnimatePresence mode="popLayout">
+                {calledNumbers
+                  .slice(-6, -1)
+                  .reverse()
+                  .map((n, i) => {
+                    const letter =
+                      n <= 15
+                        ? "B"
+                        : n <= 30
+                          ? "I"
+                          : n <= 45
+                            ? "N"
+                            : n <= 60
+                              ? "G"
+                              : "O";
 
-                const colors = {
-                  B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                  I: "bg-green-500/30 text-green-200 border-green-400/40",
-                  N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                  G: "bg-red-500/30 text-red-200 border-red-400/40",
-                  O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                };
+                    const colors = {
+                      B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                      I: "bg-green-500/30 text-green-200 border-green-400/40",
+                      N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                      G: "bg-red-500/30 text-red-200 border-red-400/40",
+                      O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                    };
 
-                const isNewestShown = i === 0;
+                    const isNewestShown = i === 0;
 
-                return (
-                  <motion.div
-                    key={call.id}
-                    initial={{ opacity: 0, scale: 0.3, y: 20 }}
-                    animate={{
-                      opacity: 1,
-                      scale: isNewestShown ? [0.3, 1.1, 1] : 1,
-                      y: 0,
-                    }}
-                    exit={{ opacity: 0, scale: 0.3, y: -20 }}
-                    transition={{
-                      type: "spring",
-                      damping: 15,
-                      stiffness: 250,
-                      delay: i * 0.06,
-                    }}
-                    whileHover={{ scale: 1.1 }}
-                    className={`
-                      rounded-full px-2 py-2 flex items-center justify-center 
-                      text-[11px] font-extrabold font-mono border shadow-lg 
-                      ${colors[letter]}
-                      ${isNewestShown ? "ring-1 ring-blue-400/50 ring-offset-1 ring-offset-[var(--cardbackground)]" : ""}
-                    `}
-                  >
-                    {letter}
-                    {n}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                    return (
+                      <motion.div
+                        key={n} // Use the number itself as key, not index
+                        layout
+                        initial={{ opacity: 0, scale: 0.3, y: 20 }}
+                        animate={{
+                          opacity: 1,
+                          scale: isNewestShown ? [0.3, 1.1, 1] : 1,
+                          y: 0,
+                          transition: {
+                            type: "spring",
+                            damping: 12,
+                            stiffness: 200,
+                            delay: i * 0.08,
+                          },
+                        }}
+                        exit={{ opacity: 0, scale: 0.3, y: -20 }}
+                        transition={{ duration: 0.2 }}
+                        whileHover={{
+                          scale: 1.1,
+                          transition: { duration: 0.2 },
+                        }}
+                        className={`
+              rounded-full px-2 py-2 flex items-center justify-center 
+              text-[11px] font-extrabold font-mono border shadow-lg 
+              ${colors[letter]}
+              ${isNewestShown ? "ring-1 ring-blue-400/50 ring-offset-1 ring-offset-[var(--cardbackground)]" : ""}
+            `}
+                      >
+                        <motion.span
+                          initial={isNewestShown ? { scale: 0 } : {}}
+                          animate={isNewestShown ? { scale: 1 } : {}}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                        >
+                          {letter}
+                          {n}
+                        </motion.span>
+                      </motion.div>
+                    );
+                  })}
+              </AnimatePresence>
+            </div>
           </div>
         )}
 
@@ -749,15 +743,13 @@ export default function GameLayout({ stake, onNavigate }) {
           {/* BINGO Button - always visible */}
           {hasSingleCartela && gameState.phase === "running" && (
             <div className="flex-shrink-0 pt-1">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={handleManualBingo}
                 disabled={isManualClaiming || !connected}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isManualClaiming ? "⏳" : "BINGO!"}
-              </motion.button>
+              </button>
             </div>
           )}
         </main>
