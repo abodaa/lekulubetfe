@@ -481,7 +481,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
                 Derash
               </div> */}
-              <div className="text-amber-200 font-black text-sm">
+              <div className="text-amber-200 font-black text-xs">
                 Derash: {currentPrizePool || 0}
               </div>
             </div>
@@ -489,7 +489,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Players
               </div> */}
-              <div className="text-blue-300 font-extrabold text-sm">
+              <div className="text-blue-300 font-extrabold text-xs">
                 Players: {currentPlayersCount || 0}
               </div>
             </div>
@@ -497,7 +497,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Stake
               </div> */}
-              <div className="text-green-300 font-extrabold text-sm">
+              <div className="text-green-300 font-extrabold text-xs">
                 Stake: {stake || 0}
               </div>
             </div>
@@ -505,7 +505,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Calls
               </div> */}
-              <div className="text-pink-300 font-extrabold text-sm">
+              <div className="text-pink-300 font-extrabold text-xs">
                 Calls: {calledNumbers.length}/75
               </div>
             </div>
@@ -547,9 +547,9 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Previously Called Numbers with animation */}
         {calledNumbers.length > 0 ? (
           <div className="px-3 pb-1 flex-shrink-0 my-1">
-            <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+            {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
-            </div>
+            </div> */}
             <div className="flex justify-center gap-1.5 flex-wrap relative">
               <AnimatePresence mode="popLayout">
                 {/* Show current call + 5 most recent (excluding current if already in slice) */}
