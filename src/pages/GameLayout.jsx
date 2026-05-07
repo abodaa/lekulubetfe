@@ -571,7 +571,7 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Previously Called Numbers - Fixed with smooth animations */}
         {calledNumbers.length > 1 && (
           <div className="flex justify-center gap-1.5 flex-wrap relative px-3 py-1">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               {recentCalls.map((call, i) => {
                 const n = call.number;
                 const letter =
