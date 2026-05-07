@@ -11,6 +11,10 @@ import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { CgLivePhoto } from "react-icons/cg";
+import { GiTakeMyMoney } from "react-icons/gi";
+import { GrGamepad } from "react-icons/gr";
+import { MdAttachMoney } from "react-icons/md";
+import { PiUserSound } from "react-icons/pi";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -483,7 +487,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 Derash
               </div> */}
               <div className="text-amber-200 font-black text-xs">
-                Derash: {currentPrizePool || 0}
+                <GiTakeMyMoney /> {currentPrizePool || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -491,7 +495,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 Players
               </div> */}
               <div className="text-blue-300 font-extrabold text-xs">
-                Players: {currentPlayersCount || 0}
+                <GrGamepad /> {currentPlayersCount || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -499,7 +503,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 Stake
               </div> */}
               <div className="text-green-300 font-extrabold text-xs">
-                Stake: {stake || 0}
+                <MdAttachMoney /> {stake || 0}
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -507,7 +511,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 Calls
               </div> */}
               <div className="text-pink-300 font-extrabold text-xs">
-                Calls: {calledNumbers.length}/75
+                <PiUserSound /> {calledNumbers.length}/75
               </div>
             </div>
           </div>
