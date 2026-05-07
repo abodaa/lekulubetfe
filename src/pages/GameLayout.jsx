@@ -623,7 +623,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       >
                         {isCurrent && (
                           <motion.div
-                            className="absolute -top-2 -right-2"
+                            className="absolute -top-2 -left-2"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.2, type: "spring" }}
