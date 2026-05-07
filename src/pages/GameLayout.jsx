@@ -486,7 +486,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
                 Derash
               </div> */}
-              <div className="flex items-center gap-1 text-amber-200 font-black text-xs">
+              <div className="flex items-center gap-1 text-amber-200 font-black text-sm">
                 <GiTakeMyMoney />
                 <p>{currentPrizePool || 0}</p>
               </div>
@@ -495,7 +495,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Players
               </div> */}
-              <div className="flex items-center gap-1 text-blue-300 font-extrabold text-xs">
+              <div className="flex items-center gap-1 text-blue-300 font-extrabold text-sm">
                 <GrGamepad />
                 <p>{currentPlayersCount || 0}</p>
               </div>
@@ -504,7 +504,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Stake
               </div> */}
-              <div className="flex items-center gap-1 text-green-300 font-extrabold text-xs">
+              <div className="flex items-center gap-1 text-green-300 font-extrabold text-sm">
                 <MdAttachMoney />
                 <p>{stake || 0}</p>
               </div>
@@ -513,7 +513,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Calls
               </div> */}
-              <div className="text-pink-300 font-extrabold text-xs">
+              <div className="flex items-center gap-1 text-pink-300 font-extrabold text-sm">
                 <PiUserSound />
                 <p>{calledNumbers.length}/75</p>
               </div>
