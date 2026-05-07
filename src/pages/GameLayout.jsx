@@ -545,7 +545,7 @@ export default function GameLayout({ stake, onNavigate }) {
         </div> */}
 
         {/* Previously Called Numbers with animation */}
-        {calledNumbers.length > 0 && (
+        {calledNumbers.length > 0 ? (
           <div className="px-3 pb-1 flex-shrink-0 my-1">
             <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
@@ -603,7 +603,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         }}
                         whileHover={{ scale: 1.1 }}
                         className={`
-                  rounded-full w-5 h-5 flex items-center justify-center 
+                  rounded-full w-8 h-8 flex items-center justify-center 
                   text-[11px] font-extrabold font-mono border shadow-lg 
                   ${colors[letter]}
                   ${
@@ -650,6 +650,8 @@ export default function GameLayout({ stake, onNavigate }) {
               </AnimatePresence>
             </div>
           </div>
+        ) : (
+          <p className="text-white text-sm">Starting ...</p>
         )}
 
         {/* Number Board - Vertical BINGO */}
