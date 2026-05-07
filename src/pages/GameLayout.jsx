@@ -10,6 +10,7 @@ import {
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
+import { CgLivePhoto } from "react-icons/cg";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -628,7 +629,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             transition={{ delay: 0.2, type: "spring" }}
                           >
                             <div className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                              LIVE
+                              <CgLivePhoto className="inline-block w-3 h-3" />
                             </div>
                           </motion.div>
                         )}
