@@ -41,15 +41,15 @@ export default function GameLayout({ stake, onNavigate }) {
       )
     )
       return true;
-    const tl = cartella[0][0],
-      tr = cartella[0][4],
-      bl = cartella[4][0],
-      br = cartella[4][4];
+    const topLeft = cartella[0][0],
+      topRight = cartella[0][4],
+      bottomLeft = cartella[4][0],
+      bottomRight = cartella[4][4];
     if (
-      (tl === 0 || calledNumbers.includes(tl)) &&
-      (tr === 0 || calledNumbers.includes(tr)) &&
-      (bl === 0 || calledNumbers.includes(bl)) &&
-      (br === 0 || calledNumbers.includes(br))
+      (topLeft === 0 || calledNumbers.includes(topLeft)) &&
+      (topRight === 0 || calledNumbers.includes(topRight)) &&
+      (bottomLeft === 0 || calledNumbers.includes(bottomLeft)) &&
+      (bottomRight === 0 || calledNumbers.includes(bottomRight))
     )
       return true;
     return false;
@@ -87,22 +87,25 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [stake, sessionId, connectToStake]);
 
   useEffect(() => {
-    const h = () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && stake && sessionId) {
         setTimeout(() => {
           if (!connected) connectToStake(stake);
         }, 100);
       }
     };
-    document.addEventListener("visibilitychange", h);
-    return () => document.removeEventListener("visibilitychange", h);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [stake, sessionId, connected, connectToStake]);
 
   useEffect(() => {
     const id = setTimeout(() => {
       try {
         preloadNumberSounds();
-      } catch {}
+      } catch {
+        console.warn("Failed to preload number sounds");
+      }
     }, 1000);
     return () => clearTimeout(id);
   }, []);
@@ -136,12 +139,10 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (len > calledLenEvalRef.current) {
       for (let i = calledLenEvalRef.current + 1; i <= len; i++) {
-        if (
-          checkBingoPattern(card, calledNumbers.slice(0, i - 1)) &&
-          !claimedBingoRef.current
-        ) {
+        const prevCalled = calledNumbers.slice(0, i - 1);
+        if (checkBingoPattern(card, prevCalled) && !claimedBingoRef.current) {
           setMissedClaimWindow(true);
-          setMissedPatternCalledSnapshot([...calledNumbers.slice(0, i - 1)]);
+          setMissedPatternCalledSnapshot([...prevCalled]);
           break;
         }
       }
@@ -177,12 +178,14 @@ export default function GameLayout({ stake, onNavigate }) {
       }
       const result = claimBingo(payload);
       if (!result) {
+        console.warn("Manual BINGO claim send failed");
         claimedBingoRef.current = false;
-        showError("Failed to send BINGO claim.");
-      } else showSuccess("BINGO claim sent!");
-    } catch {
+        showError("Failed to send BINGO claim. Please try again.");
+      } else showSuccess("BINGO claim sent! Waiting for confirmation...");
+    } catch (error) {
+      console.error("Error sending manual BINGO claim:", error);
       claimedBingoRef.current = false;
-      showError("Failed to send BINGO claim.");
+      showError("Failed to send BINGO claim. Please try again.");
     } finally {
       setIsManualClaiming(false);
     }
@@ -197,6 +200,7 @@ export default function GameLayout({ stake, onNavigate }) {
     yourCards,
   ]);
 
+  // Auto-claim BINGO when winning pattern is detected in auto-mark mode
   useEffect(() => {
     if (
       gameState.phase !== "running" ||
@@ -207,7 +211,10 @@ export default function GameLayout({ stake, onNavigate }) {
       return;
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
-    if (checkBingoPattern(card, calledNumbers)) handleManualBingo();
+    if (checkBingoPattern(card, calledNumbers)) {
+      console.log("🎯 Auto-BINGO detected! Claiming...");
+      handleManualBingo();
+    }
   }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   useEffect(() => {
@@ -220,22 +227,28 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [gameState.phase, calledNumbers.length, currentGameId]);
   useEffect(() => {
     if (startCountdown <= 0) return;
-    const t = setTimeout(
+    const timer = setTimeout(
       () => setStartCountdown((prev) => (prev > 0 ? prev - 1 : 0)),
       1000,
     );
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [startCountdown]);
 
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await new Promise((r) => setTimeout(r, 100));
+      showSuccess("🔄 Refreshing game data...");
+      await new Promise((resolve) => setTimeout(resolve, 100));
       if (stake && sessionId) {
         connectToStake(stake);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
-    } catch {
+      showSuccess("✅ Game data refreshed successfully!");
+    } catch (error) {
+      console.log(error);
+      showError(
+        "❌ Failed to refresh game data. Please check your connection.",
+      );
     } finally {
       setIsRefreshing(false);
     }
@@ -243,6 +256,15 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
+      const winners = gameState.winners || [];
+      if (winners.length > 0) {
+        const winnerNames = winners.map((w) => w.name || "Player").join(", ");
+        showSuccess(
+          winners.some((w) => w.userId === sessionId)
+            ? `🎉 Congratulations! You won! ${winners.length > 1 ? `(Shared with ${winners.length - 1} other${winners.length > 2 ? "s" : ""})` : ""}`
+            : `🏆 Game Over! Winner${winners.length > 1 ? "s" : ""}: ${winnerNames}`,
+        );
+      } else showSuccess("🏆 Game Over!");
       onNavigate?.("winner");
     }
   }, [
@@ -256,8 +278,8 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (!currentGameId) {
-      const t = setTimeout(() => setShowTimeout(true), 5000);
-      return () => clearTimeout(t);
+      const timeout = setTimeout(() => setShowTimeout(true), 5000);
+      return () => clearTimeout(timeout);
     } else setShowTimeout(false);
   }, [currentGameId]);
   useEffect(() => {
@@ -272,44 +294,48 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [gameState.phase]);
 
   useEffect(() => {
-    const h = (event) => {
+    const handleBingoRejected = (event) => {
       claimedBingoRef.current = false;
       const reason = event?.detail?.reason || "invalid_claim";
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
-        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
+        setAlertBanners((prev) => [
+          ...prev,
+          "Invalid BINGO! Marks cleared. Try again.",
+        ]);
       } else if (reason === "stale_claim") {
         setAlertBanners((prev) => [
           ...prev,
-          "Pattern passed. Wait for next call.",
+          "Pattern already passed. Wait for next call.",
         ]);
       }
     };
-    window.addEventListener("bingoRejected", h);
-    return () => window.removeEventListener("bingoRejected", h);
+    window.addEventListener("bingoRejected", handleBingoRejected);
+    return () =>
+      window.removeEventListener("bingoRejected", handleBingoRejected);
   }, []);
 
   useEffect(() => {
-    const current = new Set(alertBanners);
+    const currentMessages = new Set(alertBanners);
     alertTimersRef.current.forEach((timer, msg) => {
-      if (!current.has(msg)) {
+      if (!currentMessages.has(msg)) {
         clearTimeout(timer);
         alertTimersRef.current.delete(msg);
       }
     });
-    alertBanners.forEach((msg) => {
-      if (!alertTimersRef.current.has(msg)) {
-        const t = setTimeout(() => {
-          setAlertBanners((prev) => prev.filter((m) => m !== msg));
-          alertTimersRef.current.delete(msg);
+    alertBanners.forEach((alertMsg) => {
+      if (!alertTimersRef.current.has(alertMsg)) {
+        const timer = setTimeout(() => {
+          setAlertBanners((prev) => prev.filter((msg) => msg !== alertMsg));
+          alertTimersRef.current.delete(alertMsg);
         }, 3000);
-        alertTimersRef.current.set(msg, t);
+        alertTimersRef.current.set(alertMsg, timer);
       }
     });
   }, [alertBanners]);
   useEffect(() => {
     return () => {
-      alertTimersRef.current.forEach((t) => clearTimeout(t));
+      alertTimersRef.current.forEach((timer) => clearTimeout(timer));
       alertTimersRef.current.clear();
     };
   }, []);
@@ -319,7 +345,7 @@ export default function GameLayout({ stake, onNavigate }) {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
-          <p className="text-white/80 text-lg font-bold">Refreshing...</p>
+          <p className="text-white/80 text-lg">Refreshing...</p>
         </div>
       </div>
     );
@@ -329,15 +355,17 @@ export default function GameLayout({ stake, onNavigate }) {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
-          <div className="text-white text-lg font-bold mb-2">Connecting...</div>
+          <div className="text-white text-lg mb-2">Connecting to game...</div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
           {showTimeout && (
-            <button
-              onClick={() => onNavigate?.("cartela-selection")}
-              className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold"
-            >
-              Back
-            </button>
+            <div className="mt-4">
+              <button
+                onClick={() => onNavigate?.("cartela-selection")}
+                className="px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold"
+              >
+                Back to Cartella Selection
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -353,15 +381,20 @@ export default function GameLayout({ stake, onNavigate }) {
   const hasSingleCartela = yourCards.length === 1;
   const isWatchMode = yourCards.length === 0;
 
+  // Previous calls for display
+  const previousCalls =
+    calledNumbers.length > 1 ? calledNumbers.slice(-5, -1).reverse() : [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+      {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
-          {alertBanners.map((msg, i) => (
+          {alertBanners.map((alertMsg, index) => (
             <div
-              key={i}
+              key={index}
               className="alert-banner-appeal animate-slide-in"
-              style={{ animationDelay: `${i * 0.1}s` }}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
               <div className="alert-icon-wrapper">
                 <svg
@@ -376,10 +409,10 @@ export default function GameLayout({ stake, onNavigate }) {
                   />
                 </svg>
               </div>
-              <div className="alert-message-text">{msg}</div>
+              <div className="alert-message-text">{alertMsg}</div>
               <button
                 onClick={() =>
-                  setAlertBanners((prev) => prev.filter((_, j) => j !== i))
+                  setAlertBanners((prev) => prev.filter((_, i) => i !== index))
                 }
                 className="alert-dismiss-btn"
                 aria-label="Dismiss"
@@ -404,12 +437,12 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-        {/* Top Bar - Compact inline stats */}
-        <div className="px-2 pt-1.5 pb-0.5 flex-shrink-0">
-          <div className="flex items-center justify-between gap-1">
-            <div className="flex items-center gap-1">
+        {/* Header - Compact */}
+        <header className="px-3 pt-2 pb-1 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
               <div
-                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
                   gameState.phase === "running"
                     ? "bg-green-500/30 text-green-200 border-green-400/40"
                     : gameState.phase === "registration"
@@ -421,47 +454,98 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
               <button
                 onClick={() => setIsSoundOn(!isSoundOn)}
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isSoundOn ? "bg-white/20 text-white" : "bg-white/5 text-white/30"}`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isSoundOn ? "bg-white/20 text-white" : "bg-white/5 text-white/30"}`}
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
               <button
-                onClick={() => setIsAutoMarkOn(!isAutoMarkOn)}
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isAutoMarkOn ? "bg-green-500/30 text-green-200" : "bg-white/5 text-white/30"}`}
+                onClick={() => {
+                  if (isAutoMarkOn) {
+                    const autoMarks = {};
+                    yourCards.forEach(({ cardNumber, card }) => {
+                      const marks = new Set();
+                      calledNumbers.forEach((num) => {
+                        card.forEach((row) => {
+                          if (row.includes(num)) marks.add(num);
+                        });
+                      });
+                      if (marks.size > 0) autoMarks[cardNumber] = marks;
+                    });
+                    setManuallyMarkedNumbers(autoMarks);
+                  }
+                  setIsAutoMarkOn(!isAutoMarkOn);
+                }}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isAutoMarkOn ? "bg-green-500/30 text-green-200" : "bg-white/5 text-white/30"}`}
               >
                 {isAutoMarkOn ? "🟢" : "✋"}
               </button>
+              <button
+                onClick={handleRefresh}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs bg-white/5 text-white/50 hover:bg-white/15 transition-all font-bold"
+              >
+                🔄
+              </button>
             </div>
-            <div className="flex items-center gap-1 text-[10px]">
-              <span className="text-white/40 font-bold">
-                Game {currentGameId ? currentGameId.replace("LB", "#") : "---"}
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="text-white/40 font-bold">Game</span>{" "}
+              <span className="text-white/70 font-bold">
+                {currentGameId ? currentGameId.replace("LB", "#") : "---"}
               </span>
               <span className="text-white/20">|</span>
               <span className="text-white/40 font-bold">Derash</span>{" "}
               <span className="text-amber-300 font-extrabold">
                 {currentPrizePool || 0}
               </span>
-              <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">Call</span>{" "}
-              <span className="text-pink-300 font-extrabold">
-                {calledNumbers.length}
-              </span>
-              <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">P</span>{" "}
+            </div>
+          </div>
+          {/* Second row: Players, Stake, Calls, Previous calls */}
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center gap-2 text-[10px]">
+              <span className="text-white/40 font-bold">Players</span>{" "}
               <span className="text-blue-300 font-extrabold">
                 {currentPlayersCount || 0}
               </span>
               <span className="text-white/20">|</span>
-              <span className="text-white/40 font-bold">S</span>{" "}
+              <span className="text-white/40 font-bold">Stake</span>{" "}
               <span className="text-green-300 font-extrabold">
                 {stake || 0}
               </span>
+              <span className="text-white/20">|</span>
+              <span className="text-white/40 font-bold">Calls</span>{" "}
+              <span className="text-pink-300 font-extrabold">
+                {calledNumbers.length}/75
+              </span>
             </div>
+            {previousCalls.length > 0 && (
+              <div className="flex items-center gap-1">
+                {previousCalls.map((n, i) => {
+                  const letter =
+                    n <= 15
+                      ? "B"
+                      : n <= 30
+                        ? "I"
+                        : n <= 45
+                          ? "N"
+                          : n <= 60
+                            ? "G"
+                            : "O";
+                  return (
+                    <div
+                      key={i}
+                      className="bg-white/10 rounded-md px-1.5 py-0.5 text-white/60 text-[10px] font-bold font-mono"
+                    >
+                      {letter}
+                      {n}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
+        </header>
 
         {/* Current Call */}
-        <div className="px-2 pb-1 flex-shrink-0 flex justify-center">
+        <div className="px-3 pb-1.5 flex-shrink-0 flex justify-center">
           {currentNumber ? (
             <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl px-5 py-2 shadow-lg shadow-orange-500/40">
               <div className="text-white/90 text-[10px] uppercase tracking-widest text-center font-bold">
@@ -492,9 +576,9 @@ export default function GameLayout({ stake, onNavigate }) {
           )}
         </div>
 
-        {/* Number Board - 5 rows: B (1-15), I (16-30), N (31-45), G (46-60), O (61-75) */}
-        <div className="px-2 pb-1 flex-shrink-0">
-          <div className="bg-white/5 backdrop-blur rounded-lg border border-white/10 overflow-hidden">
+        {/* Number Board - Vertical BINGO: 5 rows, letter then 15 numbers each */}
+        <div className="px-3 pb-1.5 flex-shrink-0">
+          <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
             <table className="w-full border-collapse">
               <tbody>
                 {[
@@ -536,7 +620,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       return (
                         <td
                           key={n}
-                          className={`text-center text-[11px] py-0.5 font-bold ${
+                          className={`text-center text-[11px] py-1 font-bold ${
                             isCurrent
                               ? "bg-orange-500 text-white font-extrabold rounded shadow-lg shadow-orange-500/50"
                               : isCalled
@@ -556,10 +640,10 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
 
         {/* Cartella + BINGO Button */}
-        <main className="flex-1 px-2 pb-1.5 overflow-y-auto flex flex-col min-h-0">
+        <main className="flex-1 px-3 pb-2 overflow-y-auto flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center">
             {hasSingleCartela ? (
-              <div className="w-full max-w-[210px] mx-auto">
+              <div className="bg-white/5 backdrop-blur rounded-2xl p-2 border border-white/10 w-full max-w-[220px] mx-auto">
                 {yourCards.map(({ cardNumber, card }) => {
                   const markedNumbers = isAutoMarkOn
                     ? calledNumbers
@@ -567,57 +651,69 @@ export default function GameLayout({ stake, onNavigate }) {
                       ? Array.from(manuallyMarkedNumbers[cardNumber])
                       : [];
                   return (
-                    <CartellaCard
+                    <div
                       key={cardNumber}
-                      id={cardNumber}
-                      card={card}
-                      called={
-                        isAutoMarkOn
-                          ? [
-                              ...new Set([
-                                ...calledNumbers,
-                                ...(manuallyMarkedNumbers[cardNumber]
-                                  ? Array.from(
-                                      manuallyMarkedNumbers[cardNumber],
-                                    )
-                                  : []),
-                              ]),
-                            ]
-                          : markedNumbers
-                      }
-                      isPreview={false}
-                      showHeader={true}
-                      isAutoMarkOn={isAutoMarkOn}
-                      onNumberToggle={
-                        !isAutoMarkOn
-                          ? (number) => handleNumberToggle(cardNumber, number)
-                          : undefined
-                      }
-                      missedWinningCalledNumbers={
-                        missedClaimWindow && missedPatternCalledSnapshot
-                          ? missedPatternCalledSnapshot
-                          : null
-                      }
-                    />
+                      className="w-full flex flex-col items-center gap-1"
+                    >
+                      <CartellaCard
+                        id={cardNumber}
+                        card={card}
+                        called={
+                          isAutoMarkOn
+                            ? [
+                                ...new Set([
+                                  ...calledNumbers,
+                                  ...(manuallyMarkedNumbers[cardNumber]
+                                    ? Array.from(
+                                        manuallyMarkedNumbers[cardNumber],
+                                      )
+                                    : []),
+                                ]),
+                              ]
+                            : markedNumbers
+                        }
+                        isPreview={false}
+                        showHeader={true}
+                        isAutoMarkOn={isAutoMarkOn}
+                        onNumberToggle={
+                          !isAutoMarkOn
+                            ? (number) => handleNumberToggle(cardNumber, number)
+                            : undefined
+                        }
+                        missedWinningCalledNumbers={
+                          missedClaimWindow && missedPatternCalledSnapshot
+                            ? missedPatternCalledSnapshot
+                            : null
+                        }
+                      />
+                      <div className="text-[10px] font-bold text-white/40">
+                        Board #{cardNumber}
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             ) : isWatchMode ? (
               <div className="text-center">
-                <div className="text-3xl mb-1">👀</div>
-                <p className="text-white/40 text-xs font-bold">Watch Mode</p>
+                <div className="text-4xl mb-2">👀</div>
+                <h3 className="text-white text-base font-bold mb-1">
+                  Watch Mode
+                </h3>
+                <p className="text-white/50 text-xs">
+                  Game in progress. Wait for next round.
+                </p>
               </div>
             ) : null}
           </div>
 
           {hasSingleCartela && gameState.phase === "running" && (
-            <div className="flex-shrink-0 pt-1">
+            <div className="flex-shrink-0 pt-1.5">
               <button
                 onClick={handleManualBingo}
                 disabled={isManualClaiming || !connected}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-base uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isManualClaiming ? "⏳" : "BINGO!"}
+                {isManualClaiming ? "⏳ Sending..." : "BINGO!"}
               </button>
             </div>
           )}
