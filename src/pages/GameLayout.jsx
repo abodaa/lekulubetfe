@@ -459,7 +459,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isAutoMarkOn ? "bg-green-500/30 text-green-200" : "bg-white/5 text-white/30"}`}
+                className={`px-3 py-1 rounded-full flex items-center justify-center text-xs font-bold ${isAutoMarkOn ? "bg-green-500/50 text-green-200" : "bg-white/20 text-white/60"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
               </button>
@@ -467,7 +467,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 onClick={handleRefresh}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs bg-white/5 text-white/50 hover:bg-white/15 font-bold"
               >
-                Refresh <BiRefresh />
+                <BiRefresh />
               </button>
             </div>
             <div className="text-right">
