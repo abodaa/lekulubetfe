@@ -15,6 +15,8 @@ import { GiTakeMyMoney } from "react-icons/gi";
 import { GrGamepad } from "react-icons/gr";
 import { MdAttachMoney } from "react-icons/md";
 import { PiUserSound } from "react-icons/pi";
+import { BiRefresh } from "react-icons/bi";
+import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -459,13 +461,13 @@ export default function GameLayout({ stake, onNavigate }) {
                 }}
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isAutoMarkOn ? "bg-green-500/30 text-green-200" : "bg-white/5 text-white/30"}`}
               >
-                {isAutoMarkOn ? "🟢" : "✋"}
+                {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
               </button>
               <button
                 onClick={handleRefresh}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs bg-white/5 text-white/50 hover:bg-white/15 font-bold"
               >
-                🔄
+                Refresh <BiRefresh />
               </button>
             </div>
             <div className="text-right">
@@ -483,31 +485,23 @@ export default function GameLayout({ stake, onNavigate }) {
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1.5">
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">
-                Derash :{" "}
-              </p>
+              <p className="text-white/30 text-[10px]">Derash : </p>
               <p className="text-white font-bold text-xs">
                 {currentPrizePool || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">
-                Players :{" "}
-              </p>
+              <p className="text-white/30 text-[10px]">Players : </p>
               <p className="text-white font-bold text-xs">
                 {currentPlayersCount || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">
-                Stake :{" "}
-              </p>
+              <p className="text-white/30 text-[10px]">Stake : </p>
               <p className="text-white font-bold text-xs">{stake || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">
-                Call :{" "}
-              </p>
+              <p className="text-white/30 text-[10px]">Call : </p>
               <p className="text-white font-bold text-xs">
                 {calledNumbers.length}/75
               </p>
