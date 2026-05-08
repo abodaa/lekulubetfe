@@ -459,7 +459,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`px-2 py-1 text-xl font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
+                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
               </button>
