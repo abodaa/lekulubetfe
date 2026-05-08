@@ -486,7 +486,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
                 Derash
               </div> */}
-              <div className="flex items-center gap-1 text-amber-200 font-black text-sm">
+              <div className="flex items-center justify-center gap-1 text-amber-200 font-black text-[11px]">
                 {/* <GiTakeMyMoney /> */}
                 <p className="text-[11px]">Derash : </p>
 
@@ -497,28 +497,27 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Players
               </div> */}
-              <div className="flex items-center gap-1 text-blue-300 font-extrabold text-sm">
+              <div className="flex items-center justify-center gap-1 text-blue-300 font-extrabold text-[11px]">
                 {/* <GrGamepad /> */}
                 <p className="text-[11px]">Players : </p>
                 <p>{currentPlayersCount || 0}</p>
               </div>
             </div>
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Stake
               </div> */}
-              <div className="flex items-center gap-1 text-green-300 font-extrabold text-sm">
+              <div className="flex items-center justify-center gap-1 text-green-300 font-extrabold text-[11px]">
                 {/* <MdAttachMoney /> */}
                 <p className="text-[11px]">Stake : </p>
-                              <p>{stake || 0}</p>
-                              
+                <p>{stake || 0}</p>
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
               {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Calls
               </div> */}
-              <div className="flex items-center gap-1 text-pink-300 font-extrabold text-sm">
+              <div className="flex items-center justify-center gap-1 text-pink-300 font-extrabold text-[11px]">
                 <PiUserSound />
                 <p>{calledNumbers.length}/75</p>
               </div>
