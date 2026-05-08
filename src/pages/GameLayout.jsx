@@ -482,47 +482,35 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1.5">
-            <div className="bg-amber-500/15 rounded-lg p-1 text-center border border-amber-500/20">
-              {/* <div className="text-amber-300/60 text-[9px] uppercase tracking-widest font-bold">
-                Derash
-              </div> */}
-              <div className="flex items-center justify-center gap-1 text-amber-200 font-black text-[11px]">
-                {/* <GiTakeMyMoney /> */}
-                <p className="text-[11px]">Derash : </p>
-
-                <p>{currentPrizePool || 0}</p>
-              </div>
-            </div>
-            <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
-                Players
-              </div> */}
-              <div className="flex items-center justify-center gap-1 text-blue-300 font-extrabold text-[11px]">
-                {/* <GrGamepad /> */}
-                <p className="text-[11px]">Players : </p>
-                <p>{currentPlayersCount || 0}</p>
-              </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider">
+                Derash :{" "}
+              </p>
+              <p className="text-white font-bold text-sm">
+                {currentPrizePool || 0}
+              </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
-                Stake
-              </div> */}
-              <div className="flex items-center justify-center gap-1 text-green-300 font-extrabold text-[11px]">
-                {/* <MdAttachMoney /> */}
-                <p className="text-[11px]">Stake : </p>
-                <p>{stake || 0}</p>
-              </div>
+              <p className="text-white/40 text-[10px] uppercase tracking-wider">
+                Players :{" "}
+              </p>
+              <p className="text-white font-bold text-sm">
+                {currentPlayersCount || 0}
+              </p>
             </div>
-            <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              {/* <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
-                Calls
-              </div> */}
-              <div className="flex items-center justify-center gap-1 text-pink-300 font-extrabold text-[11px]">
-                {/* <PiUserSound /> */}
-                <p className="text-[11px]">Call : </p>
-
-                <p>{calledNumbers.length}/75</p>
-              </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider">
+                Stake :{" "}
+              </p>
+              <p className="text-white font-bold text-sm">{stake || 0}</p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider">
+                Call :{" "}
+              </p>
+              <p className="text-white font-bold text-sm">
+                {calledNumbers.length}/75
+              </p>
             </div>
           </div>
         </div>
