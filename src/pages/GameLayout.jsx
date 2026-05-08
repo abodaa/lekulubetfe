@@ -211,14 +211,15 @@ export default function GameLayout({ stake, onNavigate }) {
     if (!isAutoMarkOn) return;
     if (yourCards.length !== 1) return;
     if (claimedBingoRef.current) return;
+    if (isManualClaiming) return;
 
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
+
     const hasWin = checkBingoPattern(card, calledNumbers);
 
-    if (hasWin && !claimedBingoRef.current && !isManualClaiming) {
-      claimedBingoRef.current = true;
-      console.log("🎯 Auto-BINGO detected! Claiming...");
+    if (hasWin) {
+      claimedBingoRef.current = true; // Set BEFORE calling to prevent re-entry
       handleManualBingo();
     }
   }, [
@@ -226,7 +227,6 @@ export default function GameLayout({ stake, onNavigate }) {
     gameState.phase,
     isAutoMarkOn,
     yourCards,
-    isManualClaiming,
   ]);
 
   useEffect(() => {
@@ -468,7 +468,7 @@ export default function GameLayout({ stake, onNavigate }) {
                     });
                     setManuallyMarkedNumbers(autoMarks);
                   }
-                  // Reset claim state when toggling modes
+                  // Reset claim state when toggling
                   claimedBingoRef.current = false;
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
