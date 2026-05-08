@@ -497,7 +497,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </div> */}
               <div className="flex items-center gap-1 text-blue-300 font-extrabold text-sm">
                 {/* <GrGamepad /> */}
-                <p>Players</p>
+                <p className="text-[10px]">Players : </p>
                 <p>{currentPlayersCount || 0}</p>
               </div>
             </div>
@@ -507,7 +507,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </div> */}
               <div className="flex items-center gap-1 text-green-300 font-extrabold text-sm">
                 {/* <MdAttachMoney /> */}
-                <p>Stake</p>
+                <p className="text-[10px]">Stake : </p>
                 <p>{stake || 0}</p>
               </div>
             </div>
