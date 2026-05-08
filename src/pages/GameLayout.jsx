@@ -518,7 +518,9 @@ export default function GameLayout({ stake, onNavigate }) {
                 Calls
               </div> */}
               <div className="flex items-center justify-center gap-1 text-pink-300 font-extrabold text-[11px]">
-                <PiUserSound />
+                {/* <PiUserSound /> */}
+                <p className="text-[11px]">Call : </p>
+
                 <p>{calledNumbers.length}/75</p>
               </div>
             </div>
