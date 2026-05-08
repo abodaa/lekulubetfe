@@ -210,24 +210,24 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
     if (yourCards.length !== 1) return;
-    if (claimedBingoRef.current) return;
-    if (isManualClaiming) return;
 
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
 
+    if (claimedBingoRef.current) return;
+
     const hasWin = checkBingoPattern(card, calledNumbers);
 
     if (hasWin) {
-      claimedBingoRef.current = true; // Set BEFORE calling to prevent re-entry
-      handleManualBingo();
+      console.log("🎯 Auto-BINGO detected! Claiming...");
+      claimedBingoRef.current = true;
+      // Don't call handleManualBingo directly — send the claim ourselves
+      let payload = {};
+      const { cardNumber } = yourCards[0] || {};
+      payload = { cardNumber };
+      claimBingo(payload);
     }
-  }, [
-    calledNumbers,
-    gameState.phase,
-    isAutoMarkOn,
-    yourCards,
-  ]);
+  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
