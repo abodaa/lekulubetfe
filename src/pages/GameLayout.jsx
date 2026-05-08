@@ -488,7 +488,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </div> */}
               <div className="flex items-center gap-1 text-amber-200 font-black text-sm">
                 {/* <GiTakeMyMoney /> */}
-                <p className="text-[10px]">Derash : </p>
+                <p className="text-[11px]">Derash : </p>
 
                 <p>{currentPrizePool || 0}</p>
               </div>
@@ -499,7 +499,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </div> */}
               <div className="flex items-center gap-1 text-blue-300 font-extrabold text-sm">
                 {/* <GrGamepad /> */}
-                <p className="text-[10px]">Players : </p>
+                <p className="text-[11px]">Players : </p>
                 <p>{currentPlayersCount || 0}</p>
               </div>
             </div>
@@ -509,7 +509,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </div> */}
               <div className="flex items-center gap-1 text-green-300 font-extrabold text-sm">
                 {/* <MdAttachMoney /> */}
-                <p className="text-[10px]">Stake : </p>
+                <p className="text-[11px]">Stake : </p>
                 <p>{stake || 0}</p>
               </div>
             </div>
