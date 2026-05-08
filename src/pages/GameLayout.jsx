@@ -510,7 +510,8 @@ export default function GameLayout({ stake, onNavigate }) {
               <div className="flex items-center gap-1 text-green-300 font-extrabold text-sm">
                 {/* <MdAttachMoney /> */}
                 <p className="text-[11px]">Stake : </p>
-                <p>{stake || 0}</p>
+                              <p>{stake || 0}</p>
+                              
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-1 text-center border border-white/10">
