@@ -205,18 +205,29 @@ export default function GameLayout({ stake, onNavigate }) {
     yourCards,
   ]);
 
+  // Auto-claim BINGO when winning pattern is detected in auto-mark mode
   useEffect(() => {
-    if (
-      gameState.phase !== "running" ||
-      !isAutoMarkOn ||
-      yourCards.length !== 1 ||
-      claimedBingoRef.current
-    )
-      return;
+    if (gameState.phase !== "running") return;
+    if (!isAutoMarkOn) return;
+    if (yourCards.length !== 1) return;
+    if (claimedBingoRef.current) return;
+
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
-    if (checkBingoPattern(card, calledNumbers)) handleManualBingo();
-  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
+    const hasWin = checkBingoPattern(card, calledNumbers);
+
+    if (hasWin && !claimedBingoRef.current && !isManualClaiming) {
+      claimedBingoRef.current = true;
+      console.log("🎯 Auto-BINGO detected! Claiming...");
+      handleManualBingo();
+    }
+  }, [
+    calledNumbers,
+    gameState.phase,
+    isAutoMarkOn,
+    yourCards,
+    isManualClaiming,
+  ]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -457,6 +468,8 @@ export default function GameLayout({ stake, onNavigate }) {
                     });
                     setManuallyMarkedNumbers(autoMarks);
                   }
+                  // Reset claim state when toggling modes
+                  claimedBingoRef.current = false;
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
                 className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
