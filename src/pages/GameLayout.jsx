@@ -21,7 +21,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
-  const [isBanned, setIsBanned] = useState(false);
+//   const [isBanned, setIsBanned] = useState(false);
   const alertTimersRef = useRef(new Map());
 
   const triggerConfetti = () => {
@@ -196,7 +196,7 @@ export default function GameLayout({ stake, onNavigate }) {
       calledLenEvalRef.current = -1;
       setMissedClaimWindow(false);
       setMissedPatternCalledSnapshot(null);
-      setIsBanned(false);
+    //   setIsBanned(false);
     }
   }, [currentGameId]);
 
@@ -379,7 +379,7 @@ export default function GameLayout({ stake, onNavigate }) {
       calledLenEvalRef.current = -1;
       setMissedClaimWindow(false);
       setMissedPatternCalledSnapshot(null);
-      setIsBanned(false);
+    //   setIsBanned(false);
     }
   }, [gameState.phase]);
 
@@ -389,7 +389,7 @@ export default function GameLayout({ stake, onNavigate }) {
       const reason = event?.detail?.reason || "invalid_claim";
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
-        setIsBanned(true); // ← ADD: Ban the user
+        // setIsBanned(true); // ← ADD: Ban the user
         setAlertBanners((prev) => [
           ...prev,
           "❌ Invalid BINGO! You are banned from this game.",
@@ -821,7 +821,7 @@ export default function GameLayout({ stake, onNavigate }) {
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center overflow-y-auto">
             {hasSingleCartela ? (
-              isBanned ? (
+              gameState.isBanned ? (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="text-6xl mb-3">🚫</div>
@@ -899,7 +899,10 @@ export default function GameLayout({ stake, onNavigate }) {
                   handleManualBingo();
                 }}
                 disabled={
-                  isManualClaiming || !connected || isAutoMarkOn || isBanned
+                  isManualClaiming ||
+                  !connected ||
+                  isAutoMarkOn ||
+                  gameState.isBanned
                 }
                 className="bingo-button-cheer w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative"
               >

@@ -32,6 +32,7 @@ export function WebSocketProvider({ children }) {
     walletUpdate: null,
     nextRegistrationStart: null,
     totalCartellas: 200,
+    isBanned: false,
   });
   const [lastEvent, setLastEvent] = useState(null);
   const [currentStake, setCurrentStake] = useState(null);
@@ -309,6 +310,7 @@ export function WebSocketProvider({ children }) {
                     phase === "registration" ? [] : finalSelections,
                   totalCartellas:
                     event.payload.totalCartellas || prev.totalCartellas || 200,
+                  isBanned: event.payload.isBanned || false,
                   ...(phase === "registration"
                     ? { currentNumber: null, winners: [] }
                     : {}),
