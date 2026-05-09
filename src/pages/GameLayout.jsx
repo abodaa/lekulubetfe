@@ -21,7 +21,6 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
-  const [isBanned, setIsBanned] = useState(false);
   const alertTimersRef = useRef(new Map());
 
   const triggerConfetti = () => {
@@ -196,7 +195,6 @@ export default function GameLayout({ stake, onNavigate }) {
       calledLenEvalRef.current = -1;
       setMissedClaimWindow(false);
       setMissedPatternCalledSnapshot(null);
-      setIsBanned(false);
     }
   }, [currentGameId]);
 
@@ -379,7 +377,6 @@ export default function GameLayout({ stake, onNavigate }) {
       calledLenEvalRef.current = -1;
       setMissedClaimWindow(false);
       setMissedPatternCalledSnapshot(null);
-      setIsBanned(false);
     }
   }, [gameState.phase]);
 
@@ -389,15 +386,11 @@ export default function GameLayout({ stake, onNavigate }) {
       const reason = event?.detail?.reason || "invalid_claim";
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
-        setIsBanned(true); // ← ADD: Ban the user
-        setAlertBanners((prev) => [
-          ...prev,
-          "❌ Invalid BINGO! You are banned from this game.",
-        ]);
+        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
       } else if (reason === "stale_claim") {
         setAlertBanners((prev) => [
           ...prev,
-          "Pattern already passed. Wait for next call.",
+          "Pattern passed. Wait for next call.",
         ]);
       }
     };
@@ -821,63 +814,49 @@ export default function GameLayout({ stake, onNavigate }) {
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center overflow-y-auto">
             {hasSingleCartela ? (
-              isBanned ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="text-6xl mb-3">🚫</div>
-                    <h3 className="text-white text-lg font-black mb-2">
-                      Banned
-                    </h3>
-                    <p className="text-white/50 text-sm font-bold">
-                      Invalid BINGO claim. Wait for next game.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full max-w-[300px] mx-auto">
-                  {yourCards.map(({ cardNumber, card }) => {
-                    const markedNumbers = isAutoMarkOn
-                      ? calledNumbers
-                      : manuallyMarkedNumbers[cardNumber]
-                        ? Array.from(manuallyMarkedNumbers[cardNumber])
-                        : [];
-                    return (
-                      <CartellaCard
-                        key={cardNumber}
-                        id={cardNumber}
-                        card={card}
-                        called={
-                          isAutoMarkOn
-                            ? [
-                                ...new Set([
-                                  ...calledNumbers,
-                                  ...(manuallyMarkedNumbers[cardNumber]
-                                    ? Array.from(
-                                        manuallyMarkedNumbers[cardNumber],
-                                      )
-                                    : []),
-                                ]),
-                              ]
-                            : markedNumbers
-                        }
-                        isPreview={false}
-                        showHeader={true}
-                        isAutoMarkOn={isAutoMarkOn}
-                        onNumberToggle={
-                          !isAutoMarkOn
-                            ? (number) => handleNumberToggle(cardNumber, number)
-                            : undefined
-                        }
-                        missedWinningCalledNumbers={
-                          missedClaimWindow && missedPatternCalledSnapshot
-                            ? missedPatternCalledSnapshot
-                            : null
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              )
+              <div className="w-full max-w-[300px] mx-auto">
+                {yourCards.map(({ cardNumber, card }) => {
+                  const markedNumbers = isAutoMarkOn
+                    ? calledNumbers
+                    : manuallyMarkedNumbers[cardNumber]
+                      ? Array.from(manuallyMarkedNumbers[cardNumber])
+                      : [];
+                  return (
+                    <CartellaCard
+                      key={cardNumber}
+                      id={cardNumber}
+                      card={card}
+                      called={
+                        isAutoMarkOn
+                          ? [
+                              ...new Set([
+                                ...calledNumbers,
+                                ...(manuallyMarkedNumbers[cardNumber]
+                                  ? Array.from(
+                                      manuallyMarkedNumbers[cardNumber],
+                                    )
+                                  : []),
+                              ]),
+                            ]
+                          : markedNumbers
+                      }
+                      isPreview={false}
+                      showHeader={true}
+                      isAutoMarkOn={isAutoMarkOn}
+                      onNumberToggle={
+                        !isAutoMarkOn
+                          ? (number) => handleNumberToggle(cardNumber, number)
+                          : undefined
+                      }
+                      missedWinningCalledNumbers={
+                        missedClaimWindow && missedPatternCalledSnapshot
+                          ? missedPatternCalledSnapshot
+                          : null
+                      }
+                    />
+                  );
+                })}
+              </div>
             ) : isWatchMode ? (
               <div className="text-center">
                 <div className="text-4xl mb-2">👀</div>
@@ -898,9 +877,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   );
                   handleManualBingo();
                 }}
-                disabled={
-                  isManualClaiming || !connected || isAutoMarkOn || isBanned
-                }
+                disabled={isManualClaiming || !connected || isAutoMarkOn}
                 className="bingo-button-cheer w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative"
               >
                 {isManualClaiming ? (
