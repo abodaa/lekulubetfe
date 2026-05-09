@@ -870,7 +870,6 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex-shrink-0 pt-1">
               <button
                 onClick={(e) => {
-                  // Button click effect
                   e.currentTarget.classList.add("bingo-pop");
                   setTimeout(
                     () => e.currentTarget.classList.remove("bingo-pop"),
@@ -878,13 +877,15 @@ export default function GameLayout({ stake, onNavigate }) {
                   );
                   handleManualBingo();
                 }}
-                disabled={isManualClaiming || !connected}
+                disabled={isManualClaiming || !connected || isAutoMarkOn}
                 className="bingo-button-cheer w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative"
               >
                 {isManualClaiming ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="animate-spin">⏳</span> Sending...
                   </span>
+                ) : isAutoMarkOn ? (
+                  <span>🎉 Auto BINGO is Active 🎉</span>
                 ) : (
                   <span>🎉 BINGO! 🎉</span>
                 )}
