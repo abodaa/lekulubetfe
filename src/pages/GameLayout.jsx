@@ -11,10 +11,7 @@ import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { CgLivePhoto } from "react-icons/cg";
-import { GiTakeMyMoney } from "react-icons/gi";
-import { GrGamepad } from "react-icons/gr";
-import { MdAttachMoney } from "react-icons/md";
-import { PiUserSound } from "react-icons/pi";
+
 import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 
@@ -25,6 +22,11 @@ export default function GameLayout({ stake, onNavigate }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
+
+  const triggerConfetti = () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2000);
+  };
 
   const checkBingoPattern = (cartella, calledNumbers) => {
     if (!cartella || !Array.isArray(cartella) || !Array.isArray(calledNumbers))
@@ -62,71 +64,71 @@ export default function GameLayout({ stake, onNavigate }) {
       return true;
     return false;
   };
-    
-    const isLastCallPartOfWinningPattern = (card, calledNumbers) => {
-      if (!card || !calledNumbers || calledNumbers.length === 0) return false;
 
-      const lastCall = calledNumbers[calledNumbers.length - 1];
-      const calledSet = new Set(calledNumbers);
+  const isLastCallPartOfWinningPattern = (card, calledNumbers) => {
+    if (!card || !calledNumbers || calledNumbers.length === 0) return false;
 
-      // Check rows
-      for (let row = 0; row < 5; row++) {
-        if (!card[row]) continue;
-        if (
-          card[row].every((num) => num === 0 || calledSet.has(num)) &&
-          card[row].includes(lastCall)
-        )
-          return true;
-      }
-      // Check columns
-      for (let col = 0; col < 5; col++) {
-        let complete = true,
-          hasLast = false;
-        for (let row = 0; row < 5; row++) {
-          const num = card[row][col];
-          if (num !== 0 && !calledSet.has(num)) {
-            complete = false;
-            break;
-          }
-          if (num === lastCall) hasLast = true;
-        }
-        if (complete && hasLast) return true;
-      }
-      // Check diagonals
-      let d1 = true,
-        h1 = false;
-      for (let i = 0; i < 5; i++) {
-        const num = card[i][i];
-        if (num !== 0 && !calledSet.has(num)) {
-          d1 = false;
-          break;
-        }
-        if (num === lastCall) h1 = true;
-      }
-      if (d1 && h1) return true;
+    const lastCall = calledNumbers[calledNumbers.length - 1];
+    const calledSet = new Set(calledNumbers);
 
-      let d2 = true,
-        h2 = false;
-      for (let i = 0; i < 5; i++) {
-        const num = card[i][4 - i];
-        if (num !== 0 && !calledSet.has(num)) {
-          d2 = false;
-          break;
-        }
-        if (num === lastCall) h2 = true;
-      }
-      if (d2 && h2) return true;
-
-      // Check four corners
-      const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
+    // Check rows
+    for (let row = 0; row < 5; row++) {
+      if (!card[row]) continue;
       if (
-        corners.every((num) => num === 0 || calledSet.has(num)) &&
-        corners.includes(lastCall)
+        card[row].every((num) => num === 0 || calledSet.has(num)) &&
+        card[row].includes(lastCall)
       )
         return true;
+    }
+    // Check columns
+    for (let col = 0; col < 5; col++) {
+      let complete = true,
+        hasLast = false;
+      for (let row = 0; row < 5; row++) {
+        const num = card[row][col];
+        if (num !== 0 && !calledSet.has(num)) {
+          complete = false;
+          break;
+        }
+        if (num === lastCall) hasLast = true;
+      }
+      if (complete && hasLast) return true;
+    }
+    // Check diagonals
+    let d1 = true,
+      h1 = false;
+    for (let i = 0; i < 5; i++) {
+      const num = card[i][i];
+      if (num !== 0 && !calledSet.has(num)) {
+        d1 = false;
+        break;
+      }
+      if (num === lastCall) h1 = true;
+    }
+    if (d1 && h1) return true;
 
-      return false;
-    };
+    let d2 = true,
+      h2 = false;
+    for (let i = 0; i < 5; i++) {
+      const num = card[i][4 - i];
+      if (num !== 0 && !calledSet.has(num)) {
+        d2 = false;
+        break;
+      }
+      if (num === lastCall) h2 = true;
+    }
+    if (d2 && h2) return true;
+
+    // Check four corners
+    const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
+    if (
+      corners.every((num) => num === 0 || calledSet.has(num)) &&
+      corners.includes(lastCall)
+    )
+      return true;
+
+    return false;
+  };
 
   const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
   const currentPlayersCount = gameState.playersCount || 0;
@@ -143,6 +145,8 @@ export default function GameLayout({ stake, onNavigate }) {
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [isManualClaiming, setIsManualClaiming] = useState(false);
   const [startCountdown, setStartCountdown] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiRef = useRef(null);
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -243,6 +247,7 @@ export default function GameLayout({ stake, onNavigate }) {
     try {
       setIsManualClaiming(true);
       claimedBingoRef.current = true;
+      triggerConfetti();
       let payload = {};
       if (yourCards.length === 1) {
         const { cardNumber } = yourCards[0] || {};
@@ -252,7 +257,7 @@ export default function GameLayout({ stake, onNavigate }) {
       if (!result) {
         claimedBingoRef.current = false;
         showError("Failed to send BINGO claim.");
-      } else showSuccess("BINGO claim sent!");
+      } else showSuccess("🎉 BINGO claim sent!");
     } catch {
       claimedBingoRef.current = false;
       showError("Failed to send BINGO claim.");
@@ -298,6 +303,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
     console.log("🎯 New Auto-BINGO detected! Claiming...");
     claimedBingoRef.current = true;
+    triggerConfetti();
     let payload = {};
     const { cardNumber } = yourCards[0] || {};
     payload = { cardNumber };
@@ -863,12 +869,81 @@ export default function GameLayout({ stake, onNavigate }) {
           {hasSingleCartela && gameState.phase === "running" && (
             <div className="flex-shrink-0 pt-1">
               <button
-                onClick={handleManualBingo}
+                onClick={(e) => {
+                  // Button click effect
+                  e.currentTarget.classList.add("bingo-pop");
+                  setTimeout(
+                    () => e.currentTarget.classList.remove("bingo-pop"),
+                    400,
+                  );
+                  handleManualBingo();
+                }}
                 disabled={isManualClaiming || !connected}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bingo-button-cheer w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white font-black text-lg uppercase tracking-widest shadow-lg shadow-red-500/50 hover:from-red-500 hover:to-pink-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed relative"
               >
-                {isManualClaiming ? "⏳" : "BINGO!"}
+                {isManualClaiming ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⏳</span> Sending...
+                  </span>
+                ) : (
+                  <span>🎉 BINGO! 🎉</span>
+                )}
               </button>
+            </div>
+          )}
+
+          {/* Confetti Overlay */}
+          {showConfetti && (
+            <div className="confetti-container" ref={confettiRef}>
+              {Array.from({ length: 50 }).map((_, i) => {
+                const colors = [
+                  "#ff6b6b",
+                  "#ffd93d",
+                  "#6bcb77",
+                  "#4d96ff",
+                  "#ff6b9d",
+                  "#c44dff",
+                  "#00d2ff",
+                  "#ff9f43",
+                ];
+                const left = Math.random() * 100;
+                const delay = Math.random() * 0.5;
+                const size = Math.random() * 8 + 6;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const shape = Math.random() > 0.5 ? "50%" : "2px";
+                return (
+                  <div
+                    key={i}
+                    className="confetti-piece"
+                    style={{
+                      left: `${left}%`,
+                      top: `-${Math.random() * 20}px`,
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      backgroundColor: color,
+                      borderRadius: shape,
+                      animationDelay: `${delay}s`,
+                      animationDuration: `${1 + Math.random()}s`,
+                    }}
+                  />
+                );
+              })}
+              {/* Star particles */}
+              {["🎉", "🎊", "✨", "🌟", "💫", "🏆", "⭐", "🎯"].map(
+                (emoji, i) => (
+                  <div
+                    key={`star-${i}`}
+                    className="star-particle"
+                    style={{
+                      left: `${10 + Math.random() * 80}%`,
+                      top: `${20 + Math.random() * 40}%`,
+                      animationDelay: `${i * 0.1}s`,
+                    }}
+                  >
+                    {emoji}
+                  </div>
+                ),
+              )}
             </div>
           )}
         </main>
