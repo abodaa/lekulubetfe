@@ -62,6 +62,71 @@ export default function GameLayout({ stake, onNavigate }) {
       return true;
     return false;
   };
+    
+    const isLastCallPartOfWinningPattern = (card, calledNumbers) => {
+      if (!card || !calledNumbers || calledNumbers.length === 0) return false;
+
+      const lastCall = calledNumbers[calledNumbers.length - 1];
+      const calledSet = new Set(calledNumbers);
+
+      // Check rows
+      for (let row = 0; row < 5; row++) {
+        if (!card[row]) continue;
+        if (
+          card[row].every((num) => num === 0 || calledSet.has(num)) &&
+          card[row].includes(lastCall)
+        )
+          return true;
+      }
+      // Check columns
+      for (let col = 0; col < 5; col++) {
+        let complete = true,
+          hasLast = false;
+        for (let row = 0; row < 5; row++) {
+          const num = card[row][col];
+          if (num !== 0 && !calledSet.has(num)) {
+            complete = false;
+            break;
+          }
+          if (num === lastCall) hasLast = true;
+        }
+        if (complete && hasLast) return true;
+      }
+      // Check diagonals
+      let d1 = true,
+        h1 = false;
+      for (let i = 0; i < 5; i++) {
+        const num = card[i][i];
+        if (num !== 0 && !calledSet.has(num)) {
+          d1 = false;
+          break;
+        }
+        if (num === lastCall) h1 = true;
+      }
+      if (d1 && h1) return true;
+
+      let d2 = true,
+        h2 = false;
+      for (let i = 0; i < 5; i++) {
+        const num = card[i][4 - i];
+        if (num !== 0 && !calledSet.has(num)) {
+          d2 = false;
+          break;
+        }
+        if (num === lastCall) h2 = true;
+      }
+      if (d2 && h2) return true;
+
+      // Check four corners
+      const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
+      if (
+        corners.every((num) => num === 0 || calledSet.has(num)) &&
+        corners.includes(lastCall)
+      )
+        return true;
+
+      return false;
+    };
 
   const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
   const currentPlayersCount = gameState.playersCount || 0;
@@ -206,27 +271,37 @@ export default function GameLayout({ stake, onNavigate }) {
   ]);
 
   // Auto-claim BINGO when winning pattern is detected in auto-mark mode
+  // Auto-claim BINGO only when the LAST called number completes a new pattern
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
     if (yourCards.length !== 1) return;
+    if (claimedBingoRef.current) return;
 
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
 
-    if (claimedBingoRef.current) return;
+    const lastCalled = calledNumbers[calledNumbers.length - 1];
 
+    // Check if card has a winning pattern AND the last called number is part of it
     const hasWin = checkBingoPattern(card, calledNumbers);
 
-    if (hasWin) {
-      console.log("🎯 Auto-BINGO detected! Claiming...");
-      claimedBingoRef.current = true;
-      // Don't call handleManualBingo directly — send the claim ourselves
-      let payload = {};
-      const { cardNumber } = yourCards[0] || {};
-      payload = { cardNumber };
-      claimBingo(payload);
-    }
+    if (!hasWin) return;
+
+    // Verify last called number is in at least one winning pattern
+    const lastNumberInPattern = isLastCallPartOfWinningPattern(
+      card,
+      calledNumbers,
+    );
+
+    if (!lastNumberInPattern) return; // Pattern exists but last call didn't complete it
+
+    console.log("🎯 New Auto-BINGO detected! Claiming...");
+    claimedBingoRef.current = true;
+    let payload = {};
+    const { cardNumber } = yourCards[0] || {};
+    payload = { cardNumber };
+    claimBingo(payload);
   }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   useEffect(() => {
