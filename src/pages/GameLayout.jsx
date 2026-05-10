@@ -469,6 +469,15 @@ export default function GameLayout({ stake, onNavigate }) {
   const hasSingleCartela = yourCards.length === 1;
   const isWatchMode = yourCards.length === 0;
 
+  // DEBUG
+  console.log("🎮 Debug:", {
+    hasSingleCartela,
+    isWatchMode,
+    yourCardsLength: yourCards.length,
+    phase: gameState.phase,
+    gameId: currentGameId,
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
       {alertBanners.length > 0 && (
