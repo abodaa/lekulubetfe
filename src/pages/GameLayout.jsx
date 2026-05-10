@@ -14,6 +14,7 @@ import { CgLivePhoto } from "react-icons/cg";
 
 import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
+import { BsInfoCircle } from "react-icons/bs";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -179,7 +180,9 @@ export default function GameLayout({ stake, onNavigate }) {
     const id = setTimeout(() => {
       try {
         preloadNumberSounds();
-      } catch {}
+      } catch {
+        showError("Failed to preload number sounds.");
+      }
     }, 1000);
     return () => clearTimeout(id);
   }, []);
@@ -286,7 +289,7 @@ export default function GameLayout({ stake, onNavigate }) {
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
 
-    const lastCalled = calledNumbers[calledNumbers.length - 1];
+    // const lastCalled = calledNumbers[calledNumbers.length - 1];
 
     // Check if card has a winning pattern AND the last called number is part of it
     const hasWin = checkBingoPattern(card, calledNumbers);
@@ -336,6 +339,7 @@ export default function GameLayout({ stake, onNavigate }) {
         await new Promise((r) => setTimeout(r, 500));
       }
     } catch {
+      showError("Failed to refresh game state.");
     } finally {
       setIsRefreshing(false);
     }
@@ -748,71 +752,71 @@ export default function GameLayout({ stake, onNavigate }) {
                 Starts in {startCountdown > 0 ? startCountdown : "0"} secs
               </p>
             )}
+
+            {/* Number Board - Vertical BINGO */}
+            <div className="px-3 pb-1 flex-shrink-0">
+              <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {[
+                      {
+                        letter: "B",
+                        color: "bg-blue-600/70 text-blue-100",
+                        nums: Array.from({ length: 15 }, (_, i) => i + 1),
+                      },
+                      {
+                        letter: "I",
+                        color: "bg-green-600/70 text-green-100",
+                        nums: Array.from({ length: 15 }, (_, i) => i + 16),
+                      },
+                      {
+                        letter: "N",
+                        color: "bg-purple-600/70 text-purple-100",
+                        nums: Array.from({ length: 15 }, (_, i) => i + 31),
+                      },
+                      {
+                        letter: "G",
+                        color: "bg-red-600/70 text-red-100",
+                        nums: Array.from({ length: 15 }, (_, i) => i + 46),
+                      },
+                      {
+                        letter: "O",
+                        color: "bg-yellow-600/70 text-yellow-100",
+                        nums: Array.from({ length: 15 }, (_, i) => i + 61),
+                      },
+                    ].map(({ letter, color, nums }) => (
+                      <tr key={letter}>
+                        <td
+                          className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
+                        >
+                          {letter}
+                        </td>
+                        {nums.map((n) => {
+                          const isCalled = calledNumbers.includes(n);
+                          const isCurrent = currentNumber === n;
+                          return (
+                            <td
+                              key={n}
+                              className={`text-center text-[10px] py-0.5 font-bold transition-all duration-200 ${
+                                isCurrent
+                                  ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50 scale-110"
+                                  : isCalled
+                                    ? "bg-white/20 text-white font-extrabold"
+                                    : "text-white/20"
+                              }`}
+                            >
+                              {n}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </>
         )}
-
-        {/* Number Board - Vertical BINGO */}
-        <div className="px-3 pb-1 flex-shrink-0">
-          <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
-            <table className="w-full border-collapse">
-              <tbody>
-                {[
-                  {
-                    letter: "B",
-                    color: "bg-blue-600/70 text-blue-100",
-                    nums: Array.from({ length: 15 }, (_, i) => i + 1),
-                  },
-                  {
-                    letter: "I",
-                    color: "bg-green-600/70 text-green-100",
-                    nums: Array.from({ length: 15 }, (_, i) => i + 16),
-                  },
-                  {
-                    letter: "N",
-                    color: "bg-purple-600/70 text-purple-100",
-                    nums: Array.from({ length: 15 }, (_, i) => i + 31),
-                  },
-                  {
-                    letter: "G",
-                    color: "bg-red-600/70 text-red-100",
-                    nums: Array.from({ length: 15 }, (_, i) => i + 46),
-                  },
-                  {
-                    letter: "O",
-                    color: "bg-yellow-600/70 text-yellow-100",
-                    nums: Array.from({ length: 15 }, (_, i) => i + 61),
-                  },
-                ].map(({ letter, color, nums }) => (
-                  <tr key={letter}>
-                    <td
-                      className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
-                    >
-                      {letter}
-                    </td>
-                    {nums.map((n) => {
-                      const isCalled = calledNumbers.includes(n);
-                      const isCurrent = currentNumber === n;
-                      return (
-                        <td
-                          key={n}
-                          className={`text-center text-[10px] py-0.5 font-bold transition-all duration-200 ${
-                            isCurrent
-                              ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50 scale-110"
-                              : isCalled
-                                ? "bg-white/20 text-white font-extrabold"
-                                : "text-white/20"
-                          }`}
-                        >
-                          {n}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
 
         {/* Cartella - fills remaining space */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
@@ -862,9 +866,92 @@ export default function GameLayout({ stake, onNavigate }) {
                 })}
               </div>
             ) : isWatchMode ? (
-              <div className="text-center">
-                <div className="text-4xl mb-2">👀</div>
-                <p className="text-white/50 text-sm font-bold">Watch Mode</p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center px-6">
+                  {/* Animated eye icon */}
+                  <div className="relative mb-6">
+                    <div className="w-24 h-24 mx-auto rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="text-5xl"
+                      >
+                        👀
+                      </motion.div>
+                    </div>
+                    {/* Pulse ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div>
+                  </div>
+
+                  <h3 className="text-white text-xl font-black mb-2 tracking-wide">
+                    Watch Mode
+                  </h3>
+                  <p className="text-white/40 text-sm font-bold mb-4">
+                    Game currently in progress
+                  </p>
+
+                  {/* Status indicators */}
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                      <span className="text-white/30 text-xs font-bold">
+                        Live
+                      </span>
+                    </div>
+                    <div className="text-white/10">|</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white/30 text-xs font-bold">
+                        Players
+                      </span>
+                      <span className="text-white/50 text-xs font-extrabold">
+                        {currentPlayersCount || 0}
+                      </span>
+                    </div>
+                    {/* <div className="text-white/10">|</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white/30 text-xs font-bold">
+                        Calls
+                      </span>
+                      <span className="text-white/50 text-xs font-extrabold">
+                        {calledNumbers.length}
+                      </span>
+                    </div> */}
+                  </div>
+
+                  {/* Info card */}
+                  <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">
+                        <BsInfoCircle />
+                      </span>
+                      <div className="text-left">
+                        <p className="text-white/60 text-xs font-bold mb-1">
+                          You will automatically join the next available game
+                        </p>
+                        <p className="text-white/30 text-[10px] leading-relaxed">
+                          Stay on this screen. When a new round begins, you'll
+                          be taken to cartella selection.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Animated waiting dots */}
+                  <div className="flex justify-center gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-white/20"
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                          delay: i * 0.2,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
