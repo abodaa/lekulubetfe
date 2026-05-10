@@ -636,64 +636,66 @@ export default function GameLayout({ stake, onNavigate }) {
         </div> */}
 
         {/* Previously Called Numbers with animation */}
-        {calledNumbers.length > 0 ? (
-          <div className="px-3 pb-1 flex-shrink-0 my-2">
-            {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+        {!isWatchMode && (
+          <>
+            {calledNumbers.length > 0 ? (
+              <div className="px-3 pb-1 flex-shrink-0 my-2">
+                {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
             </div> */}
-            <div className="flex justify-center gap-1.5 flex-wrap relative">
-              <AnimatePresence mode="popLayout">
-                {/* Show current call + 5 most recent (excluding current if already in slice) */}
-                {(() => {
-                  // Get last 5 calls excluding current? Or include current?
-                  // This shows current + 4 previous = 5 total
-                  const lastFive = calledNumbers.slice(-5).reverse();
+                <div className="flex justify-center gap-1.5 flex-wrap relative">
+                  <AnimatePresence mode="popLayout">
+                    {/* Show current call + 5 most recent (excluding current if already in slice) */}
+                    {(() => {
+                      // Get last 5 calls excluding current? Or include current?
+                      // This shows current + 4 previous = 5 total
+                      const lastFive = calledNumbers.slice(-5).reverse();
 
-                  return lastFive.map((n, i) => {
-                    const isCurrent = n === currentNumber;
-                    const letter =
-                      n <= 15
-                        ? "B"
-                        : n <= 30
-                          ? "I"
-                          : n <= 45
-                            ? "N"
-                            : n <= 60
-                              ? "G"
-                              : "O";
+                      return lastFive.map((n, i) => {
+                        const isCurrent = n === currentNumber;
+                        const letter =
+                          n <= 15
+                            ? "B"
+                            : n <= 30
+                              ? "I"
+                              : n <= 45
+                                ? "N"
+                                : n <= 60
+                                  ? "G"
+                                  : "O";
 
-                    const colors = {
-                      B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                      I: "bg-green-500/30 text-green-200 border-green-400/40",
-                      N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                      G: "bg-red-500/30 text-red-200 border-red-400/40",
-                      O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                    };
+                        const colors = {
+                          B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                          I: "bg-green-500/30 text-green-200 border-green-400/40",
+                          N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                          G: "bg-red-500/30 text-red-200 border-red-400/40",
+                          O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                        };
 
-                    return (
-                      <motion.div
-                        key={`${n}-${calledNumbers.length - i}`}
-                        layout
-                        initial={
-                          isCurrent
-                            ? { scale: 0, rotate: -180 }
-                            : { opacity: 0, scale: 0.3, y: 20 }
-                        }
-                        animate={{
-                          opacity: 1,
-                          scale: isCurrent ? [0, 1.2, 1] : 1,
-                          y: 0,
-                          rotate: isCurrent ? 0 : 0,
-                        }}
-                        exit={{ opacity: 0, scale: 0.3, y: -20 }}
-                        transition={{
-                          type: "spring",
-                          damping: isCurrent ? 10 : 15,
-                          stiffness: isCurrent ? 200 : 250,
-                          delay: isCurrent ? 0 : i * 0.05,
-                        }}
-                        whileHover={{ scale: 1.1 }}
-                        className={`
+                        return (
+                          <motion.div
+                            key={`${n}-${calledNumbers.length - i}`}
+                            layout
+                            initial={
+                              isCurrent
+                                ? { scale: 0, rotate: -180 }
+                                : { opacity: 0, scale: 0.3, y: 20 }
+                            }
+                            animate={{
+                              opacity: 1,
+                              scale: isCurrent ? [0, 1.2, 1] : 1,
+                              y: 0,
+                              rotate: isCurrent ? 0 : 0,
+                            }}
+                            exit={{ opacity: 0, scale: 0.3, y: -20 }}
+                            transition={{
+                              type: "spring",
+                              damping: isCurrent ? 10 : 15,
+                              stiffness: isCurrent ? 200 : 250,
+                              delay: isCurrent ? 0 : i * 0.05,
+                            }}
+                            whileHover={{ scale: 1.1 }}
+                            className={`
                   rounded-full w-8 h-8 flex items-center justify-center 
                   text-[11px] font-extrabold font-mono border
                   ${colors[letter]}
@@ -705,46 +707,48 @@ export default function GameLayout({ stake, onNavigate }) {
                         : ""
                   }
                 `}
-                        style={{
-                          boxShadow: isCurrent
-                            ? "0 0 20px rgba(234, 179, 8, 0.6)"
-                            : undefined,
-                        }}
-                      >
-                        {isCurrent && (
-                          <motion.div
-                            className="absolute -top-2 -left-2"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.2, type: "spring" }}
+                            style={{
+                              boxShadow: isCurrent
+                                ? "0 0 20px rgba(234, 179, 8, 0.6)"
+                                : undefined,
+                            }}
                           >
-                            <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
-                              <CgLivePhoto className="inline-block w-3 h-3" />
-                            </div>
+                            {isCurrent && (
+                              <motion.div
+                                className="absolute -top-2 -left-2"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ delay: 0.2, type: "spring" }}
+                              >
+                                <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
+                                  <CgLivePhoto className="inline-block w-3 h-3" />
+                                </div>
+                              </motion.div>
+                            )}
+                            <motion.span
+                              initial={isCurrent ? { scale: 0 } : {}}
+                              animate={isCurrent ? { scale: 1 } : {}}
+                              transition={{ duration: 0.3, delay: 0.15 }}
+                              className={
+                                isCurrent ? "text-white drop-shadow-lg" : ""
+                              }
+                            >
+                              {letter}
+                              {n}
+                            </motion.span>
                           </motion.div>
-                        )}
-                        <motion.span
-                          initial={isCurrent ? { scale: 0 } : {}}
-                          animate={isCurrent ? { scale: 1 } : {}}
-                          transition={{ duration: 0.3, delay: 0.15 }}
-                          className={
-                            isCurrent ? "text-white drop-shadow-lg" : ""
-                          }
-                        >
-                          {letter}
-                          {n}
-                        </motion.span>
-                      </motion.div>
-                    );
-                  });
-                })()}
-              </AnimatePresence>
-            </div>
-          </div>
-        ) : (
-          <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-            Starts in {startCountdown > 0 ? startCountdown : "..."} secs
-          </p>
+                        );
+                      });
+                    })()}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : (
+              <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
+                Starts in {startCountdown > 0 ? startCountdown : "0"} secs
+              </p>
+            )}
+          </>
         )}
 
         {/* Number Board - Vertical BINGO */}
