@@ -821,49 +821,70 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Cartella - fills remaining space */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center overflow-y-auto">
-            {hasSingleCartela ? (
-              <div className="w-full max-w-[300px] mx-auto">
-                {yourCards.map(({ cardNumber, card }) => {
-                  const markedNumbers = isAutoMarkOn
-                    ? calledNumbers
-                    : manuallyMarkedNumbers[cardNumber]
-                      ? Array.from(manuallyMarkedNumbers[cardNumber])
-                      : [];
-                  return (
-                    <CartellaCard
-                      key={cardNumber}
-                      id={cardNumber}
-                      card={card}
-                      called={
-                        isAutoMarkOn
-                          ? [
-                              ...new Set([
-                                ...calledNumbers,
-                                ...(manuallyMarkedNumbers[cardNumber]
-                                  ? Array.from(
-                                      manuallyMarkedNumbers[cardNumber],
-                                    )
-                                  : []),
-                              ]),
-                            ]
-                          : markedNumbers
-                      }
-                      isPreview={false}
-                      showHeader={true}
-                      isAutoMarkOn={isAutoMarkOn}
-                      onNumberToggle={
-                        !isAutoMarkOn
-                          ? (number) => handleNumberToggle(cardNumber, number)
-                          : undefined
-                      }
-                      missedWinningCalledNumbers={
-                        missedClaimWindow && missedPatternCalledSnapshot
-                          ? missedPatternCalledSnapshot
-                          : null
-                      }
-                    />
-                  );
-                })}
+            {yourCards.length > 0 ? (
+              <div
+                className={`w-full ${yourCards.length === 1 ? "max-w-[300px] mx-auto" : "px-2"}`}
+              >
+                <div
+                  className={`grid gap-3 ${
+                    yourCards.length === 1
+                      ? "grid-cols-1"
+                      : yourCards.length === 2
+                        ? "grid-cols-1 sm:grid-cols-2"
+                        : "grid-cols-1 sm:grid-cols-2"
+                  }`}
+                >
+                  {yourCards.map(({ cardNumber, card }) => {
+                    const markedNumbers = isAutoMarkOn
+                      ? calledNumbers
+                      : manuallyMarkedNumbers[cardNumber]
+                        ? Array.from(manuallyMarkedNumbers[cardNumber])
+                        : [];
+
+                    return (
+                      <div key={cardNumber} className="relative">
+                        {yourCards.length > 1 && (
+                          <div className="absolute -top-2 -left-2 z-10 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border border-white/30">
+                            {cardNumber}
+                          </div>
+                        )}
+                        <CartellaCard
+                          id={cardNumber}
+                          card={card}
+                          called={
+                            isAutoMarkOn
+                              ? [
+                                  ...new Set([
+                                    ...calledNumbers,
+                                    ...(manuallyMarkedNumbers[cardNumber]
+                                      ? Array.from(
+                                          manuallyMarkedNumbers[cardNumber],
+                                        )
+                                      : []),
+                                  ]),
+                                ]
+                              : markedNumbers
+                          }
+                          isPreview={false}
+                          showHeader={yourCards.length === 1}
+                          isAutoMarkOn={isAutoMarkOn}
+                          onNumberToggle={
+                            !isAutoMarkOn
+                              ? (number) =>
+                                  handleNumberToggle(cardNumber, number)
+                              : undefined
+                          }
+                          missedWinningCalledNumbers={
+                            missedClaimWindow && missedPatternCalledSnapshot
+                              ? missedPatternCalledSnapshot
+                              : null
+                          }
+                          size={yourCards.length > 1 ? "small" : "normal"}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : isWatchMode ? (
               <div className="flex items-center justify-center h-full">
@@ -907,15 +928,6 @@ export default function GameLayout({ stake, onNavigate }) {
                         {currentPlayersCount || 0}
                       </span>
                     </div>
-                    {/* <div className="text-white/10">|</div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-white/30 text-xs font-bold">
-                        Calls
-                      </span>
-                      <span className="text-white/50 text-xs font-extrabold">
-                        {calledNumbers.length}
-                      </span>
-                    </div> */}
                   </div>
 
                   {/* Info card */}
