@@ -15,6 +15,7 @@ import {
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
 import AdminLayout from "./admin/AdminLayout.jsx";
+import DebugConsole from "./components/DebugConsole";
 
 // Inner component that has access to WebSocket context
 function AppContent() {
@@ -608,6 +609,9 @@ function AppContent() {
           </div>
         </div>
       )}
+
+      {/* Add debug console - only shows when ?debug=true */}
+      <DebugConsole enabled={true} />
     </div>
   );
 }
