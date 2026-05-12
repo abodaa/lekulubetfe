@@ -14,7 +14,6 @@ import { CgLivePhoto } from "react-icons/cg";
 
 import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
-import { BsInfoCircle } from "react-icons/bs";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -180,9 +179,7 @@ export default function GameLayout({ stake, onNavigate }) {
     const id = setTimeout(() => {
       try {
         preloadNumberSounds();
-      } catch {
-        showError("Failed to preload number sounds.");
-      }
+      } catch {}
     }, 1000);
     return () => clearTimeout(id);
   }, []);
@@ -289,7 +286,7 @@ export default function GameLayout({ stake, onNavigate }) {
     const card = yourCards[0]?.card;
     if (!card || calledNumbers.length === 0) return;
 
-    // const lastCalled = calledNumbers[calledNumbers.length - 1];
+    const lastCalled = calledNumbers[calledNumbers.length - 1];
 
     // Check if card has a winning pattern AND the last called number is part of it
     const hasWin = checkBingoPattern(card, calledNumbers);
@@ -339,7 +336,6 @@ export default function GameLayout({ stake, onNavigate }) {
         await new Promise((r) => setTimeout(r, 500));
       }
     } catch {
-      showError("Failed to refresh game state.");
     } finally {
       setIsRefreshing(false);
     }
@@ -640,66 +636,64 @@ export default function GameLayout({ stake, onNavigate }) {
         </div> */}
 
         {/* Previously Called Numbers with animation */}
-        {!isWatchMode && (
-          <>
-            {calledNumbers.length > 0 ? (
-              <div className="px-3 pb-1 flex-shrink-0 my-2">
-                {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
+        {calledNumbers.length > 0 ? (
+          <div className="px-3 pb-1 flex-shrink-0 my-2">
+            {/* <div className="text-white/30 text-[8px] uppercase tracking-widest font-bold mb-1 text-center">
               Recently Called
             </div> */}
-                <div className="flex justify-center gap-1.5 flex-wrap relative">
-                  <AnimatePresence mode="popLayout">
-                    {/* Show current call + 5 most recent (excluding current if already in slice) */}
-                    {(() => {
-                      // Get last 5 calls excluding current? Or include current?
-                      // This shows current + 4 previous = 5 total
-                      const lastFive = calledNumbers.slice(-5).reverse();
+            <div className="flex justify-center gap-1.5 flex-wrap relative">
+              <AnimatePresence mode="popLayout">
+                {/* Show current call + 5 most recent (excluding current if already in slice) */}
+                {(() => {
+                  // Get last 5 calls excluding current? Or include current?
+                  // This shows current + 4 previous = 5 total
+                  const lastFive = calledNumbers.slice(-5).reverse();
 
-                      return lastFive.map((n, i) => {
-                        const isCurrent = n === currentNumber;
-                        const letter =
-                          n <= 15
-                            ? "B"
-                            : n <= 30
-                              ? "I"
-                              : n <= 45
-                                ? "N"
-                                : n <= 60
-                                  ? "G"
-                                  : "O";
+                  return lastFive.map((n, i) => {
+                    const isCurrent = n === currentNumber;
+                    const letter =
+                      n <= 15
+                        ? "B"
+                        : n <= 30
+                          ? "I"
+                          : n <= 45
+                            ? "N"
+                            : n <= 60
+                              ? "G"
+                              : "O";
 
-                        const colors = {
-                          B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                          I: "bg-green-500/30 text-green-200 border-green-400/40",
-                          N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                          G: "bg-red-500/30 text-red-200 border-red-400/40",
-                          O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                        };
+                    const colors = {
+                      B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                      I: "bg-green-500/30 text-green-200 border-green-400/40",
+                      N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                      G: "bg-red-500/30 text-red-200 border-red-400/40",
+                      O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                    };
 
-                        return (
-                          <motion.div
-                            key={`${n}-${calledNumbers.length - i}`}
-                            layout
-                            initial={
-                              isCurrent
-                                ? { scale: 0, rotate: -180 }
-                                : { opacity: 0, scale: 0.3, y: 20 }
-                            }
-                            animate={{
-                              opacity: 1,
-                              scale: isCurrent ? [0, 1.2, 1] : 1,
-                              y: 0,
-                              rotate: isCurrent ? 0 : 0,
-                            }}
-                            exit={{ opacity: 0, scale: 0.3, y: -20 }}
-                            transition={{
-                              type: "spring",
-                              damping: isCurrent ? 10 : 15,
-                              stiffness: isCurrent ? 200 : 250,
-                              delay: isCurrent ? 0 : i * 0.05,
-                            }}
-                            whileHover={{ scale: 1.1 }}
-                            className={`
+                    return (
+                      <motion.div
+                        key={`${n}-${calledNumbers.length - i}`}
+                        layout
+                        initial={
+                          isCurrent
+                            ? { scale: 0, rotate: -180 }
+                            : { opacity: 0, scale: 0.3, y: 20 }
+                        }
+                        animate={{
+                          opacity: 1,
+                          scale: isCurrent ? [0, 1.2, 1] : 1,
+                          y: 0,
+                          rotate: isCurrent ? 0 : 0,
+                        }}
+                        exit={{ opacity: 0, scale: 0.3, y: -20 }}
+                        transition={{
+                          type: "spring",
+                          damping: isCurrent ? 10 : 15,
+                          stiffness: isCurrent ? 200 : 250,
+                          delay: isCurrent ? 0 : i * 0.05,
+                        }}
+                        whileHover={{ scale: 1.1 }}
+                        className={`
                   rounded-full w-8 h-8 flex items-center justify-center 
                   text-[11px] font-extrabold font-mono border
                   ${colors[letter]}
@@ -711,259 +705,162 @@ export default function GameLayout({ stake, onNavigate }) {
                         : ""
                   }
                 `}
-                            style={{
-                              boxShadow: isCurrent
-                                ? "0 0 20px rgba(234, 179, 8, 0.6)"
-                                : undefined,
-                            }}
+                        style={{
+                          boxShadow: isCurrent
+                            ? "0 0 20px rgba(234, 179, 8, 0.6)"
+                            : undefined,
+                        }}
+                      >
+                        {isCurrent && (
+                          <motion.div
+                            className="absolute -top-2 -left-2"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.2, type: "spring" }}
                           >
-                            {isCurrent && (
-                              <motion.div
-                                className="absolute -top-2 -left-2"
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: 0.2, type: "spring" }}
-                              >
-                                <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
-                                  <CgLivePhoto className="inline-block w-3 h-3" />
-                                </div>
-                              </motion.div>
-                            )}
-                            <motion.span
-                              initial={isCurrent ? { scale: 0 } : {}}
-                              animate={isCurrent ? { scale: 1 } : {}}
-                              transition={{ duration: 0.3, delay: 0.15 }}
-                              className={
-                                isCurrent ? "text-white drop-shadow-lg" : ""
-                              }
-                            >
-                              {letter}
-                              {n}
-                            </motion.span>
+                            <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
+                              <CgLivePhoto className="inline-block w-3 h-3" />
+                            </div>
                           </motion.div>
-                        );
-                      });
-                    })()}
-                  </AnimatePresence>
-                </div>
-              </div>
-            ) : (
-              <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-                Starts in {startCountdown > 0 ? startCountdown : "0"} secs
-              </p>
-            )}
-
-            {/* Number Board - Vertical BINGO */}
-            <div className="px-3 pb-1 flex-shrink-0">
-              <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {[
-                      {
-                        letter: "B",
-                        color: "bg-blue-600/70 text-blue-100",
-                        nums: Array.from({ length: 15 }, (_, i) => i + 1),
-                      },
-                      {
-                        letter: "I",
-                        color: "bg-green-600/70 text-green-100",
-                        nums: Array.from({ length: 15 }, (_, i) => i + 16),
-                      },
-                      {
-                        letter: "N",
-                        color: "bg-purple-600/70 text-purple-100",
-                        nums: Array.from({ length: 15 }, (_, i) => i + 31),
-                      },
-                      {
-                        letter: "G",
-                        color: "bg-red-600/70 text-red-100",
-                        nums: Array.from({ length: 15 }, (_, i) => i + 46),
-                      },
-                      {
-                        letter: "O",
-                        color: "bg-yellow-600/70 text-yellow-100",
-                        nums: Array.from({ length: 15 }, (_, i) => i + 61),
-                      },
-                    ].map(({ letter, color, nums }) => (
-                      <tr key={letter}>
-                        <td
-                          className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
+                        )}
+                        <motion.span
+                          initial={isCurrent ? { scale: 0 } : {}}
+                          animate={isCurrent ? { scale: 1 } : {}}
+                          transition={{ duration: 0.3, delay: 0.15 }}
+                          className={
+                            isCurrent ? "text-white drop-shadow-lg" : ""
+                          }
                         >
                           {letter}
-                        </td>
-                        {nums.map((n) => {
-                          const isCalled = calledNumbers.includes(n);
-                          const isCurrent = currentNumber === n;
-                          return (
-                            <td
-                              key={n}
-                              className={`text-center text-[10px] py-0.5 font-bold transition-all duration-200 ${
-                                isCurrent
-                                  ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50 scale-110"
-                                  : isCalled
-                                    ? "bg-white/20 text-white font-extrabold"
-                                    : "text-white/20"
-                              }`}
-                            >
-                              {n}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          {n}
+                        </motion.span>
+                      </motion.div>
+                    );
+                  });
+                })()}
+              </AnimatePresence>
             </div>
-          </>
+          </div>
+        ) : (
+          <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
+            Starts in {startCountdown > 0 ? startCountdown : "0"} secs
+          </p>
         )}
+
+        {/* Number Board - Vertical BINGO */}
+        <div className="px-3 pb-1 flex-shrink-0">
+          <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
+            <table className="w-full border-collapse">
+              <tbody>
+                {[
+                  {
+                    letter: "B",
+                    color: "bg-blue-600/70 text-blue-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 1),
+                  },
+                  {
+                    letter: "I",
+                    color: "bg-green-600/70 text-green-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 16),
+                  },
+                  {
+                    letter: "N",
+                    color: "bg-purple-600/70 text-purple-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 31),
+                  },
+                  {
+                    letter: "G",
+                    color: "bg-red-600/70 text-red-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 46),
+                  },
+                  {
+                    letter: "O",
+                    color: "bg-yellow-600/70 text-yellow-100",
+                    nums: Array.from({ length: 15 }, (_, i) => i + 61),
+                  },
+                ].map(({ letter, color, nums }) => (
+                  <tr key={letter}>
+                    <td
+                      className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
+                    >
+                      {letter}
+                    </td>
+                    {nums.map((n) => {
+                      const isCalled = calledNumbers.includes(n);
+                      const isCurrent = currentNumber === n;
+                      return (
+                        <td
+                          key={n}
+                          className={`text-center text-[10px] py-0.5 font-bold transition-all duration-200 ${
+                            isCurrent
+                              ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50 scale-110"
+                              : isCalled
+                                ? "bg-white/20 text-white font-extrabold"
+                                : "text-white/20"
+                          }`}
+                        >
+                          {n}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* Cartella - fills remaining space */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 flex items-center justify-center overflow-y-auto">
-            {yourCards.length > 0 ? (
-              <div
-                className={`w-full ${yourCards.length === 1 ? "max-w-[300px] mx-auto" : "px-2"}`}
-              >
-                <div
-                  className={`grid gap-3 ${
-                    yourCards.length === 1
-                      ? "grid-cols-1"
-                      : yourCards.length === 2
-                        ? "grid-cols-1 sm:grid-cols-2"
-                        : "grid-cols-1 sm:grid-cols-2"
-                  }`}
-                >
-                  {yourCards.map(({ cardNumber, card }) => {
-                    const markedNumbers = isAutoMarkOn
-                      ? calledNumbers
-                      : manuallyMarkedNumbers[cardNumber]
-                        ? Array.from(manuallyMarkedNumbers[cardNumber])
-                        : [];
-
-                    return (
-                      <div key={cardNumber} className="relative">
-                        {yourCards.length > 1 && (
-                          <div className="absolute -top-2 -left-2 z-10 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg border border-white/30">
-                            {cardNumber}
-                          </div>
-                        )}
-                        <CartellaCard
-                          id={cardNumber}
-                          card={card}
-                          called={
-                            isAutoMarkOn
-                              ? [
-                                  ...new Set([
-                                    ...calledNumbers,
-                                    ...(manuallyMarkedNumbers[cardNumber]
-                                      ? Array.from(
-                                          manuallyMarkedNumbers[cardNumber],
-                                        )
-                                      : []),
-                                  ]),
-                                ]
-                              : markedNumbers
-                          }
-                          isPreview={false}
-                          showHeader={yourCards.length === 1}
-                          isAutoMarkOn={isAutoMarkOn}
-                          onNumberToggle={
-                            !isAutoMarkOn
-                              ? (number) =>
-                                  handleNumberToggle(cardNumber, number)
-                              : undefined
-                          }
-                          missedWinningCalledNumbers={
-                            missedClaimWindow && missedPatternCalledSnapshot
-                              ? missedPatternCalledSnapshot
-                              : null
-                          }
-                          size={yourCards.length > 1 ? "small" : "normal"}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+            {hasSingleCartela ? (
+              <div className="w-full max-w-[300px] mx-auto">
+                {yourCards.map(({ cardNumber, card }) => {
+                  const markedNumbers = isAutoMarkOn
+                    ? calledNumbers
+                    : manuallyMarkedNumbers[cardNumber]
+                      ? Array.from(manuallyMarkedNumbers[cardNumber])
+                      : [];
+                  return (
+                    <CartellaCard
+                      key={cardNumber}
+                      id={cardNumber}
+                      card={card}
+                      called={
+                        isAutoMarkOn
+                          ? [
+                              ...new Set([
+                                ...calledNumbers,
+                                ...(manuallyMarkedNumbers[cardNumber]
+                                  ? Array.from(
+                                      manuallyMarkedNumbers[cardNumber],
+                                    )
+                                  : []),
+                              ]),
+                            ]
+                          : markedNumbers
+                      }
+                      isPreview={false}
+                      showHeader={true}
+                      isAutoMarkOn={isAutoMarkOn}
+                      onNumberToggle={
+                        !isAutoMarkOn
+                          ? (number) => handleNumberToggle(cardNumber, number)
+                          : undefined
+                      }
+                      missedWinningCalledNumbers={
+                        missedClaimWindow && missedPatternCalledSnapshot
+                          ? missedPatternCalledSnapshot
+                          : null
+                      }
+                    />
+                  );
+                })}
               </div>
             ) : isWatchMode ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center px-6">
-                  {/* Animated eye icon */}
-                  <div className="relative mb-6">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center">
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="text-5xl"
-                      >
-                        👀
-                      </motion.div>
-                    </div>
-                    {/* Pulse ring */}
-                    <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div>
-                  </div>
-
-                  <h3 className="text-white text-xl font-black mb-2 tracking-wide">
-                    Watch Mode
-                  </h3>
-                  <p className="text-white/40 text-sm font-bold mb-4">
-                    Game currently in progress
-                  </p>
-
-                  {/* Status indicators */}
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                      <span className="text-white/30 text-xs font-bold">
-                        Live
-                      </span>
-                    </div>
-                    <div className="text-white/10">|</div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-white/30 text-xs font-bold">
-                        Players
-                      </span>
-                      <span className="text-white/50 text-xs font-extrabold">
-                        {currentPlayersCount || 0}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Info card */}
-                  <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">
-                        <BsInfoCircle />
-                      </span>
-                      <div className="text-left">
-                        <p className="text-white/60 text-xs font-bold mb-1">
-                          You will automatically join the next available game
-                        </p>
-                        <p className="text-white/30 text-[10px] leading-relaxed">
-                          Stay on this screen. When a new round begins, you'll
-                          be taken to cartella selection.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Animated waiting dots */}
-                  <div className="flex justify-center gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        className="w-2 h-2 rounded-full bg-white/20"
-                        animate={{ opacity: [0.2, 1, 0.2] }}
-                        transition={{
-                          duration: 1.2,
-                          repeat: Infinity,
-                          delay: i * 0.2,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <div className="text-center">
+                <div className="text-4xl mb-2">👀</div>
+                <p className="text-white/50 text-sm font-bold">Watch Mode</p>
               </div>
             ) : null}
           </div>

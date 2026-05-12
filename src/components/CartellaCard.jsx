@@ -126,7 +126,6 @@ export default function CartellaCard({
   isAutoMarkOn = true,
   onNumberToggle = null,
   showHeader = false,
-  size = "normal",
 }) {
   const grid = card || null;
   if (!grid) return <div className="text-xs text-white/40">Loading...</div>;
@@ -162,19 +161,11 @@ export default function CartellaCard({
 
   return (
     <div
-      className={`${
-        size === "small"
-          ? "max-w-[180px]"
-          : isPreview
-            ? "max-w-[280px]"
-            : "max-w-[320px]"
-      } w-full mx-auto`}
+      className={`${isPreview ? "max-w-[280px]" : "max-w-[320px]"} w-full mx-auto`}
     >
       {/* BINGO Header */}
       {showHeader && (
-        <div
-          className={`grid grid-cols-5 gap-1 mb-1.5 ${size === "small" ? "text-[10px]" : ""}`}
-        >
+        <div className="grid grid-cols-5 gap-1 mb-1.5">
           {letters.map((letter, index) => (
             <div
               key={letter}
@@ -203,7 +194,8 @@ export default function CartellaCard({
               );
               const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
 
-              let cellStyle = "bg-white/20 text-white border border-white/5";
+              let cellStyle =
+                "bg-white/20 text-white border border-white/5";
 
               if (isFree) {
                 if (isMissedWinCell) {
@@ -223,7 +215,8 @@ export default function CartellaCard({
                 cellStyle =
                   "bg-green-500 text-white border border-green-400/50 font-bold";
               } else if (isSelected) {
-                cellStyle = "bg-blue-500 text-white border border-blue-400/50";
+                cellStyle =
+                  "bg-blue-500 text-white border border-blue-400/50";
               } else if (isCalled) {
                 if (showWinningPattern) {
                   cellStyle =
@@ -239,13 +232,12 @@ export default function CartellaCard({
                   key={`${rowIndex}-${colIndex}`}
                   onClick={() => handleCellClick(number)}
                   className={`
-                          aspect-square flex items-center justify-center 
-                          ${size === "small" ? "text-[10px]" : "text-xs sm:text-sm"} 
-                          font-medium transition-all duration-200 rounded-md m-0.5
-                          ${cellStyle}
-                          ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}
-                          ${isFree ? "text-[8px]" : ""}
-                        `}
+                    aspect-square flex items-center justify-center text-xs sm:text-sm font-medium
+                    transition-all duration-200 rounded-md m-0.5
+                    ${cellStyle}
+                    ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}
+                    ${isFree ? "text-[10px]" : ""}
+                  `}
                   title={
                     isClickable
                       ? "Click to mark/unmark"
