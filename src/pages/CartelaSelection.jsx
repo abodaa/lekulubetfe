@@ -39,6 +39,14 @@ export default function CartelaSelection({
   const totalCartellas = gameState.totalCartellas || cards.length || 200;
 
   useEffect(() => {
+    console.log(
+      "🟢 CartelaSelection - gameState.yourSelections changed:",
+      gameState.yourSelections,
+    );
+    console.log("🟢 CartelaSelection - selectedNumbers:", selectedNumbers);
+  }, [gameState.yourSelections, selectedNumbers]);
+
+  useEffect(() => {
     if (stake && sessionId && !hasConnectedRef.current) {
       hasConnectedRef.current = true;
       connectToStake(stake);
@@ -354,12 +362,18 @@ export default function CartelaSelection({
     // Select the cartella
     try {
       selectCartella(cardNum);
+      // console.log("📤 Called selectCartella for card:", cardNum);
+      // console.log("📤 Current selections before:", selectedNumbers);
       showSuccess(
         `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/${maxCartellas})`,
       );
+      // console.log("📤 Called selectCartella for card:", cardNum);
+      // console.log("📤 Current selections before:", selectedNumbers);
     } catch (err) {
       showError("Failed to select cartella.");
     }
+    console.log("📤 Called selectCartella for card:", cardNum);
+    console.log("📤 Current selections before:", selectedNumbers);
   };
 
   const handleRemoveCartella = async (cardNumber) => {
