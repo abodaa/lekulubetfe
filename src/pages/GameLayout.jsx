@@ -858,9 +858,83 @@ export default function GameLayout({ stake, onNavigate }) {
                 })}
               </div>
             ) : isWatchMode ? (
-              <div className="text-center">
-                <div className="text-4xl mb-2">👀</div>
-                <p className="text-white/50 text-sm font-bold">Watch Mode</p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center px-6">
+                  {/* Animated eye icon */}
+                  <div className="relative mb-6">
+                    <div className="w-24 h-24 mx-auto rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="text-5xl"
+                      >
+                        👀
+                      </motion.div>
+                    </div>
+                    {/* Pulse ring */}
+                    <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div>
+                  </div>
+
+                  <h3 className="text-white text-xl font-black mb-2 tracking-wide">
+                    Watch Mode
+                  </h3>
+                  <p className="text-white/40 text-sm font-bold mb-4">
+                    Game currently in progress
+                  </p>
+
+                  {/* Status indicators */}
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                      <span className="text-white/30 text-xs font-bold">
+                        Live
+                      </span>
+                    </div>
+                    <div className="text-white/10">|</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-white/30 text-xs font-bold">
+                        Players
+                      </span>
+                      <span className="text-white/50 text-xs font-extrabold">
+                        {currentPlayersCount || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Info card */}
+                  <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">
+                        <BsInfoCircle />
+                      </span>
+                      <div className="text-left">
+                        <p className="text-white/60 text-xs font-bold mb-1">
+                          You will automatically join the next available game
+                        </p>
+                        <p className="text-white/30 text-[10px] leading-relaxed">
+                          Stay on this screen. When a new round begins, you'll
+                          be taken to cartella selection.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Animated waiting dots */}
+                  <div className="flex justify-center gap-1.5">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-white/20"
+                        animate={{ opacity: [0.2, 1, 0.2] }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                          delay: i * 0.2,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
