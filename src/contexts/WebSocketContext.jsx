@@ -44,6 +44,12 @@ export function WebSocketProvider({ children }) {
   const send = useCallback(
     (type, payload) => {
       const ws = wsRef.current;
+      console.log("📤 send called:", {
+        type,
+        payload,
+        readyState: ws?.readyState,
+        hasRoom: !!ws?.room,
+      });
       const message = JSON.stringify({ type, payload });
       console.log("WebSocket send:", {
         type,
