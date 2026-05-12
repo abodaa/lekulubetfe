@@ -474,7 +474,10 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "selection_confirmed":
-                console.log("🔵 WEBSOCKET: selection_confirmed received", JSON.stringify(event.payload, null, 2));
+                console.log(
+                  "🔵 WEBSOCKET: selection_confirmed received",
+                  JSON.stringify(event.payload, null, 2),
+                );
               setGameState((prev) => {
                 if (
                   event.payload?.gameId &&

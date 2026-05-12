@@ -38,13 +38,13 @@ export default function CartelaSelection({
 
   const totalCartellas = gameState.totalCartellas || cards.length || 200;
 
-  useEffect(() => {
-    console.log(
-      "🟢 CartelaSelection - gameState.yourSelections changed:",
-      gameState.yourSelections,
-    );
-    console.log("🟢 CartelaSelection - selectedNumbers:", selectedNumbers);
-  }, [gameState.yourSelections, selectedNumbers]);
+  // useEffect(() => {
+  //   console.log(
+  //     "🟢 CartelaSelection - gameState.yourSelections changed:",
+  //     gameState.yourSelections,
+  //   );
+  //   console.log("🟢 CartelaSelection - selectedNumbers:", selectedNumbers);
+  // }, [gameState.yourSelections, selectedNumbers]);
 
   useEffect(() => {
     if (stake && sessionId && !hasConnectedRef.current) {
