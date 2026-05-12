@@ -14,6 +14,7 @@ export function WebSocketProvider({ children }) {
   const { sessionId } = useAuth();
   const wsRef = useRef(null);
   const [connected, setConnected] = useState(false);
+  const [roomJoined, setRoomJoined] = useState(false);
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -235,6 +236,9 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "snapshot": {
+              if (event.payload.gameId || event.payload.phase) {
+                setRoomJoined(true);
+              }
               setGameState((prev) => {
                 const snapshotPhase = event.payload.phase || "waiting";
                 const snapshotGameId = event.payload.gameId;
@@ -326,6 +330,7 @@ export function WebSocketProvider({ children }) {
             }
 
             case "registration_open": {
+              setRoomJoined(true);
               const registrationEndTime = event.payload.endsAt;
               // Use server-sent countdownSeconds if available
               const serverCountdown =
@@ -480,10 +485,10 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "selection_confirmed":
-                console.log(
-                  "🔵 WEBSOCKET: selection_confirmed received",
-                  JSON.stringify(event.payload, null, 2),
-                );
+              console.log(
+                "🔵 WEBSOCKET: selection_confirmed received",
+                JSON.stringify(event.payload, null, 2),
+              );
               setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
@@ -637,6 +642,7 @@ export function WebSocketProvider({ children }) {
   const connectToStake = useCallback(
     (stake) => {
       if (!safeSessionId || !stake) return;
+      setRoomJoined(false);
       const isSameStake = currentStake === stake;
 
       if (!isSameStake) {
@@ -705,6 +711,7 @@ export function WebSocketProvider({ children }) {
 
   const value = {
     connected,
+    roomJoined,
     gameState,
     lastEvent,
     currentStake,

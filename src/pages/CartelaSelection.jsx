@@ -24,6 +24,7 @@ export default function CartelaSelection({
 
   const {
     connected,
+    roomJoined,
     gameState,
     selectCartella,
     deselectCartella,
@@ -37,14 +38,6 @@ export default function CartelaSelection({
   const roomCheckTimerRef = useRef(null);
 
   const totalCartellas = gameState.totalCartellas || cards.length || 200;
-
-  // useEffect(() => {
-  //   console.log(
-  //     "🟢 CartelaSelection - gameState.yourSelections changed:",
-  //     gameState.yourSelections,
-  //   );
-  //   console.log("🟢 CartelaSelection - selectedNumbers:", selectedNumbers);
-  // }, [gameState.yourSelections, selectedNumbers]);
 
   useEffect(() => {
     if (stake && sessionId && !hasConnectedRef.current) {
@@ -320,7 +313,11 @@ export default function CartelaSelection({
       showError("Not connected to game server. Please refresh and try again.");
       return;
     }
-
+    // Check if room is joined
+    if (!roomJoined) {
+      showError("Connecting to game room. Please wait...");
+      return;
+    }
     // Check if already selected this card
     if (selectedNumbers.includes(cardNum)) {
       showError(`Cartella #${cardNum} already selected`);
@@ -595,7 +592,9 @@ export default function CartelaSelection({
                       <button
                         key={cartelaNumber}
                         onClick={() => handleCardSelect(cartelaNum)}
-                        disabled={gameState.phase !== "registration"}
+                        disabled={
+                          gameState.phase !== "registration" || !roomJoined
+                        }
                         className={`aspect-square rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                           isTaken
                             ? takenByMe
