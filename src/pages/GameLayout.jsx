@@ -823,6 +823,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         >
                           {letter}
                         </td>
+                        
                         {nums.map((n) => {
                           const isCalled = calledNumbers.includes(n);
                           const isCurrent = currentNumber === n;
