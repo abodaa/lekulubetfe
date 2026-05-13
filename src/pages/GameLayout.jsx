@@ -904,7 +904,7 @@ export default function GameLayout({ stake, onNavigate }) {
                           className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
                         >
                           {letter}
-                        </table>
+                        </td>
                         {nums.map((n) => {
                           const isCalled = calledNumbers.includes(n);
                           const isCurrent = currentNumber === n;
