@@ -32,12 +32,14 @@ export default function CartelaSelection({
     isConnecting,
     lastEvent,
   } = useWebSocket();
+
   const hasConnectedRef = useRef(false);
   const rejoinTriedRef = useRef(false);
   const roomCheckTimerRef = useRef(null);
 
   const totalCartellas = gameState.totalCartellas || cards.length || 200;
 
+  // Connect to stake when component mounts
   useEffect(() => {
     if (stake && sessionId && !hasConnectedRef.current) {
       hasConnectedRef.current = true;
@@ -45,11 +47,13 @@ export default function CartelaSelection({
     }
   }, [stake, sessionId, connectToStake]);
 
+  // Reset connection ref when stake changes
   useEffect(() => {
     hasConnectedRef.current = false;
     rejoinTriedRef.current = false;
   }, [stake]);
 
+  // Reconnect if waiting too long
   useEffect(() => {
     if (!stake || !connected) return;
     if (roomCheckTimerRef.current) clearTimeout(roomCheckTimerRef.current);
@@ -83,7 +87,7 @@ export default function CartelaSelection({
       setError(null);
       if (stake && sessionId) connectToStake(stake);
     }
-  }, [gameState.phase, gameState.winners, stake, sessionId]);
+  }, [gameState.phase, gameState.winners, stake, sessionId, connectToStake]);
 
   useEffect(() => {
     if (!stake || !sessionId) return;
@@ -119,6 +123,7 @@ export default function CartelaSelection({
     if (gameState.gameId) onGameIdUpdate?.(gameState.gameId);
   }, [gameState.gameId, onGameIdUpdate]);
 
+  // Fetch wallet balance
   useEffect(() => {
     const fetchWallet = async () => {
       if (!sessionId) return;
@@ -174,6 +179,7 @@ export default function CartelaSelection({
 
   const [retryCount, setRetryCount] = useState(0);
 
+  // Fetch all cartellas
   useEffect(() => {
     const fetchCards = async () => {
       if (!sessionId) return;
@@ -196,6 +202,7 @@ export default function CartelaSelection({
     fetchCards();
   }, [sessionId, retryCount]);
 
+  // Auto-navigate to game layout when game starts
   useEffect(() => {
     const selectedNumbers = Array.isArray(gameState.yourSelections)
       ? gameState.yourSelections
@@ -227,6 +234,9 @@ export default function CartelaSelection({
     gameState.gameId,
     gameState.yourSelections,
     gameState.yourCards,
+    onGameIdUpdate,
+    onCartelaSelected,
+    onNavigate,
   ]);
 
   useEffect(() => {
@@ -236,8 +246,13 @@ export default function CartelaSelection({
       lastEvent.type === "selection_rejected" &&
       lastEvent.payload?.reason === "LIMIT_REACHED"
     )
-      showError("You can select only 1 cartela.");
-  }, [lastEvent]);
+      showError("Maximum 5 cartellas per game");
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "INSUFFICIENT_FUNDS"
+    )
+      showError(`Insufficient balance. Need ${lastEvent.payload?.needed} ETB`);
+  }, [lastEvent, showError, showWarning]);
 
   useEffect(() => {
     const hasSelection =
@@ -283,8 +298,10 @@ export default function CartelaSelection({
     };
   }, []);
 
+  // ========== MAIN HANDLER FOR SELECTING A CARTELLA ==========
   const handleCardSelect = async (cardNumber) => {
     const cardNum = Number(cardNumber);
+
     if (walletLoading) {
       showError("Loading wallet information. Please wait a moment.");
       return;
@@ -294,87 +311,94 @@ export default function CartelaSelection({
       ? gameState.yourSelections
       : [];
 
+    // Check if game is in registration phase
     if (gameState.phase !== "registration") {
       const waitMsg =
-        "Please wait until the current game finishes. You can select cartela when registration starts again.";
-      setAlertBanners((prev) => {
-        if (prev.includes(waitMsg)) return prev;
-        return [...prev, waitMsg];
-      });
+        "Please wait until the current game finishes. You can select cartella when registration starts again.";
+      setAlertBanners((prev) =>
+        prev.includes(waitMsg) ? prev : [...prev, waitMsg],
+      );
       showError(waitMsg);
       return;
     }
 
+    // Check WebSocket connection
     if (!connected || wsReadyState !== WebSocket.OPEN) {
       showError("Not connected to game server. Please refresh and try again.");
       return;
     }
 
+    // Check if already selected this card
     if (selectedNumbers.includes(cardNum)) {
-      try {
-        deselectCartella(cardNum);
-        showSuccess(`Cartella #${cardNum} deselected!`);
-      } catch (err) {
-        showError("Failed to deselect cartella.");
-      }
+      showError(`Cartella #${cardNum} already selected`);
       return;
     }
 
-    if (selectedNumbers.length >= 1) {
-      const currentCard = selectedNumbers[0];
-      if (currentCard === cardNum) return;
-      const isTakenByOthers = gameState.takenCards.some(
-        (taken) => Number(taken) === cardNum,
+    // Check max cartellas (5)
+    if (selectedNumbers.length >= 5) {
+      showError(`Maximum 5 cartellas per game reached`);
+      return;
+    }
+
+    // Check if card is taken by other players
+    const isTakenByOthers = gameState.takenCards.some(
+      (taken) => Number(taken) === cardNum,
+    );
+    if (isTakenByOthers) {
+      setAlertBanners((prev) =>
+        prev.includes("This cartella is already taken")
+          ? prev
+          : [...prev, "This cartella is already taken."],
       );
-      if (isTakenByOthers) {
-        setAlertBanners((prev) =>
-          prev.includes("This cartella is already taken")
-            ? prev
-            : [...prev, "This cartella is already taken."],
-        );
-        showError("This cartella is already taken.");
-        return;
-      }
-      try {
-        deselectCartella(currentCard);
-        selectCartella(cardNum);
-        showSuccess(`Switched to Cartella #${cardNum}!`);
-      } catch (err) {
-        showError("Failed to switch cartella.");
-      }
+      showError("This cartella is already taken.");
       return;
     }
 
+    // Check if user has enough balance for ALL cartellas (current + new)
     const totalBalance = (wallet.main || 0) + (wallet.play || 0);
-    const needed = Number(stake);
-    if (totalBalance < needed) {
-      const msg = `Insufficient balance. You have ${totalBalance.toLocaleString()} ETB but need ${needed} ETB.`;
+    const newTotalCount = selectedNumbers.length + 1;
+    const totalNeeded = newTotalCount * Number(stake);
+
+    if (totalBalance < totalNeeded) {
+      const msg = `Insufficient balance. Need ${totalNeeded} ETB for ${newTotalCount} cartella(s). You have ${totalBalance.toLocaleString()} ETB.`;
       setAlertBanners((prev) => [...prev, msg]);
       showError(msg);
       return;
     }
 
-    const isTakenByOthers = gameState.takenCards.some(
-      (taken) => Number(taken) === cardNum,
-    );
-    if (isTakenByOthers && !selectedNumbers.includes(cardNum)) {
-      setAlertBanners((prev) => {
-        if (prev.includes("This cartella is already taken")) return prev;
-        return [...prev, "This cartella is already taken."];
-      });
-      showError("This cartella is already taken.");
+    // Select the cartella
+    try {
+      selectCartella(cardNum);
+      showSuccess(
+        `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/5)`,
+      );
+    } catch (err) {
+      showError("Failed to select cartella.");
+    }
+  };
+
+  // ========== HANDLER FOR REMOVING A CARTELLA ==========
+  const handleRemoveCartella = async (cardNumber) => {
+    const cardNum = Number(cardNumber);
+    const selectedNumbers = Array.isArray(gameState.yourSelections)
+      ? gameState.yourSelections
+      : [];
+
+    if (!selectedNumbers.includes(cardNum)) {
+      showError(`Cartella #${cardNum} not selected`);
+      return;
+    }
+
+    if (gameState.phase !== "registration") {
+      showError("Cannot remove cartella after game has started");
       return;
     }
 
     try {
-      const success = selectCartella(cardNum);
-      if (success)
-        showSuccess(
-          `Cartella #${cardNum} selected! Waiting for game to start...`,
-        );
-      else showError("Failed to select cartella.");
+      deselectCartella(cardNum);
+      showSuccess(`Cartella #${cardNum} removed`);
     } catch (err) {
-      showError("Failed to select cartella.");
+      showError("Failed to remove cartella.");
     }
   };
 
@@ -388,11 +412,9 @@ export default function CartelaSelection({
   const selectedNumbers = Array.isArray(gameState.yourSelections)
     ? gameState.yourSelections
     : [];
-  const selectedCards = selectedNumbers
-    .map((n) => ({ number: n, card: cards[n - 1] }))
-    .filter((x) => x.card);
-  const cardsReady = Array.isArray(cards) && cards.length > 0;
+
   const totalBalance = (wallet.main || 0) + (wallet.play || 0);
+  const cardsReady = Array.isArray(cards) && cards.length > 0;
 
   // Loading state
   if (loading || !cardsReady) {
@@ -517,6 +539,11 @@ export default function CartelaSelection({
               <div className="text-white font-bold text-sm">
                 {walletLoading ? "..." : totalBalance.toLocaleString()}
               </div>
+              {selectedNumbers.length > 0 && (
+                <div className="text-[8px] text-yellow-400 mt-1">
+                  Total: {selectedNumbers.length * stake} ETB
+                </div>
+              )}
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
@@ -562,7 +589,6 @@ export default function CartelaSelection({
                         )
                       : false;
                     const isSelected = selectedNumbers.includes(cartelaNum);
-                    const takenByMe = isSelected;
 
                     return (
                       <button
@@ -570,12 +596,10 @@ export default function CartelaSelection({
                         onClick={() => handleCardSelect(cartelaNum)}
                         disabled={gameState.phase !== "registration"}
                         className={`aspect-square rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
-                          isTaken
-                            ? takenByMe
-                              ? "bg-green-500/30 text-green-300 border-2 border-green-400 scale-105"
-                              : "bg-red-500/20 text-red-300/50 border border-red-500/20 cursor-not-allowed"
-                            : isSelected
-                              ? "bg-green-500/30 text-green-300 border-2 border-green-400 scale-105"
+                          isSelected
+                            ? "bg-green-500/50 text-green-300 border-2 border-green-400 scale-105"
+                            : isTaken
+                              ? "bg-red-500/20 text-red-300/50 border border-red-500/20 cursor-not-allowed"
                               : gameState.phase === "registration"
                                 ? "bg-white/10 text-white/70 hover:bg-white/20 hover:scale-105 border border-white/10 cursor-pointer"
                                 : "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
@@ -590,32 +614,64 @@ export default function CartelaSelection({
             </div>
           </div>
 
-          {/* Selected Cartella Preview */}
-          {selectedCards.length > 0 && (
+          {/* Selected Cartellas Grid */}
+          {selectedNumbers.length > 0 && (
             <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <h3 className="text-white/80 text-sm font-semibold">
-                  Your Cartella
-                </h3>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <h3 className="text-white/80 text-sm font-semibold">
+                    Your Cartellas ({selectedNumbers.length}/5)
+                  </h3>
+                </div>
+                {selectedNumbers.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Remove all ${selectedNumbers.length} cartellas?`,
+                        )
+                      ) {
+                        selectedNumbers.forEach((num) => deselectCartella(num));
+                      }
+                    }}
+                    className="text-red-400 text-xs hover:text-red-300"
+                  >
+                    Remove All
+                  </button>
+                )}
               </div>
-              <div className="bg-white/5 backdrop-blur rounded-2xl p-3 border border-green-500/20">
-                <div className="flex justify-center">
-                  {selectedCards.slice(0, 1).map(({ number, card }) => (
-                    <CartellaCard
+
+              <div className="grid grid-cols-2 gap-3">
+                {selectedNumbers.map((number) => {
+                  const cardData = cards[number - 1];
+                  if (!cardData) return null;
+
+                  return (
+                    <div
                       key={number}
-                      id={number}
-                      card={card}
-                      called={gameState.calledNumbers || []}
-                      isPreview={true}
-                    />
-                  ))}
-                </div>
-                <div className="text-center mt-2">
-                  <span className="text-white/50 text-xs">
-                    Cartella #{selectedNumbers[0]}
-                  </span>
-                </div>
+                      className="bg-white/5 backdrop-blur rounded-xl p-2 border border-green-500/20 relative"
+                    >
+                      <button
+                        onClick={() => handleRemoveCartella(number)}
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors z-10"
+                        title="Remove cartella"
+                      >
+                        ✕
+                      </button>
+                      <CartellaCard
+                        id={number}
+                        card={cardData}
+                        called={gameState.calledNumbers || []}
+                        isPreview={true}
+                        showHeader={false}
+                      />
+                      <div className="text-center mt-1">
+                        <span className="text-white/50 text-xs">#{number}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -623,7 +679,7 @@ export default function CartelaSelection({
           {/* Waiting Message */}
           {gameState.phase !== "registration" &&
             gameState.phase !== "waiting" &&
-            !selectedNumbers.length && (
+            selectedNumbers.length === 0 && (
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 text-center">
                 <div className="text-3xl mb-2">⏳</div>
                 <p className="text-yellow-300/80 text-sm font-medium">
