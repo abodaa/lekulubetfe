@@ -32,8 +32,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const checkBingoPattern = (cartella, calledNumbers) => {
     if (!cartella || !Array.isArray(cartella) || cartella.length !== 5)
       return false;
-    if (!calledNumbers || !Array.isArray(calledNumbers))
-      return false;
+    if (!calledNumbers || !Array.isArray(calledNumbers)) return false;
 
     const calledSet = new Set(calledNumbers);
 
@@ -84,8 +83,10 @@ export default function GameLayout({ stake, onNavigate }) {
 
     // Check four corners
     const corners = [
-      cartella[0][0], cartella[0][4],
-      cartella[4][0], cartella[4][4]
+      cartella[0][0],
+      cartella[0][4],
+      cartella[4][0],
+      cartella[4][4],
     ];
     const cornersComplete = corners.every((num) => {
       if (num === 0) return true;
@@ -178,11 +179,11 @@ export default function GameLayout({ stake, onNavigate }) {
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiRef = useRef(null);
-  
+
   // Track claimed cartellas per game
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
-  
+
   // Track missed winning patterns for each cartella
   const [missedPatterns, setMissedPatterns] = useState({});
 
@@ -263,7 +264,7 @@ export default function GameLayout({ stake, onNavigate }) {
       }
 
       // Verify winning pattern before sending
-      const card = yourCards.find(c => c.cardNumber === cardNumber)?.card;
+      const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
       if (!card) {
         showError(`Cartella #${cardNumber} not found`);
         return;
@@ -289,7 +290,7 @@ export default function GameLayout({ stake, onNavigate }) {
           showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
           claimedCartellasRef.current.add(cardNumber);
           // Clear missed pattern for this cartella
-          setMissedPatterns(prev => {
+          setMissedPatterns((prev) => {
             const newPatterns = { ...prev };
             delete newPatterns[cardNumber];
             return newPatterns;
@@ -324,30 +325,40 @@ export default function GameLayout({ stake, onNavigate }) {
     for (const { cardNumber, card } of yourCards) {
       // Skip if already claimed
       if (claimedCartellasRef.current.has(cardNumber)) continue;
-      
+
       const hasWin = checkBingoPattern(card, calledNumbers);
       if (!hasWin) continue;
-      
+
       // Verify last called number is part of winning pattern
-      const lastNumberInPattern = isLastCallPartOfWinningPattern(card, calledNumbers);
+      const lastNumberInPattern = isLastCallPartOfWinningPattern(
+        card,
+        calledNumbers,
+      );
       if (!lastNumberInPattern) continue;
-      
+
       console.log(`🎯 Auto-BINGO detected for Cartella #${cardNumber}!`);
       claimedCartellasRef.current.add(cardNumber);
       triggerConfetti();
       claimBingo({ cardNumber });
       showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
-      
+
       // Clear missed pattern for this cartella
-      setMissedPatterns(prev => {
+      setMissedPatterns((prev) => {
         const newPatterns = { ...prev };
         delete newPatterns[cardNumber];
         return newPatterns;
       });
-      
+
       break; // Only claim one per number call
     }
-  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards, claimBingo, showSuccess]);
+  }, [
+    calledNumbers,
+    gameState.phase,
+    isAutoMarkOn,
+    yourCards,
+    claimBingo,
+    showSuccess,
+  ]);
 
   // ========== TRACK MISSED WINNING PATTERNS ==========
   useEffect(() => {
@@ -372,12 +383,14 @@ export default function GameLayout({ stake, onNavigate }) {
 
       // Check if this cartella has a winning pattern
       const hasWin = checkBingoPattern(card, calledNumbers);
-      
+
       if (hasWin && !newMissedPatterns[cardNumber]) {
         // Winning pattern detected but not yet claimed
         newMissedPatterns[cardNumber] = [...calledNumbers];
         hasChanges = true;
-        console.log(`⚠️ Winning pattern detected for Cartella #${cardNumber} - ready to claim`);
+        console.log(
+          `⚠️ Winning pattern detected for Cartella #${cardNumber} - ready to claim`,
+        );
       } else if (!hasWin && newMissedPatterns[cardNumber]) {
         delete newMissedPatterns[cardNumber];
         hasChanges = true;
@@ -540,6 +553,15 @@ export default function GameLayout({ stake, onNavigate }) {
         ? "REG"
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
+
+  const letters = ["B", "I", "N", "G", "O"];
+  const letterColors = [
+    "bg-blue-500/30 text-blue-200",
+    "bg-green-500/30 text-green-200",
+    "bg-purple-500/30 text-purple-200",
+    "bg-red-500/30 text-red-200",
+    "bg-yellow-500/30 text-yellow-200",
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
@@ -767,7 +789,9 @@ export default function GameLayout({ stake, onNavigate }) {
                               initial={isCurrent ? { scale: 0 } : {}}
                               animate={isCurrent ? { scale: 1 } : {}}
                               transition={{ duration: 0.3, delay: 0.15 }}
-                              className={isCurrent ? "text-white drop-shadow-lg" : ""}
+                              className={
+                                isCurrent ? "text-white drop-shadow-lg" : ""
+                              }
                             >
                               {letter}
                               {n}
@@ -823,7 +847,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         >
                           {letter}
                         </td>
-                        
+
                         {nums.map((n) => {
                           const isCalled = calledNumbers.includes(n);
                           const isCurrent = currentNumber === n;
@@ -863,10 +887,18 @@ export default function GameLayout({ stake, onNavigate }) {
                       ? Array.from(manuallyMarkedNumbers[cardNumber])
                       : [];
 
-                  const hasWinningPattern = checkBingoPattern(card, calledNumbers);
+                  const hasWinningPattern = checkBingoPattern(
+                    card,
+                    calledNumbers,
+                  );
                   const isClaiming = claimingStates[cardNumber];
-                  const alreadyClaimed = claimedCartellasRef.current.has(cardNumber);
-                  const canClaim = hasWinningPattern && gameState.phase === "running" && !alreadyClaimed && !isClaiming;
+                  const alreadyClaimed =
+                    claimedCartellasRef.current.has(cardNumber);
+                  const canClaim =
+                    hasWinningPattern &&
+                    gameState.phase === "running" &&
+                    !alreadyClaimed &&
+                    !isClaiming;
                   const hasMissedPattern = !!missedPatterns[cardNumber];
 
                   return (
@@ -895,11 +927,13 @@ export default function GameLayout({ stake, onNavigate }) {
                               READY!
                             </span>
                           )}
-                          {hasMissedPattern && !alreadyClaimed && !hasWinningPattern && (
-                            <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
-                              MISSED
-                            </span>
-                          )}
+                          {hasMissedPattern &&
+                            !alreadyClaimed &&
+                            !hasWinningPattern && (
+                              <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
+                                MISSED
+                              </span>
+                            )}
                         </div>
                         <button
                           onClick={() => handleCartellaBingo(cardNumber)}
@@ -912,8 +946,24 @@ export default function GameLayout({ stake, onNavigate }) {
                                 : "bg-gradient-to-r from-red-500 to-pink-500 text-white opacity-50 cursor-not-allowed"
                           }`}
                         >
-                          {isClaiming ? "..." : alreadyClaimed ? "✓ WON" : "🎉 BINGO!"}
+                          {isClaiming
+                            ? "..."
+                            : alreadyClaimed
+                              ? "✓ WON"
+                              : "🎉 BINGO!"}
                         </button>
+                      </div>
+
+                      {/* BINGO Header - MOVED HERE (below button row) */}
+                      <div className="grid grid-cols-5 gap-1 mb-2">
+                        {letters.map((letter, idx) => (
+                          <div
+                            key={letter}
+                            className={`text-center text-[10px] font-extrabold py-1.5 rounded-md ${letterColors[idx]} border border-white/10`}
+                          >
+                            {letter}
+                          </div>
+                        ))}
                       </div>
                       <CartellaCard
                         id={cardNumber}
@@ -924,7 +974,9 @@ export default function GameLayout({ stake, onNavigate }) {
                                 ...new Set([
                                   ...calledNumbers,
                                   ...(manuallyMarkedNumbers[cardNumber]
-                                    ? Array.from(manuallyMarkedNumbers[cardNumber])
+                                    ? Array.from(
+                                        manuallyMarkedNumbers[cardNumber],
+                                      )
                                     : []),
                                 ]),
                               ]
@@ -938,7 +990,9 @@ export default function GameLayout({ stake, onNavigate }) {
                             ? (number) => handleNumberToggle(cardNumber, number)
                             : undefined
                         }
-                        missedWinningCalledNumbers={missedPatterns[cardNumber] || null}
+                        missedWinningCalledNumbers={
+                          missedPatterns[cardNumber] || null
+                        }
                         size="normal"
                       />
                     </div>
