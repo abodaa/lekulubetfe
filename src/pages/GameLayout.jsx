@@ -251,13 +251,13 @@ export default function GameLayout({ stake, onNavigate }) {
       }
 
       // ADD THIS CHECK
-      if (
-        missedPatterns[cardNumber] ||
-        missedPatternsPersistentRef.current[cardNumber]
-      ) {
-        showError("Claim time passed. You missed the winning pattern.");
-        return;
-      }
+      // if (
+      //   missedPatterns[cardNumber] ||
+      //   missedPatternsPersistentRef.current[cardNumber]
+      // ) {
+      //   showError("Claim time passed. You missed the winning pattern.");
+      //   return;
+      // }
 
       const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
       if (!card) {
@@ -378,13 +378,17 @@ export default function GameLayout({ stake, onNavigate }) {
 
       const hasWin = checkBingoPattern(card, calledNumbers);
 
-      if (
-        hasWin &&
-        !newMissedPatterns[cardNumber] &&
-        !missedPatternsPersistentRef.current[cardNumber]
-      ) {
-        newMissedPatterns[cardNumber] = [...calledNumbers];
-        hasChanges = true;
+      if (hasWin) {
+        // If there was a missed pattern, clear it because a new winning pattern appeared
+        if (
+          newMissedPatterns[cardNumber] ||
+          missedPatternsPersistentRef.current[cardNumber]
+        ) {
+          delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
+          hasChanges = true;
+        }
+        // Don't mark as missed immediately - only mark when pattern is missed (from bingoRejected event)
       }
     }
 
@@ -475,9 +479,9 @@ export default function GameLayout({ stake, onNavigate }) {
       } else if (reason === "stale_claim") {
         setAlertBanners((prev) => [
           ...prev,
-          "Pattern passed. Wait for next call.",
+          "You missed that winning pattern. Keep playing for the next one!",
         ]);
-        // Store missed pattern
+        // Store missed pattern - but this will be cleared when a new winning pattern appears
         if (cardNumber) {
           setMissedPatterns((prev) => ({
             ...prev,
@@ -938,8 +942,9 @@ export default function GameLayout({ stake, onNavigate }) {
                                 )}
                                 {!isAutoMarkOn &&
                                   hasMissedPattern &&
-                                  !alreadyClaimed && (
-                                    <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
+                                  !alreadyClaimed &&
+                                  !hasWinningPattern && (
+                                    <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
                                       MISSED
                                     </span>
                                   )}
