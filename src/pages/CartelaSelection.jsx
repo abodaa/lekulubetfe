@@ -21,6 +21,7 @@ export default function CartelaSelection({
   const [walletLoading, setWalletLoading] = useState(true);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
+  const isSelectingRef = useRef(false);
 
   const {
     connected,
@@ -300,80 +301,93 @@ export default function CartelaSelection({
 
   // ========== MAIN HANDLER FOR SELECTING A CARTELLA ==========
   const handleCardSelect = async (cardNumber) => {
-    const cardNum = Number(cardNumber);
-
-    if (walletLoading) {
-      showError("Loading wallet information. Please wait a moment.");
+    // Prevent multiple rapid clicks
+    if (isSelectingRef.current) {
       return;
     }
 
-    const selectedNumbers = Array.isArray(gameState.yourSelections)
-      ? gameState.yourSelections
-      : [];
+    isSelectingRef.current = true;
 
-    // Check if game is in registration phase
-    if (gameState.phase !== "registration") {
-      const waitMsg =
-        "Please wait until the current game finishes. You can select cartella when registration starts again.";
-      setAlertBanners((prev) =>
-        prev.includes(waitMsg) ? prev : [...prev, waitMsg],
-      );
-      showError(waitMsg);
-      return;
-    }
-
-    // Check WebSocket connection
-    if (!connected || wsReadyState !== WebSocket.OPEN) {
-      showError("Not connected to game server. Please refresh and try again.");
-      return;
-    }
-
-    // Check if already selected this card
-    if (selectedNumbers.includes(cardNum)) {
-      showError(`Cartella #${cardNum} already selected`);
-      return;
-    }
-
-    // Check max cartellas (5)
-    if (selectedNumbers.length >= 5) {
-      showError(`Maximum 5 cartellas per game reached`);
-      return;
-    }
-
-    // Check if card is taken by other players
-    const isTakenByOthers = gameState.takenCards.some(
-      (taken) => Number(taken) === cardNum,
-    );
-    if (isTakenByOthers) {
-      setAlertBanners((prev) =>
-        prev.includes("This cartella is already taken")
-          ? prev
-          : [...prev, "This cartella is already taken."],
-      );
-      showError("This cartella is already taken.");
-      return;
-    }
-
-    // Check if user has enough balance for ALL cartellas (current + new)
-    const totalBalance = (wallet.main || 0) + (wallet.play || 0);
-    const newTotalCount = selectedNumbers.length + 1;
-    const totalNeeded = newTotalCount * Number(stake);
-
-    if (totalBalance < totalNeeded) {
-      const msg = `Insufficient balance. Need ${totalNeeded} ETB for ${newTotalCount} cartella(s). You have ${totalBalance.toLocaleString()} ETB.`;
-      setAlertBanners((prev) => [...prev, msg]);
-      showError(msg);
-      return;
-    }
-
-    // Select the cartella
     try {
+      const cardNum = Number(cardNumber);
+
+      if (walletLoading) {
+        showError("Loading wallet information. Please wait a moment.");
+        return;
+      }
+
+      const selectedNumbers = Array.isArray(gameState.yourSelections)
+        ? gameState.yourSelections
+        : [];
+
+      // Check if game is in registration phase
+      if (gameState.phase !== "registration") {
+        const waitMsg =
+          "Please wait until the current game finishes. You can select cartella when registration starts again.";
+        setAlertBanners((prev) =>
+          prev.includes(waitMsg) ? prev : [...prev, waitMsg],
+        );
+        showError(waitMsg);
+        return;
+      }
+
+      // Check WebSocket connection
+      if (!connected || wsReadyState !== WebSocket.OPEN) {
+        showError(
+          "Not connected to game server. Please refresh and try again.",
+        );
+        return;
+      }
+
+      // Check if already selected this card
+      if (selectedNumbers.includes(cardNum)) {
+        showError(`Cartella #${cardNum} already selected`);
+        return;
+      }
+
+      // Check max cartellas (5)
+      if (selectedNumbers.length >= 5) {
+        showError(`Maximum 5 cartellas per game reached`);
+        return;
+      }
+
+      // Check if card is taken by other players
+      const isTakenByOthers = gameState.takenCards.some(
+        (taken) => Number(taken) === cardNum,
+      );
+      if (isTakenByOthers) {
+        setAlertBanners((prev) =>
+          prev.includes("This cartella is already taken")
+            ? prev
+            : [...prev, "This cartella is already taken."],
+        );
+        showError("This cartella is already taken.");
+        return;
+      }
+
+      // Check if user has enough balance for ALL cartellas (current + new)
+      const totalBalance = (wallet.main || 0) + (wallet.play || 0);
+      const newTotalCount = selectedNumbers.length + 1;
+      const totalNeeded = newTotalCount * Number(stake);
+
+      if (totalBalance < totalNeeded) {
+        const msg = `Insufficient balance. Need ${totalNeeded} ETB for ${newTotalCount} cartella(s). You have ${totalBalance.toLocaleString()} ETB.`;
+        setAlertBanners((prev) => [...prev, msg]);
+        showError(msg);
+        return;
+      }
+
+      // Select the cartella
       selectCartella(cardNum);
       showSuccess(
         `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/5)`,
       );
     } catch (err) {
       showError("Failed to select cartella.");
+    } finally {
+      setTimeout(() => {
+        isSelectingRef.current = false;
+      }, 500);
     }
   };
 
