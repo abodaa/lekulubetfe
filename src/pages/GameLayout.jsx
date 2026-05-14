@@ -249,6 +249,15 @@ export default function GameLayout({ stake, onNavigate }) {
         return;
       }
 
+      // ADD THIS CHECK
+      if (
+        missedPatterns[cardNumber] ||
+        missedPatternsPersistentRef.current[cardNumber]
+      ) {
+        showError("Claim time passed. You missed the winning pattern.");
+        return;
+      }
+
       const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
       if (!card) {
         showError(`Cartella #${cardNumber} not found`);
@@ -299,11 +308,11 @@ export default function GameLayout({ stake, onNavigate }) {
       yourCards,
       calledNumbers,
       isAutoMarkOn,
+      missedPatterns,
       showError,
       showSuccess,
     ],
   );
-
   // AUTO-BINGO for multiple cartellas
   useEffect(() => {
     if (gameState.phase !== "running") return;
@@ -467,6 +476,7 @@ export default function GameLayout({ stake, onNavigate }) {
           ...prev,
           "Pattern passed. Wait for next call.",
         ]);
+        // Store missed pattern
         if (cardNumber) {
           setMissedPatterns((prev) => ({
             ...prev,
