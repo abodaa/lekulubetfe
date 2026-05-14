@@ -126,6 +126,7 @@ export default function CartellaCard({
   isAutoMarkOn = true,
   onNumberToggle = null,
   showHeader = false,
+  size,
 }) {
   const grid = card || null;
   if (!grid) return <div className="text-xs text-white/40">Loading...</div>;
@@ -161,7 +162,13 @@ export default function CartellaCard({
 
   return (
     <div
-      className={`${isPreview ? "max-w-[280px]" : "max-w-[320px]"} w-full mx-auto`}
+      className={`${
+        size === "small"
+          ? "max-w-[220px]"
+          : isPreview
+            ? "max-w-[280px]"
+            : "max-w-[320px]"
+      } w-full mx-auto`}
     >
       {/* BINGO Header */}
       {showHeader && (
@@ -194,8 +201,7 @@ export default function CartellaCard({
               );
               const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
 
-              let cellStyle =
-                "bg-white/20 text-white border border-white/5";
+              let cellStyle = "bg-white/20 text-white border border-white/5";
 
               if (isFree) {
                 if (isMissedWinCell) {
@@ -215,8 +221,7 @@ export default function CartellaCard({
                 cellStyle =
                   "bg-green-500 text-white border border-green-400/50 font-bold";
               } else if (isSelected) {
-                cellStyle =
-                  "bg-blue-500 text-white border border-blue-400/50";
+                cellStyle = "bg-blue-500 text-white border border-blue-400/50";
               } else if (isCalled) {
                 if (showWinningPattern) {
                   cellStyle =

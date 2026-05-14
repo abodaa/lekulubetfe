@@ -1024,7 +1024,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                 ] ||
                                 null
                               }
-                              size="normal"
+                              size="small"
                             />
                           </div>
                         </div>
