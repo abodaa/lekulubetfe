@@ -128,6 +128,10 @@ export default function CartellaCard({
   showHeader = false,
   size,
 }) {
+  console.log(
+    `Cartella ${id}: missedWinningCalledNumbers =`,
+    missedWinningCalledNumbers,
+  );
   const grid = card || null;
   if (!grid) return <div className="text-xs text-white/40">Loading...</div>;
 
