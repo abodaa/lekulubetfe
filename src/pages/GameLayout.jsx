@@ -168,6 +168,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [claimingStates, setClaimingStates] = useState({});
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const confettiRef = useRef(null);
 
   const claimedCartellasRef = useRef(new Set());
@@ -879,129 +880,216 @@ export default function GameLayout({ stake, onNavigate }) {
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto">
             {yourCards.length > 0 ? (
-              <div className="space-y-4">
-                {yourCards.map(({ cardNumber, card }) => {
-                  const markedNumbers = isAutoMarkOn
-                    ? calledNumbers
-                    : manuallyMarkedNumbers[cardNumber]
-                      ? Array.from(manuallyMarkedNumbers[cardNumber])
-                      : [];
+              <div className="relative">
+                {/* Slider Container */}
+                <div className="overflow-hidden">
+                  <div
+                    className="flex transition-transform duration-300 ease-out"
+                    style={{
+                      transform: `translateX(-${currentCardIndex * 100}%)`,
+                    }}
+                  >
+                    {yourCards.map(({ cardNumber, card }) => {
+                      const markedNumbers = isAutoMarkOn
+                        ? calledNumbers
+                        : manuallyMarkedNumbers[cardNumber]
+                          ? Array.from(manuallyMarkedNumbers[cardNumber])
+                          : [];
 
-                  const hasWinningPattern = checkBingoPattern(
-                    card,
-                    calledNumbers,
-                  );
-                  const isClaiming = claimingStates[cardNumber];
-                  const alreadyClaimed =
-                    claimedCartellasRef.current.has(cardNumber);
-                  const hasMissedPattern =
-                    !!missedPatterns[cardNumber] ||
-                    !!missedPatternsPersistentRef.current[cardNumber];
+                      const hasWinningPattern = checkBingoPattern(
+                        card,
+                        calledNumbers,
+                      );
+                      const isClaiming = claimingStates[cardNumber];
+                      const alreadyClaimed =
+                        claimedCartellasRef.current.has(cardNumber);
+                      const hasMissedPattern =
+                        !!missedPatterns[cardNumber] ||
+                        !!missedPatternsPersistentRef.current[cardNumber];
 
-                  return (
-                    <div
-                      key={cardNumber}
-                      className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
-                        hasMissedPattern && !alreadyClaimed && !isAutoMarkOn
-                          ? "border-red-500/50 bg-red-500/10"
-                          : hasWinningPattern &&
+                      return (
+                        <div
+                          key={cardNumber}
+                          className="w-full flex-shrink-0 px-2"
+                          style={{ flex: "0 0 100%" }}
+                        >
+                          <div
+                            className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
+                              hasMissedPattern &&
                               !alreadyClaimed &&
                               !isAutoMarkOn
-                            ? "border-green-500/50 bg-green-500/10"
-                            : "border-white/10"
+                                ? "border-red-500/50 bg-red-500/10"
+                                : hasWinningPattern &&
+                                    !alreadyClaimed &&
+                                    !isAutoMarkOn
+                                  ? "border-green-500/50 bg-green-500/10"
+                                  : "border-white/10"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-white/70 text-sm font-bold">
+                                  Cartella #{cardNumber}
+                                </span>
+                                {alreadyClaimed && (
+                                  <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full">
+                                    WON ✓
+                                  </span>
+                                )}
+                                {!isAutoMarkOn &&
+                                  hasMissedPattern &&
+                                  !alreadyClaimed && (
+                                    <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
+                                      MISSED
+                                    </span>
+                                  )}
+                              </div>
+                              <button
+                                onClick={() => handleCartellaBingo(cardNumber)}
+                                disabled={
+                                  isAutoMarkOn ||
+                                  alreadyClaimed ||
+                                  isClaiming ||
+                                  gameState.phase !== "running"
+                                }
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                  alreadyClaimed
+                                    ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
+                                    : isAutoMarkOn
+                                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-70 cursor-not-allowed"
+                                      : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:scale-105"
+                                }`}
+                              >
+                                {isClaiming
+                                  ? "..."
+                                  : alreadyClaimed
+                                    ? "✓ WON"
+                                    : isAutoMarkOn
+                                      ? "🤖 AUTO BINGO"
+                                      : "🎉 BINGO!"}
+                              </button>
+                            </div>
+
+                            {/* BINGO Header */}
+                            <div className="grid grid-cols-5 gap-1 mb-2">
+                              {["B", "I", "N", "G", "O"].map((letter, idx) => {
+                                const colors = [
+                                  "bg-blue-500/30 text-blue-200",
+                                  "bg-green-500/30 text-green-200",
+                                  "bg-purple-500/30 text-purple-200",
+                                  "bg-red-500/30 text-red-200",
+                                  "bg-yellow-500/30 text-yellow-200",
+                                ];
+                                return (
+                                  <div
+                                    key={letter}
+                                    className={`text-center text-[10px] font-extrabold py-1.5 rounded-md ${colors[idx]} border border-white/10`}
+                                  >
+                                    {letter}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <CartellaCard
+                              id={cardNumber}
+                              card={card}
+                              called={
+                                isAutoMarkOn
+                                  ? [
+                                      ...new Set([
+                                        ...calledNumbers,
+                                        ...(manuallyMarkedNumbers[cardNumber]
+                                          ? Array.from(
+                                              manuallyMarkedNumbers[cardNumber],
+                                            )
+                                          : []),
+                                      ]),
+                                    ]
+                                  : markedNumbers
+                              }
+                              isPreview={false}
+                              showHeader={false}
+                              isAutoMarkOn={isAutoMarkOn}
+                              onNumberToggle={
+                                !isAutoMarkOn
+                                  ? (number) =>
+                                      handleNumberToggle(cardNumber, number)
+                                  : undefined
+                              }
+                              missedWinningCalledNumbers={
+                                missedPatterns[cardNumber] ||
+                                missedPatternsPersistentRef.current[
+                                  cardNumber
+                                ] ||
+                                null
+                              }
+                              size="normal"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Navigation Buttons - Only show if more than 1 cartella */}
+                {yourCards.length > 1 && (
+                  <div className="flex justify-between items-center mt-3">
+                    <button
+                      onClick={() =>
+                        setCurrentCardIndex((prev) => Math.max(0, prev - 1))
+                      }
+                      disabled={currentCardIndex === 0}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        currentCardIndex === 0
+                          ? "bg-white/10 text-white/30 cursor-not-allowed"
+                          : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
                       }`}
                     >
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-white/70 text-sm font-bold">
-                            Cartella #{cardNumber}
-                          </span>
-                          {alreadyClaimed && (
-                            <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full">
-                              WON ✓
-                            </span>
-                          )}
-                          {!isAutoMarkOn &&
-                            hasMissedPattern &&
-                            !alreadyClaimed && (
-                              <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
-                                MISSED
-                              </span>
-                            )}
-                        </div>
+                      ◀
+                    </button>
+
+                    <div className="flex gap-1.5">
+                      {yourCards.map((_, idx) => (
                         <button
-                          onClick={() => handleCartellaBingo(cardNumber)}
-                          disabled={
-                            isAutoMarkOn ||
-                            alreadyClaimed ||
-                            isClaiming ||
-                            gameState.phase !== "running"
-                          }
-                          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                            alreadyClaimed
-                              ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
-                              : isAutoMarkOn
-                                ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-70 cursor-not-allowed"
-                                : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:scale-105"
+                          key={idx}
+                          onClick={() => setCurrentCardIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            currentCardIndex === idx
+                              ? "bg-white w-4"
+                              : "bg-white/30 hover:bg-white/50"
                           }`}
-                        >
-                          {isClaiming
-                            ? "..."
-                            : alreadyClaimed
-                              ? "✓ WON"
-                              : isAutoMarkOn
-                                ? "🤖 AUTO BINGO"
-                                : "🎉 BINGO!"}
-                        </button>
-                      </div>
-
-                      {/* BINGO Header */}
-                      <div className="grid grid-cols-5 gap-1 mb-2">
-                        {letters.map((letter, idx) => (
-                          <div
-                            key={letter}
-                            className={`text-center text-[10px] font-extrabold py-1.5 rounded-md ${letterColors[idx]} border border-white/10`}
-                          >
-                            {letter}
-                          </div>
-                        ))}
-                      </div>
-
-                      <CartellaCard
-                        id={cardNumber}
-                        card={card}
-                        called={
-                          isAutoMarkOn
-                            ? [
-                                ...new Set([
-                                  ...calledNumbers,
-                                  ...(manuallyMarkedNumbers[cardNumber]
-                                    ? Array.from(
-                                        manuallyMarkedNumbers[cardNumber],
-                                      )
-                                    : []),
-                                ]),
-                              ]
-                            : markedNumbers
-                        }
-                        isPreview={false}
-                        showHeader={false}
-                        isAutoMarkOn={isAutoMarkOn}
-                        onNumberToggle={
-                          !isAutoMarkOn
-                            ? (number) => handleNumberToggle(cardNumber, number)
-                            : undefined
-                        }
-                        missedWinningCalledNumbers={
-                          missedPatterns[cardNumber] ||
-                          missedPatternsPersistentRef.current[cardNumber] ||
-                          null
-                        }
-                        size="normal"
-                      />
+                        />
+                      ))}
                     </div>
-                  );
-                })}
+
+                    <button
+                      onClick={() =>
+                        setCurrentCardIndex((prev) =>
+                          Math.min(yourCards.length - 1, prev + 1),
+                        )
+                      }
+                      disabled={currentCardIndex === yourCards.length - 1}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                        currentCardIndex === yourCards.length - 1
+                          ? "bg-white/10 text-white/30 cursor-not-allowed"
+                          : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
+                      }`}
+                    >
+                      ▶
+                    </button>
+                  </div>
+                )}
+
+                {/* Counter indicator */}
+                {yourCards.length > 1 && (
+                  <div className="text-center mt-2">
+                    <span className="text-white/40 text-[10px]">
+                      {currentCardIndex + 1} / {yourCards.length}
+                    </span>
+                  </div>
+                )}
               </div>
             ) : isWatchMode ? (
               <div className="flex items-center justify-center h-full">
