@@ -394,13 +394,18 @@ export default function GameLayout({ stake, onNavigate }) {
 
     for (const { cardNumber, card } of yourCards) {
       if (claimedCartellasRef.current.has(cardNumber)) continue;
-      
+
       const hasWin = checkBingoPattern(card, calledNumbers);
-      
+
       if (hasWin) {
-        if (missedPatterns[cardNumber] || missedPatternsPersistentRef.current[cardNumber]) {
-          console.log(`Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`);
-          setMissedPatterns(prev => {
+        if (
+          missedPatterns[cardNumber] ||
+          missedPatternsPersistentRef.current[cardNumber]
+        ) {
+          console.log(
+            `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
+          );
+          setMissedPatterns((prev) => {
             const newPatterns = { ...prev };
             delete newPatterns[cardNumber];
             return newPatterns;
@@ -419,7 +424,9 @@ export default function GameLayout({ stake, onNavigate }) {
     for (const { cardNumber, card } of yourCards) {
       const hasWin = checkBingoPattern(card, calledNumbers);
       if (hasWin && claimedCartellasRef.current.has(cardNumber)) {
-        console.log(`⚠️ Resetting claimed status for Cartella #${cardNumber} - has winning pattern but was marked claimed`);
+        console.log(
+          `⚠️ Resetting claimed status for Cartella #${cardNumber} - has winning pattern but was marked claimed`,
+        );
         claimedCartellasRef.current.delete(cardNumber);
       }
     }
@@ -898,7 +905,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
