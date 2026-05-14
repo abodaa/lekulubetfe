@@ -344,7 +344,6 @@ export default function CartelaSelection({
         showError(`Cartella #${cardNum} already selected`);
         return;
       }
-
       // Check max cartellas (5)
       if (selectedNumbers.length >= 5) {
         showError(`Maximum 5 cartellas per game reached`);
