@@ -28,7 +28,6 @@ export default function GameLayout({ stake, onNavigate }) {
     setTimeout(() => setShowConfetti(false), 2000);
   };
 
-  // ========== CORRECTED BINGO PATTERN CHECKER ==========
   const checkBingoPattern = (cartella, calledNumbers) => {
     if (!cartella || !Array.isArray(cartella) || cartella.length !== 5)
       return false;
@@ -36,7 +35,6 @@ export default function GameLayout({ stake, onNavigate }) {
 
     const calledSet = new Set(calledNumbers);
 
-    // Check rows
     for (let i = 0; i < 5; i++) {
       if (!cartella[i] || !Array.isArray(cartella[i])) continue;
       const rowComplete = cartella[i].every((num) => {
@@ -46,7 +44,6 @@ export default function GameLayout({ stake, onNavigate }) {
       if (rowComplete) return true;
     }
 
-    // Check columns
     for (let j = 0; j < 5; j++) {
       let colComplete = true;
       for (let i = 0; i < 5; i++) {
@@ -59,7 +56,6 @@ export default function GameLayout({ stake, onNavigate }) {
       if (colComplete) return true;
     }
 
-    // Check main diagonal
     let diag1Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][i];
@@ -70,7 +66,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag1Complete) return true;
 
-    // Check anti-diagonal
     let diag2Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][4 - i];
@@ -81,7 +76,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag2Complete) return true;
 
-    // Check four corners
     const corners = [
       cartella[0][0],
       cartella[0][4],
@@ -103,7 +97,6 @@ export default function GameLayout({ stake, onNavigate }) {
     const lastCall = calledNumbers[calledNumbers.length - 1];
     const calledSet = new Set(calledNumbers);
 
-    // Check rows
     for (let row = 0; row < 5; row++) {
       if (!card[row]) continue;
       if (
@@ -112,7 +105,6 @@ export default function GameLayout({ stake, onNavigate }) {
       )
         return true;
     }
-    // Check columns
     for (let col = 0; col < 5; col++) {
       let complete = true,
         hasLast = false;
@@ -126,7 +118,6 @@ export default function GameLayout({ stake, onNavigate }) {
       }
       if (complete && hasLast) return true;
     }
-    // Check diagonals
     let d1 = true,
       h1 = false;
     for (let i = 0; i < 5; i++) {
@@ -151,7 +142,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (d2 && h2) return true;
 
-    // Check four corners
     const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
     if (
       corners.every((num) => num === 0 || calledSet.has(num)) &&
@@ -180,11 +170,9 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiRef = useRef(null);
 
-  // Track claimed cartellas per game
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
-
-  // Track missed winning patterns for each cartella
+  const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
 
   useEffect(() => {
@@ -224,13 +212,13 @@ export default function GameLayout({ stake, onNavigate }) {
       playNumberSound(currentNumber).catch(() => {});
   }, [currentNumber, isSoundOn]);
 
-  // Reset claimed cartellas when game changes
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
       claimedCartellasRef.current.clear();
       lastGameIdRef.current = currentGameId;
       setClaimingStates({});
       setMissedPatterns({});
+      missedPatternsPersistentRef.current = {};
     }
   }, [currentGameId]);
 
@@ -249,7 +237,6 @@ export default function GameLayout({ stake, onNavigate }) {
     [isAutoMarkOn],
   );
 
-  // Handle manual BINGO claim for a specific cartella
   const handleCartellaBingo = useCallback(
     async (cardNumber) => {
       if (!connected || gameState.phase !== "running" || !currentGameId) {
@@ -257,23 +244,24 @@ export default function GameLayout({ stake, onNavigate }) {
         return;
       }
 
-      // Check if this cartella already won
       if (claimedCartellasRef.current.has(cardNumber)) {
         showError(`Cartella #${cardNumber} already won`);
         return;
       }
 
-      // Verify winning pattern before sending
       const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
       if (!card) {
         showError(`Cartella #${cardNumber} not found`);
         return;
       }
 
-      const hasWin = checkBingoPattern(card, calledNumbers);
-      if (!hasWin) {
-        showError(`No winning pattern on Cartella #${cardNumber}`);
-        return;
+      // For manual mode, verify winning pattern before sending
+      if (!isAutoMarkOn) {
+        const hasWin = checkBingoPattern(card, calledNumbers);
+        if (!hasWin) {
+          showError(`No winning pattern on Cartella #${cardNumber}`);
+          return;
+        }
       }
 
       if (claimingStates[cardNumber]) return;
@@ -289,12 +277,12 @@ export default function GameLayout({ stake, onNavigate }) {
         } else {
           showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
           claimedCartellasRef.current.add(cardNumber);
-          // Clear missed pattern for this cartella
           setMissedPatterns((prev) => {
             const newPatterns = { ...prev };
             delete newPatterns[cardNumber];
             return newPatterns;
           });
+          delete missedPatternsPersistentRef.current[cardNumber];
         }
       } catch (err) {
         showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
@@ -310,46 +298,43 @@ export default function GameLayout({ stake, onNavigate }) {
       claimingStates,
       yourCards,
       calledNumbers,
+      isAutoMarkOn,
       showError,
       showSuccess,
     ],
   );
 
-  // ========== AUTO-BINGO FOR MULTIPLE CARTELLAS ==========
+  // AUTO-BINGO for multiple cartellas
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
     if (yourCards.length === 0) return;
 
-    // Check each cartella for winning pattern
     for (const { cardNumber, card } of yourCards) {
-      // Skip if already claimed
       if (claimedCartellasRef.current.has(cardNumber)) continue;
 
       const hasWin = checkBingoPattern(card, calledNumbers);
       if (!hasWin) continue;
 
-      // Verify last called number is part of winning pattern
       const lastNumberInPattern = isLastCallPartOfWinningPattern(
         card,
         calledNumbers,
       );
       if (!lastNumberInPattern) continue;
 
-      console.log(`🎯 Auto-BINGO detected for Cartella #${cardNumber}!`);
       claimedCartellasRef.current.add(cardNumber);
       triggerConfetti();
       claimBingo({ cardNumber });
       showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
 
-      // Clear missed pattern for this cartella
       setMissedPatterns((prev) => {
         const newPatterns = { ...prev };
         delete newPatterns[cardNumber];
         return newPatterns;
       });
+      delete missedPatternsPersistentRef.current[cardNumber];
 
-      break; // Only claim one per number call
+      break;
     }
   }, [
     calledNumbers,
@@ -360,7 +345,7 @@ export default function GameLayout({ stake, onNavigate }) {
     showSuccess,
   ]);
 
-  // ========== TRACK MISSED WINNING PATTERNS ==========
+  // TRACK MISSED WINNING PATTERNS (PERSISTENT)
   useEffect(() => {
     if (gameState.phase !== "running") {
       setMissedPatterns({});
@@ -372,27 +357,23 @@ export default function GameLayout({ stake, onNavigate }) {
     let hasChanges = false;
 
     for (const { cardNumber, card } of yourCards) {
-      // Skip if already claimed
       if (claimedCartellasRef.current.has(cardNumber)) {
         if (newMissedPatterns[cardNumber]) {
           delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
           hasChanges = true;
         }
         continue;
       }
 
-      // Check if this cartella has a winning pattern
       const hasWin = checkBingoPattern(card, calledNumbers);
 
-      if (hasWin && !newMissedPatterns[cardNumber]) {
-        // Winning pattern detected but not yet claimed
+      if (
+        hasWin &&
+        !newMissedPatterns[cardNumber] &&
+        !missedPatternsPersistentRef.current[cardNumber]
+      ) {
         newMissedPatterns[cardNumber] = [...calledNumbers];
-        hasChanges = true;
-        console.log(
-          `⚠️ Winning pattern detected for Cartella #${cardNumber} - ready to claim`,
-        );
-      } else if (!hasWin && newMissedPatterns[cardNumber]) {
-        delete newMissedPatterns[cardNumber];
         hasChanges = true;
       }
     }
@@ -469,12 +450,15 @@ export default function GameLayout({ stake, onNavigate }) {
       claimedCartellasRef.current.clear();
       setClaimingStates({});
       setMissedPatterns({});
+      missedPatternsPersistentRef.current = {};
     }
   }, [gameState.phase]);
 
   useEffect(() => {
     const h = (event) => {
       const reason = event?.detail?.reason || "invalid_claim";
+      const cardNumber = event?.detail?.cardNumber;
+
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
         setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
@@ -483,11 +467,18 @@ export default function GameLayout({ stake, onNavigate }) {
           ...prev,
           "Pattern passed. Wait for next call.",
         ]);
+        if (cardNumber) {
+          setMissedPatterns((prev) => ({
+            ...prev,
+            [cardNumber]: [...calledNumbers],
+          }));
+          missedPatternsPersistentRef.current[cardNumber] = [...calledNumbers];
+        }
       }
     };
     window.addEventListener("bingoRejected", h);
     return () => window.removeEventListener("bingoRejected", h);
-  }, []);
+  }, [calledNumbers]);
 
   useEffect(() => {
     const current = new Set(alertBanners);
@@ -847,7 +838,6 @@ export default function GameLayout({ stake, onNavigate }) {
                         >
                           {letter}
                         </td>
-
                         {nums.map((n) => {
                           const isCalled = calledNumbers.includes(n);
                           const isCurrent = currentNumber === n;
@@ -875,7 +865,7 @@ export default function GameLayout({ stake, onNavigate }) {
           </>
         )}
 
-        {/* Cartellas - Each with its own BINGO button */}
+        {/* Cartellas */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto">
             {yourCards.length > 0 ? (
@@ -894,20 +884,19 @@ export default function GameLayout({ stake, onNavigate }) {
                   const isClaiming = claimingStates[cardNumber];
                   const alreadyClaimed =
                     claimedCartellasRef.current.has(cardNumber);
-                  const canClaim =
-                    hasWinningPattern &&
-                    gameState.phase === "running" &&
-                    !alreadyClaimed &&
-                    !isClaiming;
-                  const hasMissedPattern = !!missedPatterns[cardNumber];
+                  const hasMissedPattern =
+                    !!missedPatterns[cardNumber] ||
+                    !!missedPatternsPersistentRef.current[cardNumber];
 
                   return (
                     <div
                       key={cardNumber}
                       className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
-                        hasMissedPattern && !alreadyClaimed
+                        hasMissedPattern && !alreadyClaimed && !isAutoMarkOn
                           ? "border-red-500/50 bg-red-500/10"
-                          : hasWinningPattern && !alreadyClaimed
+                          : hasWinningPattern &&
+                              !alreadyClaimed &&
+                              !isAutoMarkOn
                             ? "border-green-500/50 bg-green-500/10"
                             : "border-white/10"
                       }`}
@@ -922,14 +911,9 @@ export default function GameLayout({ stake, onNavigate }) {
                               WON ✓
                             </span>
                           )}
-                          {hasWinningPattern && !alreadyClaimed && (
-                            <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full animate-pulse">
-                              READY!
-                            </span>
-                          )}
-                          {hasMissedPattern &&
-                            !alreadyClaimed &&
-                            !hasWinningPattern && (
+                          {!isAutoMarkOn &&
+                            hasMissedPattern &&
+                            !alreadyClaimed && (
                               <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
                                 MISSED
                               </span>
@@ -937,24 +921,31 @@ export default function GameLayout({ stake, onNavigate }) {
                         </div>
                         <button
                           onClick={() => handleCartellaBingo(cardNumber)}
-                          disabled={!canClaim}
+                          disabled={
+                            isAutoMarkOn ||
+                            alreadyClaimed ||
+                            isClaiming ||
+                            gameState.phase !== "running"
+                          }
                           className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                             alreadyClaimed
                               ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
-                              : canClaim
-                                ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white animate-pulse shadow-lg shadow-green-500/50 hover:scale-105"
-                                : "bg-gradient-to-r from-red-500 to-pink-500 text-white opacity-50 cursor-not-allowed"
+                              : isAutoMarkOn
+                                ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-70 cursor-not-allowed"
+                                : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:scale-105"
                           }`}
                         >
                           {isClaiming
                             ? "..."
                             : alreadyClaimed
                               ? "✓ WON"
-                              : "🎉 BINGO!"}
+                              : isAutoMarkOn
+                                ? "🤖 AUTO BINGO"
+                                : "🎉 BINGO!"}
                         </button>
                       </div>
 
-                      {/* BINGO Header - MOVED HERE (below button row) */}
+                      {/* BINGO Header */}
                       <div className="grid grid-cols-5 gap-1 mb-2">
                         {letters.map((letter, idx) => (
                           <div
@@ -965,6 +956,7 @@ export default function GameLayout({ stake, onNavigate }) {
                           </div>
                         ))}
                       </div>
+
                       <CartellaCard
                         id={cardNumber}
                         card={card}
@@ -991,7 +983,9 @@ export default function GameLayout({ stake, onNavigate }) {
                             : undefined
                         }
                         missedWinningCalledNumbers={
-                          missedPatterns[cardNumber] || null
+                          missedPatterns[cardNumber] ||
+                          missedPatternsPersistentRef.current[cardNumber] ||
+                          null
                         }
                         size="normal"
                       />
