@@ -250,15 +250,6 @@ export default function GameLayout({ stake, onNavigate }) {
         return;
       }
 
-      // ADD THIS CHECK
-      // if (
-      //   missedPatterns[cardNumber] ||
-      //   missedPatternsPersistentRef.current[cardNumber]
-      // ) {
-      //   showError("Claim time passed. You missed the winning pattern.");
-      //   return;
-      // }
-
       const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
       if (!card) {
         showError(`Cartella #${cardNumber} not found`);
@@ -309,11 +300,11 @@ export default function GameLayout({ stake, onNavigate }) {
       yourCards,
       calledNumbers,
       isAutoMarkOn,
-      missedPatterns,
       showError,
       showSuccess,
     ],
   );
+
   // AUTO-BINGO for multiple cartellas
   useEffect(() => {
     if (gameState.phase !== "running") return;
@@ -355,7 +346,7 @@ export default function GameLayout({ stake, onNavigate }) {
     showSuccess,
   ]);
 
-  // TRACK MISSED WINNING PATTERNS (PERSISTENT)
+  // TRACK MISSED WINNING PATTERNS
   useEffect(() => {
     if (gameState.phase !== "running") {
       setMissedPatterns({});
@@ -388,7 +379,6 @@ export default function GameLayout({ stake, onNavigate }) {
           delete missedPatternsPersistentRef.current[cardNumber];
           hasChanges = true;
         }
-        // Don't mark as missed immediately - only mark when pattern is missed (from bingoRejected event)
       }
     }
 
@@ -396,6 +386,36 @@ export default function GameLayout({ stake, onNavigate }) {
       setMissedPatterns(newMissedPatterns);
     }
   }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
+
+  // Clear missed pattern when a new winning pattern appears (so user can claim)
+  useEffect(() => {
+    if (gameState.phase !== "running") return;
+    if (isAutoMarkOn) return;
+    if (yourCards.length === 0) return;
+
+    for (const { cardNumber, card } of yourCards) {
+      if (claimedCartellasRef.current.has(cardNumber)) continue;
+
+      const hasWin = checkBingoPattern(card, calledNumbers);
+
+      if (hasWin) {
+        if (
+          missedPatterns[cardNumber] ||
+          missedPatternsPersistentRef.current[cardNumber]
+        ) {
+          console.log(
+            `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
+          );
+          setMissedPatterns((prev) => {
+            const newPatterns = { ...prev };
+            delete newPatterns[cardNumber];
+            return newPatterns;
+          });
+          delete missedPatternsPersistentRef.current[cardNumber];
+        }
+      }
+    }
+  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -481,7 +501,6 @@ export default function GameLayout({ stake, onNavigate }) {
           ...prev,
           "You missed that winning pattern. Keep playing for the next one!",
         ]);
-        // Store missed pattern - but this will be cleared when a new winning pattern appears
         if (cardNumber) {
           setMissedPatterns((prev) => ({
             ...prev,
@@ -942,8 +961,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                 )}
                                 {!isAutoMarkOn &&
                                   hasMissedPattern &&
-                                  !alreadyClaimed &&
-                                  !hasWinningPattern && (
+                                  !alreadyClaimed && (
                                     <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
                                       MISSED
                                     </span>
@@ -952,10 +970,7 @@ export default function GameLayout({ stake, onNavigate }) {
                               <button
                                 onClick={() => handleCartellaBingo(cardNumber)}
                                 disabled={
-                                  isAutoMarkOn ||
-                                  alreadyClaimed ||
-                                  isClaiming ||
-                                  gameState.phase !== "running"
+                                  isAutoMarkOn || alreadyClaimed || isClaiming
                                 }
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                                   alreadyClaimed
