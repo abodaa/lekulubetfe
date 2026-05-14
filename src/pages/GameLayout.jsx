@@ -370,7 +370,6 @@ export default function GameLayout({ stake, onNavigate }) {
       const hasWin = checkBingoPattern(card, calledNumbers);
 
       if (hasWin) {
-        // If there was a missed pattern, clear it because a new winning pattern appeared
         if (
           newMissedPatterns[cardNumber] ||
           missedPatternsPersistentRef.current[cardNumber]
@@ -395,18 +394,13 @@ export default function GameLayout({ stake, onNavigate }) {
 
     for (const { cardNumber, card } of yourCards) {
       if (claimedCartellasRef.current.has(cardNumber)) continue;
-
+      
       const hasWin = checkBingoPattern(card, calledNumbers);
-
+      
       if (hasWin) {
-        if (
-          missedPatterns[cardNumber] ||
-          missedPatternsPersistentRef.current[cardNumber]
-        ) {
-          console.log(
-            `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
-          );
-          setMissedPatterns((prev) => {
+        if (missedPatterns[cardNumber] || missedPatternsPersistentRef.current[cardNumber]) {
+          console.log(`Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`);
+          setMissedPatterns(prev => {
             const newPatterns = { ...prev };
             delete newPatterns[cardNumber];
             return newPatterns;
@@ -416,6 +410,20 @@ export default function GameLayout({ stake, onNavigate }) {
       }
     }
   }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
+
+  // Recovery: If a cartella has a winning pattern but is incorrectly marked as claimed, reset it
+  useEffect(() => {
+    if (gameState.phase !== "running") return;
+    if (yourCards.length === 0) return;
+
+    for (const { cardNumber, card } of yourCards) {
+      const hasWin = checkBingoPattern(card, calledNumbers);
+      if (hasWin && claimedCartellasRef.current.has(cardNumber)) {
+        console.log(`⚠️ Resetting claimed status for Cartella #${cardNumber} - has winning pattern but was marked claimed`);
+        claimedCartellasRef.current.delete(cardNumber);
+      }
+    }
+  }, [calledNumbers, gameState.phase, yourCards]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -890,7 +898,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </tr>
+                      </td>
                     ))}
                   </tbody>
                 </table>
@@ -959,19 +967,15 @@ export default function GameLayout({ stake, onNavigate }) {
                                     WON ✓
                                   </span>
                                 )}
-                                {!isAutoMarkOn &&
-                                  hasMissedPattern &&
-                                  !alreadyClaimed && (
-                                    <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
-                                      MISSED
-                                    </span>
-                                  )}
+                                {!isAutoMarkOn && hasMissedPattern && (
+                                  <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
+                                    MISSED
+                                  </span>
+                                )}
                               </div>
                               <button
                                 onClick={() => handleCartellaBingo(cardNumber)}
-                                disabled={
-                                  isAutoMarkOn || alreadyClaimed || isClaiming
-                                }
+                                disabled={isAutoMarkOn || isClaiming}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                                   alreadyClaimed
                                     ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
