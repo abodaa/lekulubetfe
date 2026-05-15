@@ -988,10 +988,11 @@ export default function GameLayout({ stake, onNavigate }) {
                       const isClaiming = claimingStates[cardNumber];
                       const alreadyClaimed =
                         claimedCartellasRef.current.has(cardNumber);
+                      // const hasMissedPattern =
+                      //   !!missedPatterns[cardNumber] ||
+                      //   !!missedPatternsPersistentRef.current[cardNumber];
                       const hasMissedPattern =
-                        !!missedPatterns[cardNumber] ||
-                        !!missedPatternsPersistentRef.current[cardNumber];
-
+                        !!missedWinningPatterns[cardNumber];
                       return (
                         <div
                           key={cardNumber}
@@ -1095,12 +1096,15 @@ export default function GameLayout({ stake, onNavigate }) {
                                       handleNumberToggle(cardNumber, number)
                                   : undefined
                               }
+                              // missedWinningCalledNumbers={
+                              //   missedPatterns[cardNumber] ||
+                              //   missedPatternsPersistentRef.current[
+                              //     cardNumber
+                              //   ] ||
+                              //   null
+                              // }
                               missedWinningCalledNumbers={
-                                missedPatterns[cardNumber] ||
-                                missedPatternsPersistentRef.current[
-                                  cardNumber
-                                ] ||
-                                null
+                                missedWinningPatterns[cardNumber] || null
                               }
                               size="small"
                             />
