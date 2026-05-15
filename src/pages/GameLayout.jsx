@@ -170,6 +170,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
+  const [missedPatternDetails, setMissedPatternDetails] = useState({});
   const confettiRef = useRef(null);
 
   const claimedCartellasRef = useRef(new Set());
@@ -218,6 +219,7 @@ export default function GameLayout({ stake, onNavigate }) {
       lastGameIdRef.current = currentGameId;
       setClaimingStates({});
       setMissedWinningPatterns({});
+      setMissedPatternDetails({});
     }
   }, [currentGameId]);
 
@@ -245,6 +247,19 @@ export default function GameLayout({ stake, onNavigate }) {
 
       if (claimedCartellasRef.current.has(cardNumber)) {
         showError(`Cartella #${cardNumber} already won`);
+        return;
+      }
+
+      // Check if this cartella has a missed pattern
+      if (missedWinningPatterns[cardNumber]) {
+        const missedNumbers = missedPatternDetails[cardNumber];
+        if (missedNumbers && missedNumbers.length > 0) {
+          showError(
+            `⏰ Claim time passed! You missed the winning pattern. The numbers ${missedNumbers.join(", ")} would have completed a winning pattern. Keep playing for the next one!`
+          );
+        } else {
+          showError(`⏰ Claim time passed! You missed a winning pattern on Cartella #${cardNumber}. Keep playing for the next one!`);
+        }
         return;
       }
 
@@ -281,6 +296,11 @@ export default function GameLayout({ stake, onNavigate }) {
             delete newPatterns[cardNumber];
             return newPatterns;
           });
+          setMissedPatternDetails((prev) => {
+            const newDetails = { ...prev };
+            delete newDetails[cardNumber];
+            return newDetails;
+          });
         }
       } catch (err) {
         showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
@@ -297,25 +317,30 @@ export default function GameLayout({ stake, onNavigate }) {
       yourCards,
       calledNumbers,
       isAutoMarkOn,
+      missedWinningPatterns,
+      missedPatternDetails,
       showError,
       showSuccess,
     ],
   );
 
-  // Track missed winning patterns (when the last call that completes a pattern passes)
+  // Track missed winning patterns and store the actual pattern numbers
   useEffect(() => {
     if (gameState.phase !== "running") {
       setMissedWinningPatterns({});
+      setMissedPatternDetails({});
       return;
     }
     if (yourCards.length === 0) return;
     if (calledNumbers.length === 0) return;
 
     const newMissedPatterns = { ...missedWinningPatterns };
+    const newMissedDetails = { ...missedPatternDetails };
 
     for (const { cardNumber, card } of yourCards) {
       if (claimedCartellasRef.current.has(cardNumber)) {
         if (newMissedPatterns[cardNumber]) delete newMissedPatterns[cardNumber];
+        if (newMissedDetails[cardNumber]) delete newMissedDetails[cardNumber];
         continue;
       }
 
@@ -336,16 +361,20 @@ export default function GameLayout({ stake, onNavigate }) {
             `🔴 Missed winning pattern for Cartella #${cardNumber} at call ${calledNumbers.length}`,
           );
           newMissedPatterns[cardNumber] = true;
+          // Store the numbers that formed the missed pattern
+          newMissedDetails[cardNumber] = previousCalled;
         }
       }
 
       // If it has a winning pattern now, clear missed status
       if (hasWinNow && newMissedPatterns[cardNumber]) {
         delete newMissedPatterns[cardNumber];
+        delete newMissedDetails[cardNumber];
       }
     }
 
     setMissedWinningPatterns(newMissedPatterns);
+    setMissedPatternDetails(newMissedDetails);
   }, [calledNumbers, gameState.phase, yourCards]);
 
   // AUTO-BINGO for multiple cartellas
@@ -375,6 +404,11 @@ export default function GameLayout({ stake, onNavigate }) {
         const newPatterns = { ...prev };
         delete newPatterns[cardNumber];
         return newPatterns;
+      });
+      setMissedPatternDetails((prev) => {
+        const newDetails = { ...prev };
+        delete newDetails[cardNumber];
+        return newDetails;
       });
 
       break;
@@ -471,6 +505,7 @@ export default function GameLayout({ stake, onNavigate }) {
       claimedCartellasRef.current.clear();
       setClaimingStates({});
       setMissedWinningPatterns({});
+      setMissedPatternDetails({});
     }
   }, [gameState.phase]);
 
@@ -850,7 +885,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </tr>
+                      </table>
                     ))}
                   </tbody>
                 </table>
@@ -886,10 +921,8 @@ export default function GameLayout({ stake, onNavigate }) {
                       const isClaiming = claimingStates[cardNumber];
                       const alreadyClaimed =
                         claimedCartellasRef.current.has(cardNumber);
-                      const hasMissedPattern =
-                        !!missedWinningPatterns[cardNumber];
-                      const canClaim =
-                        hasWinningPattern && !alreadyClaimed && !isAutoMarkOn;
+                      const hasMissedPattern = !!missedWinningPatterns[cardNumber];
+                      const canClaim = hasWinningPattern && !alreadyClaimed && !isAutoMarkOn;
 
                       return (
                         <div
@@ -899,14 +932,9 @@ export default function GameLayout({ stake, onNavigate }) {
                         >
                           <div
                             className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
-                              hasMissedPattern &&
-                              !alreadyClaimed &&
-                              !isAutoMarkOn &&
-                              !hasWinningPattern
+                              hasMissedPattern && !alreadyClaimed && !isAutoMarkOn && !hasWinningPattern
                                 ? "border-red-500/50 bg-red-500/10"
-                                : hasWinningPattern &&
-                                    !alreadyClaimed &&
-                                    !isAutoMarkOn
+                                : hasWinningPattern && !alreadyClaimed && !isAutoMarkOn
                                   ? "border-green-500/50 bg-green-500/10"
                                   : "border-white/10"
                             }`}
@@ -921,38 +949,38 @@ export default function GameLayout({ stake, onNavigate }) {
                                     WON ✓
                                   </span>
                                 )}
-                                {!isAutoMarkOn &&
-                                  hasWinningPattern &&
-                                  !alreadyClaimed && (
-                                    <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full animate-pulse">
-                                      READY!
-                                    </span>
-                                  )}
-                                {!isAutoMarkOn &&
-                                  hasMissedPattern &&
-                                  !alreadyClaimed &&
-                                  !hasWinningPattern && (
-                                    <span className="text-red-400 text-xs font-bold bg-red-500/20 px-2 py-0.5 rounded-full">
+                                {!isAutoMarkOn && hasWinningPattern && !alreadyClaimed && (
+                                  <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full animate-pulse">
+                                    READY!
+                                  </span>
+                                )}
+                                {!isAutoMarkOn && hasMissedPattern && !alreadyClaimed && !hasWinningPattern && (
+                                  <div className="flex flex-col items-start">
+                                    <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
                                       MISSED
                                     </span>
-                                  )}
+                                    {missedPatternDetails[cardNumber] && (
+                                      <span className="text-red-400/70 text-[8px] mt-0.5">
+                                        {missedPatternDetails[cardNumber].join(", ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 onClick={() => handleCartellaBingo(cardNumber)}
-                                disabled={!canClaim}
+                                disabled={isAutoMarkOn || !canClaim}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                                   alreadyClaimed
                                     ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
-                                    : canClaim
-                                      ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white animate-pulse shadow-lg shadow-green-500/50 hover:scale-105"
-                                      : "bg-gradient-to-r from-red-500 to-pink-500 text-white opacity-50 cursor-not-allowed"
+                                    : isAutoMarkOn
+                                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-70 cursor-not-allowed"
+                                      : canClaim
+                                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white animate-pulse shadow-lg shadow-green-500/50 hover:scale-105"
+                                        : "bg-gradient-to-r from-red-500 to-pink-500 text-white opacity-50 cursor-not-allowed"
                                 }`}
                               >
-                                {isClaiming
-                                  ? "..."
-                                  : alreadyClaimed
-                                    ? "✓ WON"
-                                    : "🎉 BINGO!"}
+                                {isClaiming ? "..." : alreadyClaimed ? "✓ WON" : isAutoMarkOn ? "🤖 AUTO BINGO" : "🎉 BINGO!"}
                               </button>
                             </div>
 
