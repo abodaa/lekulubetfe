@@ -169,6 +169,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const confettiRef = useRef(null);
 
   const claimedCartellasRef = useRef(new Set());
@@ -305,6 +306,52 @@ export default function GameLayout({ stake, onNavigate }) {
     ],
   );
 
+  // Track missed winning patterns (when the last call that completes a pattern passes)
+  useEffect(() => {
+    if (gameState.phase !== "running") {
+      setMissedWinningPatterns({});
+      return;
+    }
+    if (yourCards.length === 0) return;
+    if (calledNumbers.length === 0) return;
+
+    const newMissedPatterns = { ...missedWinningPatterns };
+
+    for (const { cardNumber, card } of yourCards) {
+      if (claimedCartellasRef.current.has(cardNumber)) {
+        if (newMissedPatterns[cardNumber]) delete newMissedPatterns[cardNumber];
+        continue;
+      }
+
+      // Check if current card has a winning pattern NOW
+      const hasWinNow = checkBingoPattern(card, calledNumbers);
+
+      // Check if card had a winning pattern on the PREVIOUS call
+      const previousCalled = calledNumbers.slice(0, -1);
+      const hadWinBefore =
+        previousCalled.length > 0
+          ? checkBingoPattern(card, previousCalled)
+          : false;
+
+      // If it had a winning pattern before but doesn't now, it was missed
+      if (hadWinBefore && !hasWinNow) {
+        if (!newMissedPatterns[cardNumber]) {
+          console.log(
+            `🔴 Missed winning pattern for Cartella #${cardNumber} at call ${calledNumbers.length}`,
+          );
+          newMissedPatterns[cardNumber] = previousCalled;
+        }
+      }
+
+      // If it has a winning pattern now, clear missed status
+      if (hasWinNow && newMissedPatterns[cardNumber]) {
+        delete newMissedPatterns[cardNumber];
+      }
+    }
+
+    setMissedWinningPatterns(newMissedPatterns);
+  }, [calledNumbers, gameState.phase, yourCards]);
+
   // AUTO-BINGO for multiple cartellas
   useEffect(() => {
     if (gameState.phase !== "running") return;
@@ -387,34 +434,34 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
 
   // Clear missed pattern when a new winning pattern appears (so user can claim)
-  useEffect(() => {
-    if (gameState.phase !== "running") return;
-    if (isAutoMarkOn) return;
-    if (yourCards.length === 0) return;
+  // useEffect(() => {
+  //   if (gameState.phase !== "running") return;
+  //   if (isAutoMarkOn) return;
+  //   if (yourCards.length === 0) return;
 
-    for (const { cardNumber, card } of yourCards) {
-      if (claimedCartellasRef.current.has(cardNumber)) continue;
+  //   for (const { cardNumber, card } of yourCards) {
+  //     if (claimedCartellasRef.current.has(cardNumber)) continue;
 
-      const hasWin = checkBingoPattern(card, calledNumbers);
+  //     const hasWin = checkBingoPattern(card, calledNumbers);
 
-      if (hasWin) {
-        if (
-          missedPatterns[cardNumber] ||
-          missedPatternsPersistentRef.current[cardNumber]
-        ) {
-          console.log(
-            `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
-          );
-          setMissedPatterns((prev) => {
-            const newPatterns = { ...prev };
-            delete newPatterns[cardNumber];
-            return newPatterns;
-          });
-          delete missedPatternsPersistentRef.current[cardNumber];
-        }
-      }
-    }
-  }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
+  //     if (hasWin) {
+  //       if (
+  //         missedPatterns[cardNumber] ||
+  //         missedPatternsPersistentRef.current[cardNumber]
+  //       ) {
+  //         console.log(
+  //           `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
+  //         );
+  //         setMissedPatterns((prev) => {
+  //           const newPatterns = { ...prev };
+  //           delete newPatterns[cardNumber];
+  //           return newPatterns;
+  //         });
+  //         delete missedPatternsPersistentRef.current[cardNumber];
+  //       }
+  //     }
+  //   }
+  // }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   // Recovery: If a cartella has a winning pattern but is incorrectly marked as claimed, reset it
   useEffect(() => {
