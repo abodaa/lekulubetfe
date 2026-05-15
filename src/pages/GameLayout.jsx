@@ -169,11 +169,13 @@ export default function GameLayout({ stake, onNavigate }) {
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [missedPatternDetected, setMissedPatternDetected] = useState({});
+  const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const confettiRef = useRef(null);
 
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
+  const missedPatternsPersistentRef = useRef({});
+  const [missedPatterns, setMissedPatterns] = useState({});
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -217,7 +219,8 @@ export default function GameLayout({ stake, onNavigate }) {
       claimedCartellasRef.current.clear();
       lastGameIdRef.current = currentGameId;
       setClaimingStates({});
-      setMissedPatternDetected({});
+      setMissedPatterns({});
+      missedPatternsPersistentRef.current = {};
     }
   }, [currentGameId]);
 
@@ -276,12 +279,12 @@ export default function GameLayout({ stake, onNavigate }) {
         } else {
           showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
           claimedCartellasRef.current.add(cardNumber);
-          // Clear missed pattern when won
-          setMissedPatternDetected((prev) => {
-            const newDetected = { ...prev };
-            delete newDetected[cardNumber];
-            return newDetected;
+          setMissedPatterns((prev) => {
+            const newPatterns = { ...prev };
+            delete newPatterns[cardNumber];
+            return newPatterns;
           });
+          delete missedPatternsPersistentRef.current[cardNumber];
         }
       } catch (err) {
         showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
@@ -306,17 +309,17 @@ export default function GameLayout({ stake, onNavigate }) {
   // Track missed winning patterns (when the last call that completes a pattern passes)
   useEffect(() => {
     if (gameState.phase !== "running") {
-      setMissedPatternDetected({});
+      setMissedWinningPatterns({});
       return;
     }
     if (yourCards.length === 0) return;
     if (calledNumbers.length === 0) return;
 
-    const newMissedDetected = { ...missedPatternDetected };
+    const newMissedPatterns = { ...missedWinningPatterns };
 
     for (const { cardNumber, card } of yourCards) {
       if (claimedCartellasRef.current.has(cardNumber)) {
-        if (newMissedDetected[cardNumber]) delete newMissedDetected[cardNumber];
+        if (newMissedPatterns[cardNumber]) delete newMissedPatterns[cardNumber];
         continue;
       }
 
@@ -332,21 +335,21 @@ export default function GameLayout({ stake, onNavigate }) {
 
       // If it had a winning pattern before but doesn't now, it was missed
       if (hadWinBefore && !hasWinNow) {
-        if (!newMissedDetected[cardNumber]) {
+        if (!newMissedPatterns[cardNumber]) {
           console.log(
             `🔴 Missed winning pattern for Cartella #${cardNumber} at call ${calledNumbers.length}`,
           );
-          newMissedDetected[cardNumber] = true;
+          newMissedPatterns[cardNumber] = previousCalled;
         }
       }
 
       // If it has a winning pattern now, clear missed status
-      if (hasWinNow && newMissedDetected[cardNumber]) {
-        delete newMissedDetected[cardNumber];
+      if (hasWinNow && newMissedPatterns[cardNumber]) {
+        delete newMissedPatterns[cardNumber];
       }
     }
 
-    setMissedPatternDetected(newMissedDetected);
+    setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
   // AUTO-BINGO for multiple cartellas
@@ -372,11 +375,12 @@ export default function GameLayout({ stake, onNavigate }) {
       claimBingo({ cardNumber });
       showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
 
-      setMissedPatternDetected((prev) => {
-        const newDetected = { ...prev };
-        delete newDetected[cardNumber];
-        return newDetected;
+      setMissedPatterns((prev) => {
+        const newPatterns = { ...prev };
+        delete newPatterns[cardNumber];
+        return newPatterns;
       });
+      delete missedPatternsPersistentRef.current[cardNumber];
 
       break;
     }
@@ -388,6 +392,76 @@ export default function GameLayout({ stake, onNavigate }) {
     claimBingo,
     showSuccess,
   ]);
+
+  // TRACK MISSED WINNING PATTERNS
+  useEffect(() => {
+    if (gameState.phase !== "running") {
+      setMissedPatterns({});
+      return;
+    }
+    if (yourCards.length === 0) return;
+
+    const newMissedPatterns = { ...missedPatterns };
+    let hasChanges = false;
+
+    for (const { cardNumber, card } of yourCards) {
+      if (claimedCartellasRef.current.has(cardNumber)) {
+        if (newMissedPatterns[cardNumber]) {
+          delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
+          hasChanges = true;
+        }
+        continue;
+      }
+
+      const hasWin = checkBingoPattern(card, calledNumbers);
+
+      if (hasWin) {
+        if (
+          newMissedPatterns[cardNumber] ||
+          missedPatternsPersistentRef.current[cardNumber]
+        ) {
+          delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      setMissedPatterns(newMissedPatterns);
+    }
+  }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
+
+  // Clear missed pattern when a new winning pattern appears (so user can claim)
+  // useEffect(() => {
+  //   if (gameState.phase !== "running") return;
+  //   if (isAutoMarkOn) return;
+  //   if (yourCards.length === 0) return;
+
+  //   for (const { cardNumber, card } of yourCards) {
+  //     if (claimedCartellasRef.current.has(cardNumber)) continue;
+
+  //     const hasWin = checkBingoPattern(card, calledNumbers);
+
+  //     if (hasWin) {
+  //       if (
+  //         missedPatterns[cardNumber] ||
+  //         missedPatternsPersistentRef.current[cardNumber]
+  //       ) {
+  //         console.log(
+  //           `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
+  //         );
+  //         setMissedPatterns((prev) => {
+  //           const newPatterns = { ...prev };
+  //           delete newPatterns[cardNumber];
+  //           return newPatterns;
+  //         });
+  //         delete missedPatternsPersistentRef.current[cardNumber];
+  //       }
+  //     }
+  //   }
+  // }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   // Recovery: If a cartella has a winning pattern but is incorrectly marked as claimed, reset it
   useEffect(() => {
@@ -471,9 +545,36 @@ export default function GameLayout({ stake, onNavigate }) {
       setIsRefreshing(false);
       claimedCartellasRef.current.clear();
       setClaimingStates({});
-      setMissedPatternDetected({});
+      setMissedPatterns({});
+      missedPatternsPersistentRef.current = {};
     }
   }, [gameState.phase]);
+
+  useEffect(() => {
+    const h = (event) => {
+      const reason = event?.detail?.reason || "invalid_claim";
+      const cardNumber = event?.detail?.cardNumber;
+
+      if (reason === "invalid_claim") {
+        setManuallyMarkedNumbers({});
+        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
+      } else if (reason === "stale_claim") {
+        setAlertBanners((prev) => [
+          ...prev,
+          "You missed that winning pattern. Keep playing for the next one!",
+        ]);
+        if (cardNumber) {
+          setMissedPatterns((prev) => ({
+            ...prev,
+            [cardNumber]: [...calledNumbers],
+          }));
+          missedPatternsPersistentRef.current[cardNumber] = [...calledNumbers];
+        }
+      }
+    };
+    window.addEventListener("bingoRejected", h);
+    return () => window.removeEventListener("bingoRejected", h);
+  }, [calledNumbers]);
 
   useEffect(() => {
     const current = new Set(alertBanners);
@@ -887,9 +988,11 @@ export default function GameLayout({ stake, onNavigate }) {
                       const isClaiming = claimingStates[cardNumber];
                       const alreadyClaimed =
                         claimedCartellasRef.current.has(cardNumber);
+                      // const hasMissedPattern =
+                      //   !!missedPatterns[cardNumber] ||
+                      //   !!missedPatternsPersistentRef.current[cardNumber];
                       const hasMissedPattern =
-                        !!missedPatternDetected[cardNumber];
-
+                        !!missedWinningPatterns[cardNumber];
                       return (
                         <div
                           key={cardNumber}
@@ -919,13 +1022,11 @@ export default function GameLayout({ stake, onNavigate }) {
                                     WON ✓
                                   </span>
                                 )}
-                                {!isAutoMarkOn &&
-                                  hasMissedPattern &&
-                                  !alreadyClaimed && (
-                                    <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
-                                      MISSED
-                                    </span>
-                                  )}
+                                {!isAutoMarkOn && hasMissedPattern && (
+                                  <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
+                                    MISSED
+                                  </span>
+                                )}
                               </div>
                               <button
                                 onClick={() => handleCartellaBingo(cardNumber)}
@@ -995,7 +1096,16 @@ export default function GameLayout({ stake, onNavigate }) {
                                       handleNumberToggle(cardNumber, number)
                                   : undefined
                               }
-                              missedWinningCalledNumbers={null}
+                              // missedWinningCalledNumbers={
+                              //   missedPatterns[cardNumber] ||
+                              //   missedPatternsPersistentRef.current[
+                              //     cardNumber
+                              //   ] ||
+                              //   null
+                              // }
+                              missedWinningCalledNumbers={
+                                missedWinningPatterns[cardNumber] || null
+                              }
                               size="small"
                             />
                           </div>
