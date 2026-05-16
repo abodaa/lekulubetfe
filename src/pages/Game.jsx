@@ -5,6 +5,7 @@ import { useWebSocket } from "../contexts/WebSocketContext";
 import lbLogo from "../assets/lb.png";
 import { apiFetch, getApiBase } from "../lib/api/client";
 import { motion } from "framer-motion";
+import { GrInfo } from "react-icons/gr";
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [adminPost, setAdminPost] = useState(null);
@@ -48,9 +49,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   // Show initial screen when no stake is selected
   if (!selectedStake) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      <div className="h-[100dvh] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         {/* Fixed Header with safe area for Telegram */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe pb-3 px-4">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe p-2 px-4">
           <div className="flex items-center justify-between max-w-md mx-auto">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
@@ -60,17 +61,19 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   className="w-6 h-6 object-contain"
                 />
               </div>
-              <span className="text-white font-bold text-lg tracking-wide">
+              {/* <span className="text-white font-bold text-lg tracking-wide">
                 Lekulu Bingo
-              </span>
+              </span> */}
             </div>
             <button
               onClick={() => onNavigate?.("rules")}
-              className="px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
             >
               <span className="flex items-center gap-1">
-                <span>❓</span>
-                <span className="hidden sm:inline">Rules</span>
+                <span>
+                  <GrInfo />
+                </span>
+                {/* <span className="hidden sm:inline">Rules</span> */}
               </span>
             </button>
           </div>
@@ -92,10 +95,10 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 HOT
               </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">
+            <h1 className="text-xl md:text-2xl font-black text-white mb-3 tracking-tight">
               Welcome to
               <br />
-              <span className="bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text uppercase text-transparent">
                 Lekulu Bingo
               </span>
             </h1>
