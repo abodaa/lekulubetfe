@@ -1,11 +1,12 @@
 import React from "react";
+import { CgProfile } from "react-icons/cg";
 import { GiPlayButton, GiTrophy, GiWallet, GiPlayer } from "react-icons/gi";
 
 const tabs = [
   { key: "game", label: "Play", icon: <GiPlayButton size={18} /> },
   { key: "scores", label: "Leaderboard", icon: <GiTrophy size={18} /> },
   { key: "wallet", label: "Wallet", icon: <GiWallet size={18} /> },
-  { key: "profile", label: "Profile", icon: <GiPlayer size={18} /> },
+  { key: "profile", label: "Profile", icon: <CgProfile size={18} /> },
 ];
 
 export default function BottomNav({ current, onNavigate }) {
