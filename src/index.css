@@ -254,6 +254,17 @@ body {
   animation: bounce-slow 2s ease-in-out infinite;
 }
 
+/* Safe area padding for Telegram Mini App */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+  padding-top: constant(safe-area-inset-top);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: constant(safe-area-inset-bottom);
+}
+
 /* Ensure nav layout even without utilities */
 .nav-wrap {
   position: fixed;

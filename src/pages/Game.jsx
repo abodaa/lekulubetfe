@@ -7,6 +7,7 @@ import { apiFetch, getApiBase } from "../lib/api/client";
 import { motion } from "framer-motion";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
+import { FaCoins, FaCrown, FaRocket } from "react-icons/fa";
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [adminPost, setAdminPost] = useState(null);
@@ -50,54 +51,46 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   // Show initial screen when no stake is selected
   if (!selectedStake) {
     return (
-      <div className="h-[100dvh] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        {/* Fixed Header with safe area for Telegram */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md py-2 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        {/* Fixed Header */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
           <div className="flex items-center justify-between max-w-md mx-auto">
-            <img
-              src={lbLogo}
-              alt="Lekulu Bingo Logo"
-              className="w-10 h-10 object-contain rounded-full flex items-center justify-center border border-white/20"
-            />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+                <img
+                  src={lbLogo}
+                  alt="Lekulu Bingo"
+                  className="w-5 h-5 object-contain"
+                />
+              </div>
+              <span className="text-white/70 text-xs font-medium">LEKULU</span>
+            </div>
             <button
               onClick={() => onNavigate?.("rules")}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/60 hover:text-white hover:bg-white/20 transition-all active:scale-95"
             >
-              <span className="flex items-center gap-1">
-                <span>
-                  <GrInfo />
-                </span>
-              </span>
+              <GrInfo size={14} />
             </button>
           </div>
         </div>
 
-        <main className="px-4 pb-24 pt-24">
-          {/* Hero Section with Animated Bingo Ball */}
+        <main className="px-4 pb-24 pt-16">
+          {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-10"
+            className="text-center mb-10 mt-4"
           >
             <div className="relative inline-block mb-4">
-              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-2xl animate-bounce-slow">
-                <span className="text-5xl">🎲</span>
-              </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold animate-pulse">
-                HOT
+              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 backdrop-blur border border-white/20 flex items-center justify-center shadow-xl">
+                <span className="text-4xl">🎲</span>
               </div>
             </div>
-            <h1 className="text-xl md:text-2xl font-black text-white/50 mb-3 tracking-tight">
-              Welcome to
-              <br />
-              <span className="text-2xl text-white uppercase">
-                Lekulu Bingo
-              </span>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Let's Play Bingo!
             </h1>
-            <p className="text-white/50 text-sm">
-              Choose your stake to start playing
-            </p>
+            <p className="text-white/40 text-sm">Select your stake amount</p>
           </motion.div>
 
           {/* Stake Cards */}
@@ -105,79 +98,107 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="max-w-sm mx-auto space-y-4"
+            className="max-w-sm mx-auto space-y-3"
           >
             {/* 10 ETB Card */}
             <motion.div
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(10)}
-              className="group relative rounded-2xl bg-gradient-to-r from-emerald-500/20 to-green-600/20 backdrop-blur border border-emerald-400/30 p-4 cursor-pointer overflow-hidden"
+              className="group relative rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 cursor-pointer transition-all overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-3xl">🎮</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <FaCoins className="text-emerald-400 text-lg" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-2xl">10 ETB</h3>
-                    <p className="text-white/40 text-xs">Starter Pack</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-lg">
+                        10 ETB
+                      </span>
+                      <span className="text-[10px] text-white/30">Starter</span>
+                    </div>
+                    <p className="text-white/30 text-[10px]">
+                      Perfect for beginners
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-all">
-                  <p>Play</p>
-                  <CiPlay1 />
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+                  <span>Play</span>
+                  <CiPlay1 size={14} />
                 </div>
               </div>
             </motion.div>
 
             {/* 20 ETB Card - Featured */}
             <motion.div
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(20)}
-              className="group relative rounded-2xl bg-gradient-to-r from-blue-500/20 to-indigo-600/20 backdrop-blur border-2 border-blue-400/50 p-4 cursor-pointer overflow-hidden"
+              className="group relative rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur border-2 border-blue-400/40 p-3 cursor-pointer transition-all overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute -top-1 -right-1">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
+                  POPULAR
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-3xl">🎯</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <FaRocket className="text-blue-400 text-lg" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-2xl">20 ETB</h3>
-                    <p className="text-white/40 text-xs">Popular Choice</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-lg">
+                        20 ETB
+                      </span>
+                      <span className="text-[10px] text-yellow-400/70">
+                        Best Value
+                      </span>
+                    </div>
+                    <p className="text-white/30 text-[10px]">
+                      Most players choice
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
-                  <p>Play</p>
-                  <CiPlay1 />
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
+                  <span>Play</span>
+                  <CiPlay1 size={14} />
                 </div>
               </div>
             </motion.div>
 
             {/* 50 ETB Card */}
             <motion.div
-              whileHover={{ scale: 1.02, x: 5 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(50)}
-              className="group relative rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-600/20 backdrop-blur border border-amber-400/30 p-4 cursor-pointer overflow-hidden"
+              className="group relative rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 cursor-pointer transition-all overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-amber-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="text-3xl">🏆</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <FaCrown className="text-amber-400 text-lg" />
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-2xl">50 ETB</h3>
-                    <p className="text-white/40 text-xs">High Roller</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-lg">
+                        50 ETB
+                      </span>
+                      <span className="text-[10px] text-white/30">VIP</span>
+                    </div>
+                    <p className="text-white/30 text-[10px]">
+                      For high rollers
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 transition-all">
-                  <p>Play</p>
-                  <CiPlay1 />
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+                  <span>Play</span>
+                  <CiPlay1 size={14} />
                 </div>
               </div>
             </motion.div>
@@ -188,27 +209,22 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="max-w-sm mx-auto mt-8"
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="max-w-sm mx-auto mt-6"
             >
-              <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
-                <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-white/60 text-xs font-bold uppercase tracking-wider">
-                      {adminPost.kind === "image" ? "LIVE" : "VIDEO"}
-                    </span>
-                  </div>
-                  <div className="text-white/30 text-[10px]">
-                    📢 ANNOUNCEMENT
-                  </div>
+              <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
+                <div className="px-3 py-2 flex items-center gap-2 border-b border-white/5">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
+                    {adminPost.kind === "image" ? "LIVE NOW" : "FEATURED"}
+                  </span>
                 </div>
 
                 {adminPost.kind === "image" ? (
                   <img
                     src={adminPost.url}
                     alt={adminPost.caption || "Announcement"}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-36 object-cover"
                     onError={(e) => {
                       e.target.src = lbLogo;
                       e.target.alt = "Lekulu Bingo Logo";
@@ -217,7 +233,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 ) : (
                   <video
                     src={adminPost.url}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-36 object-cover"
                     controls
                     muted
                     playsInline
@@ -226,15 +242,15 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                       const fallbackImg = document.createElement("img");
                       fallbackImg.src = lbLogo;
                       fallbackImg.alt = "Lekulu Bingo Logo";
-                      fallbackImg.className = "w-full h-48 object-cover";
+                      fallbackImg.className = "w-full h-36 object-cover";
                       e.target.parentNode.insertBefore(fallbackImg, e.target);
                     }}
                   />
                 )}
 
                 {adminPost.caption && (
-                  <div className="p-3 border-t border-white/10">
-                    <p className="text-white/70 text-xs leading-relaxed">
+                  <div className="p-2">
+                    <p className="text-white/50 text-[10px] leading-relaxed">
                       {adminPost.caption}
                     </p>
                   </div>
@@ -257,16 +273,16 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
         animate={{ scale: 1, opacity: 1 }}
         className="text-center"
       >
-        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
-          <span className="text-4xl">⚠️</span>
+        <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+          <span className="text-3xl">⚠️</span>
         </div>
-        <h2 className="text-white text-xl font-bold mb-2">Navigation Error</h2>
-        <p className="text-white/50 text-sm mb-6">
+        <h2 className="text-white text-lg font-bold mb-1">Navigation Error</h2>
+        <p className="text-white/40 text-xs mb-4">
           You have a stake selected but are on the wrong page.
         </p>
         <button
           onClick={() => onNavigate?.("cartela-selection")}
-          className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
+          className="px-5 py-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
         >
           Go to Cartella Selection →
         </button>
