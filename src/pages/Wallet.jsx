@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
 import { MdOutlineAttachMoney } from "react-icons/md";
+import { FaArrowTrendDown, FaArrowTrendUp } from "react-icons/fa6";
 
 export default function Wallet({ onNavigate }) {
   const { sessionId, user, isLoading: authLoading } = useAuth();
@@ -136,9 +137,9 @@ export default function Wallet({ onNavigate }) {
   }, [sessionId, activeTab]);
 
   const getTransactionIcon = (type) => {
-    if (type === "deposit") return <MdOutlineAttachMoney size={14} />;
-    if (type === "game_win") return <FaCoins size={14} />;
-    if (type === "game_bet") return <GiPlayButton size={14} />;
+    if (type === "deposit") return <FaArrowTrendUp size={14} />;
+    if (type === "game_win") return <FaArrowTrendDown size={14} />;
+    if (type === "game_bet") return <FaArrowTrendUp size={14} />;
     return <FaHistory size={14} />;
   };
 
@@ -336,8 +337,8 @@ export default function Wallet({ onNavigate }) {
                           <div
                             className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white ${
                               transaction.amount > 0
-                                ? "bg-green-500/50"
-                                : "bg-red-500/50"
+                                ? "bg-green-500/30"
+                                : "bg-red-500/30"
                             }`}
                           >
                             {getTransactionIcon(transaction.type)}
