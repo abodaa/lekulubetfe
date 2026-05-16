@@ -205,7 +205,7 @@ export default function Wallet({ onNavigate }) {
                   <span className="text-green-400 text-xs">Verified</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
                   <FaCheckCircle className="text-green-400" size={12} />
                   <span className="text-green-400 text-xs">Verified</span>
                 </div>
