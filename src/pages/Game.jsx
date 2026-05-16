@@ -52,24 +52,23 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   if (!selectedStake) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        {/* Fixed Header */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+        {/* Fixed Header*/}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md py-2 px-4">
           <div className="flex items-center justify-between max-w-md mx-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
-                <img
-                  src={lbLogo}
-                  alt="Lekulu Bingo"
-                  className="w-5 h-5 object-contain"
-                />
-              </div>
-              <span className="text-white/70 text-xs font-medium">LEKULU</span>
-            </div>
+            <img
+              src={lbLogo}
+              alt="Lekulu Bingo Logo"
+              className="w-10 h-10 object-contain rounded-full flex items-center justify-center border border-white/20"
+            />
             <button
               onClick={() => onNavigate?.("rules")}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/60 hover:text-white hover:bg-white/20 transition-all active:scale-95"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
             >
-              <GrInfo size={14} />
+              <span className="flex items-center gap-1">
+                <span>
+                  <GrInfo />
+                </span>
+              </span>
             </button>
           </div>
         </div>
@@ -139,7 +138,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               onClick={() => joinStake(20)}
               className="group relative rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur border-2 border-blue-400/40 p-3 cursor-pointer transition-all overflow-hidden"
             >
-              <div className="absolute -top-1 -right-1">
+              <div className="absolute -top-1 -right-1 z-50">
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
                   POPULAR
                 </div>
