@@ -165,11 +165,11 @@ export default function Scores({ onNavigate }) {
                   <h3 className="text-white font-semibold text-sm">
                     {user?.firstName || "Player"}
                   </h3>
-                  <p className="text-white/30 text-[10px]">Your Stats</p>
+                  <p className="text-white/50 text-xs">Your Stats</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-white/30 text-[10px]">
-                <FaChartLine size={10} />
+              <div className="flex items-center gap-1 text-white/90 text-[13px]">
+                <FaChartLine size={15} />
                 <span>View History →</span>
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function Scores({ onNavigate }) {
                 <div className="text-white font-bold text-lg">
                   {userStats.totalGamesPlayed}
                 </div>
-                <div className="text-white/30 text-[9px] uppercase tracking-wider">
+                <div className="text-white/50 text-xs uppercase tracking-wider">
                   Played
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function Scores({ onNavigate }) {
                 <div className="text-green-400 font-bold text-lg">
                   {userStats.totalGamesWon}
                 </div>
-                <div className="text-white/30 text-[9px] uppercase tracking-wider">
+                <div className="text-white/50 text-[9px] uppercase tracking-wider">
                   Wins
                 </div>
               </div>
@@ -195,7 +195,7 @@ export default function Scores({ onNavigate }) {
                 <div className="text-yellow-400 font-bold text-lg">
                   {userStats.winRate}%
                 </div>
-                <div className="text-white/30 text-[9px] uppercase tracking-wider">
+                <div className="text-white/50 text-xs uppercase tracking-wider">
                   Win Rate
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function Scores({ onNavigate }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3">
             <h2 className="text-white font-bold text-sm">Top Players</h2>
             <div className="flex gap-1 bg-white/5 rounded-full p-0.5">
               {filterOptions.map((opt) => (
@@ -238,9 +238,9 @@ export default function Scores({ onNavigate }) {
             ) : leaderboardRows.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
-                  <FaTrophy className="text-white/20" size={24} />
+                  <FaTrophy className="text-white/50" size={24} />
                 </div>
-                <p className="text-white/30 text-xs">No leaderboard data</p>
+                <p className="text-white/50 text-xs">No leaderboard data</p>
               </div>
             ) : (
               <div className="divide-y divide-white/5">
@@ -268,7 +268,7 @@ export default function Scores({ onNavigate }) {
                           <p className="text-white text-sm font-medium">
                             {player.name}
                           </p>
-                          <p className="text-white/30 text-[9px]">
+                          <p className="text-white/50 text-xs">
                             {player.wins} wins
                           </p>
                         </div>
@@ -277,7 +277,7 @@ export default function Scores({ onNavigate }) {
                         <p className="text-white font-bold text-sm">
                           {player.played}
                         </p>
-                        <p className="text-white/30 text-[9px]">games</p>
+                        <p className="text-white/50 text-xs">games</p>
                       </div>
                     </div>
                   );
