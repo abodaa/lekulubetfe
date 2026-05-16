@@ -265,7 +265,6 @@ body {
   padding-bottom: constant(safe-area-inset-bottom);
 }
 
-
 /* Ensure nav layout even without utilities */
 .nav-wrap {
   position: fixed;
