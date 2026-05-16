@@ -52,7 +52,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
     return (
       <div className="h-[100dvh] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         {/* Fixed Header with safe area for Telegram */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe py-2 px-4">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md py-2 px-4">
           <div className="flex items-center justify-between max-w-md mx-auto">
             <img
               src={lbLogo}
@@ -88,10 +88,10 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 HOT
               </div>
             </div>
-            <h1 className="text-xl md:text-2xl font-black text-white mb-3 tracking-tight">
+            <h1 className="text-xl md:text-2xl font-black text-white/50 mb-3 tracking-tight">
               Welcome to
               <br />
-              <span className="bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text uppercase text-transparent">
+              <span className="text-2xl text-white uppercase">
                 Lekulu Bingo
               </span>
             </h1>
