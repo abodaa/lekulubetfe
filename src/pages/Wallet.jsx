@@ -2,6 +2,19 @@ import React, { useEffect, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider.jsx";
 import { apiFetch } from "../lib/api/client.js";
+import { motion } from "framer-motion";
+import {
+  FaWallet,
+  FaCoins,
+  FaHistory,
+  FaUserCircle,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaArrowRight,
+  FaArrowLeft,
+} from "react-icons/fa";
+import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
+import { MdOutlineAttachMoney } from "react-icons/md";
 
 export default function Wallet({ onNavigate }) {
   const { sessionId, user, isLoading: authLoading } = useAuth();
@@ -122,184 +135,256 @@ export default function Wallet({ onNavigate }) {
     fetchTransactions();
   }, [sessionId, activeTab]);
 
+  const getTransactionIcon = (type) => {
+    if (type === "deposit") return <MdOutlineAttachMoney size={14} />;
+    if (type === "game_win") return <FaCoins size={14} />;
+    if (type === "game_bet") return <GiPlayButton size={14} />;
+    return <FaHistory size={14} />;
+  };
+
   return (
-    <div className="wallet-page">
-      <header className="wallet-header">
-        <div className="wallet-header-content">
-          <h1 className="wallet-title">Wallet</h1>
-        </div>
-      </header>
-
-      <main className="wallet-main">
-        <div className="wallet-panel">
-          <div className="wallet-user-info">
-            <div className="wallet-user-details">
-              <div className="wallet-user-icon">👤</div>
-              <div className="wallet-user-text">
-                <span className="wallet-user-name">
-                  {profileData?.user?.firstName || user?.firstName || "Player"}
-                </span>
-                {displayPhone && (
-                  <span className="wallet-user-phone">{displayPhone}</span>
-                )}
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+              <FaWallet className="text-yellow-400" size={14} />
             </div>
-            {displayRegistered ? (
-              <div className="wallet-status-verified">
-                <span className="wallet-status-icon">✓</span>
-                <span className="wallet-status-text">Verified</span>
-              </div>
-            ) : (
-              <div className="wallet-status-unverified">
-                <span className="wallet-status-icon">!</span>
-                <span className="wallet-status-text">Not registered</span>
-              </div>
-            )}
+            <span className="text-white/70 text-xs font-medium">MY WALLET</span>
           </div>
+        </div>
+      </div>
 
-          <div className="wallet-segmented">
+      <main className="px-4 pb-24 pt-16">
+        {/* User Info Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-4"
+        >
+          <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                  <FaUserCircle className="text-white" size={16} />
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium">
+                    {profileData?.user?.firstName ||
+                      user?.firstName ||
+                      "Player"}
+                  </p>
+                  {displayPhone && (
+                    <p className="text-white/30 text-[9px]">{displayPhone}</p>
+                  )}
+                </div>
+              </div>
+              {displayRegistered ? (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
+                  <FaCheckCircle className="text-green-400" size={10} />
+                  <span className="text-green-400 text-[9px]">Verified</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
+                  <FaExclamationCircle className="text-yellow-400" size={10} />
+                  <span className="text-yellow-400 text-[9px]">Unverified</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Tab Switcher */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+          className="mb-4"
+        >
+          <div className="flex gap-1 bg-white/5 rounded-full p-0.5">
             <button
               onClick={() => setActiveTab("balance")}
-              className={`wallet-seg ${activeTab === "balance" ? "active" : ""}`}
+              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full text-xs font-medium transition-all ${
+                activeTab === "balance"
+                  ? "bg-white/20 text-white"
+                  : "text-white/40 hover:text-white/60"
+              }`}
             >
+              <FaWallet size={12} />
               Balance
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`wallet-seg ${activeTab === "history" ? "active" : ""}`}
+              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-full text-xs font-medium transition-all ${
+                activeTab === "history"
+                  ? "bg-white/20 text-white"
+                  : "text-white/40 hover:text-white/60"
+              }`}
             >
+              <FaHistory size={12} />
               History
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {loading ? (
-          <div className="wallet-loading">
-            <div className="wallet-spinner"></div>
+          <div className="flex items-center justify-center py-12">
+            <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           </div>
         ) : activeTab === "balance" ? (
-          <div className="wallet-balances">
-            {/* Main Wallet */}
-            <div className="wallet-card">
-              <div className="wallet-card-content">
-                <div className="wallet-card-label">
-                  <span className="wallet-label-text">Main Wallet</span>
-                  <span className="wallet-label-icon">💰</span>
-                </div>
-                <span className="wallet-value">
-                  {wallet.main?.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="wallet-card-description">
-                Withdrawable balance
-              </div>
-            </div>
-
-            {/* Play Wallet */}
-            <div className="wallet-card">
-              <div className="wallet-card-content">
-                <div className="wallet-card-label">
-                  <span className="wallet-label-text">Play Wallet</span>
-                  <span className="wallet-label-icon">🎮</span>
-                </div>
-                <span className="wallet-value wallet-value-green">
-                  {wallet.play?.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="wallet-card-description">
-                Gaming funds and deposits
-              </div>
-            </div>
-
-            {/* Coins */}
-            <div className="wallet-card">
-              <div className="wallet-card-content">
-                <div className="wallet-card-label">
-                  <span className="wallet-label-text">Coins</span>
-                  <span className="wallet-label-icon">🪙</span>
-                </div>
-                <span className="wallet-value wallet-value-purple">
-                  {wallet.coins?.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="wallet-card-description">
-                Earn 10% of every bet. Convert to Play balance.
-              </div>
-            </div>
-
-            {/* Play Deposited (transferable) */}
-            {wallet.playDeposited > 0 && (
-              <div className="wallet-card">
-                <div className="wallet-card-content">
-                  <div className="wallet-card-label">
-                    <span className="wallet-label-text">Play Deposited</span>
-                    <span className="wallet-label-icon">💳</span>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="space-y-3"
+          >
+            {/* Main Wallet Card */}
+            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <GiMoneyStack className="text-blue-400" size={16} />
                   </div>
-                  <span className="wallet-value wallet-value-blue">
-                    {wallet.playDeposited?.toLocaleString() || 0}
+                  <span className="text-white/60 text-xs uppercase tracking-wider">
+                    Main Wallet
                   </span>
                 </div>
-                <div className="wallet-card-description">
-                  Transferable portion of Play wallet
-                </div>
+                <span className="text-white/30 text-[10px]">Withdrawable</span>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="wallet-history">
-            <h3 className="wallet-history-title">Recent Transactions</h3>
-            {historyLoading ? (
-              <div className="wallet-loading">
-                <div className="wallet-spinner"></div>
-                <div className="wallet-loading-text">
-                  Loading transactions...
-                </div>
+              <div className="text-white text-2xl font-bold">
+                {wallet.main?.toLocaleString() || 0}{" "}
+                <span className="text-white/40 text-sm">ETB</span>
               </div>
-            ) : transactions.length === 0 ? (
-              <div className="wallet-empty-state">
-                <div className="wallet-empty-icon">📝</div>
-                <div className="wallet-empty-text">No transactions yet</div>
-              </div>
-            ) : (
-              transactions.map((transaction) => (
-                <div key={transaction.id} className="wallet-transaction">
-                  <div className="wallet-transaction-content">
-                    <div className="wallet-transaction-info">
-                      <div className="wallet-transaction-icon">📄</div>
-                      <div className="wallet-transaction-details">
-                        <div className="wallet-transaction-description">
-                          {transaction.description ||
-                            (transaction.type === "deposit"
-                              ? "Deposit"
-                              : "Transaction")}
-                        </div>
-                        <div className="wallet-transaction-date">
-                          {new Date(transaction.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="wallet-transaction-amount">
-                      <div
-                        className={`wallet-transaction-value ${transaction.amount > 0 ? "positive" : "negative"}`}
-                      >
-                        {transaction.amount > 0
-                          ? `+${transaction.amount}`
-                          : `${transaction.amount}`}
-                      </div>
-                      <div
-                        className={`wallet-transaction-status ${transaction.status === "Approved" || transaction.amount > 0 ? "approved" : "pending"}`}
-                      >
-                        {transaction.status ||
-                          (transaction.amount > 0 ? "Approved" : "")}
-                      </div>
-                    </div>
+            </div>
+
+            {/* Play Wallet Card */}
+            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <GiPlayButton className="text-emerald-400" size={16} />
                   </div>
+                  <span className="text-white/60 text-xs uppercase tracking-wider">
+                    Play Wallet
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
+                <span className="text-white/30 text-[10px]">Gaming Funds</span>
+              </div>
+              <div className="text-white text-2xl font-bold">
+                {wallet.play?.toLocaleString() || 0}{" "}
+                <span className="text-white/40 text-sm">ETB</span>
+              </div>
+              {wallet.playDeposited > 0 && (
+                <div className="mt-2 text-right">
+                  <span className="text-white/20 text-[9px]">
+                    Transferable: {wallet.playDeposited.toLocaleString()} ETB
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Coins Card */}
+            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                    <FaCoins className="text-yellow-400" size={16} />
+                  </div>
+                  <span className="text-white/60 text-xs uppercase tracking-wider">
+                    Coins
+                  </span>
+                </div>
+                <span className="text-white/30 text-[10px]">
+                  Earn from bets
+                </span>
+              </div>
+              <div className="text-yellow-400 text-2xl font-bold">
+                {wallet.coins?.toLocaleString() || 0}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
+              <div className="px-3 py-2 border-b border-white/5">
+                <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
+                  Recent Transactions
+                </h3>
+              </div>
+
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
+                    <FaHistory className="text-white/20" size={24} />
+                  </div>
+                  <p className="text-white/30 text-xs">No transactions yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {transactions.slice(0, 20).map((transaction, idx) => (
+                    <div key={transaction.id || idx} className="p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                              transaction.amount > 0
+                                ? "bg-green-500/20"
+                                : "bg-red-500/20"
+                            }`}
+                          >
+                            {getTransactionIcon(transaction.type)}
+                          </div>
+                          <div>
+                            <p className="text-white text-xs font-medium">
+                              {transaction.description ||
+                                (transaction.type === "deposit"
+                                  ? "Deposit"
+                                  : "Transaction")}
+                            </p>
+                            <p className="text-white/20 text-[9px]">
+                              {new Date(
+                                transaction.createdAt,
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p
+                            className={`text-xs font-bold ${
+                              transaction.amount > 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {transaction.amount > 0
+                              ? `+${transaction.amount}`
+                              : `${transaction.amount}`}
+                          </p>
+                          <p className="text-white/20 text-[9px] uppercase">
+                            {transaction.status ||
+                              (transaction.amount > 0 ? "Completed" : "")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
         )}
       </main>
+
       <BottomNav current="wallet" onNavigate={onNavigate} />
     </div>
   );
