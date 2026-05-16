@@ -168,7 +168,7 @@ export default function Scores({ onNavigate }) {
                   <p className="text-white/50 text-xs">Your Stats</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-white/90 text-[13px]">
+              <div className="flex items-center gap-1 text-white/90 text-sm border border-white/20 rounded-full px-2 py-1">
                 <FaChartLine size={15} />
                 <span>View History →</span>
               </div>
@@ -187,7 +187,7 @@ export default function Scores({ onNavigate }) {
                 <div className="text-green-400 font-bold text-lg">
                   {userStats.totalGamesWon}
                 </div>
-                <div className="text-white/50 text-[9px] uppercase tracking-wider">
+                <div className="text-white/50 text-xs uppercase tracking-wider">
                   Wins
                 </div>
               </div>
@@ -210,8 +210,8 @@ export default function Scores({ onNavigate }) {
           transition={{ duration: 0.5, delay: 0.1 }}
         >
           <div className="mb-3">
-            <h2 className="text-white font-bold text-sm">Top Players</h2>
-            <div className="flex gap-1 bg-white/5 rounded-full p-0.5">
+            <h2 className="text-white font-bold text-sm mb-3">Top Players</h2>
+            <div className="flex items-center justify-between gap-1 bg-white/5 rounded-full p-0.5">
               {filterOptions.map((opt) => (
                 <button
                   key={opt.key}
@@ -277,7 +277,7 @@ export default function Scores({ onNavigate }) {
                         <p className="text-white font-bold text-sm">
                           {player.played}
                         </p>
-                        <p className="text-white/50 text-xs">games</p>
+                        <p className="text-white/50 text-xs">Games</p>
                       </div>
                     </div>
                   );
