@@ -140,8 +140,8 @@ export default function Wallet({ onNavigate }) {
   const getTransactionIcon = (type) => {
     if (type === "deposit") return <FiArrowDownLeft size={14} />;
     if (type === "game_win") return <FiArrowDownLeft size={14} />;
-    if (type === "game_bet") return <FiArrowDownLeft size={14} />;
-    return <FiArrowDownLeft size={14} />;
+    if (type === "game_bet") return <FiArrowUpRight size={14} />;
+    return <FiArrowUpRight size={14} />;
   };
 
   return (
