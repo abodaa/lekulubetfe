@@ -269,6 +269,31 @@ body {
   padding-top: constant(safe-area-inset-top);
 }
 
+/* Bottom Navigation */
+.nav-wrap {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px 20px 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
+  z-index: 50;
+}
+
+.bottom-nav {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Safe area for bottom navigation */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .nav-wrap {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
 /* Ensure nav layout even without utilities */
 .nav-wrap {
   position: fixed;
