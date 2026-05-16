@@ -51,20 +51,20 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
     return (
       <div className="h-[100dvh] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         {/* Fixed Header with safe area for Telegram */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe p-2 px-4">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe p-3 px-4">
           <div className="flex items-center justify-between max-w-md mx-auto">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
-                <img
-                  src={lbLogo}
-                  alt="Lekulu Bingo Logo"
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              {/* <span className="text-white font-bold text-lg tracking-wide">
+            {/* <div className="flex items-center gap-3"> */}
+            {/* <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg"> */}
+            <img
+              src={lbLogo}
+              alt="Lekulu Bingo Logo"
+              className="w-10 h-10 object-contain rounded-full flex items-center justify-center border border-white/20"
+            />
+            {/* </div> */}
+            {/* <span className="text-white font-bold text-lg tracking-wide">
                 Lekulu Bingo
               </span> */}
-            </div>
+            {/* </div> */}
             <button
               onClick={() => onNavigate?.("rules")}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
@@ -145,11 +145,11 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               onClick={() => joinStake(20)}
               className="group relative rounded-2xl bg-gradient-to-r from-blue-500/20 to-indigo-600/20 backdrop-blur border-2 border-blue-400/50 p-4 cursor-pointer overflow-hidden"
             >
-              <div className="absolute -top-2 -right-2">
+              {/* <div className="absolute -top-2 -right-2">
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
                   ⭐ MOST POPULAR
                 </div>
-              </div>
+              </div> */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-4">
