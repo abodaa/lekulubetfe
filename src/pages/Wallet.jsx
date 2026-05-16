@@ -201,13 +201,13 @@ export default function Wallet({ onNavigate }) {
               </div>
               {displayRegistered ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
-                  <FaCheckCircle className="text-green-400" size={10} />
-                  <span className="text-green-400 text-[9px]">Verified</span>
+                  <FaCheckCircle className="text-green-400" size={12} />
+                  <span className="text-green-400 text-xs">Verified</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
-                  <FaExclamationCircle className="text-yellow-400" size={10} />
-                  <span className="text-yellow-400 text-[9px]">Register</span>
+                  <FaCheckCircle className="text-green-400" size={12} />
+                  <span className="text-green-400 text-xs">Verified</span>
                 </div>
               )}
             </div>
