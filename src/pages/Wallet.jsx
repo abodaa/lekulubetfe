@@ -10,12 +10,8 @@ import {
   FaUserCircle,
   FaCheckCircle,
   FaExclamationCircle,
-  FaArrowRight,
-  FaArrowLeft,
 } from "react-icons/fa";
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
-import { MdOutlineAttachMoney } from "react-icons/md";
-import { FaArrowTrendDown, FaArrowTrendUp } from "react-icons/fa6";
 import { FiArrowDownLeft, FiArrowUpRight } from "react-icons/fi";
 
 export default function Wallet({ onNavigate }) {
@@ -84,8 +80,12 @@ export default function Wallet({ onNavigate }) {
           try {
             const profile = await apiFetch("/user/profile", { sessionId });
             setProfileData(profile);
-            setDisplayPhone(profile?.user?.phone || null);
-            setDisplayRegistered(!!profile?.user?.isRegistered);
+            // Fix: Get phone from profile.user.phone
+            const phoneNumber = profile?.user?.phone || null;
+            setDisplayPhone(phoneNumber);
+            // Fix: Check registration status correctly
+            const isRegistered = profile?.user?.isRegistered === true;
+            setDisplayRegistered(isRegistered);
             if (profile?.wallet) {
               const mainValue =
                 profile.wallet.main !== null &&
@@ -137,17 +137,31 @@ export default function Wallet({ onNavigate }) {
     fetchTransactions();
   }, [sessionId, activeTab]);
 
-  const getTransactionIcon = (type) => {
+  const getTransactionIcon = (type, amount) => {
     if (type === "deposit") return <FiArrowDownLeft size={14} />;
     if (type === "game_win") return <FiArrowDownLeft size={14} />;
     if (type === "game_bet") return <FiArrowUpRight size={14} />;
-    return <FiArrowUpRight size={14} />;
+    return amount > 0 ? (
+      <FiArrowDownLeft size={14} />
+    ) : (
+      <FiArrowUpRight size={14} />
+    );
+  };
+
+  // Format phone number for display (mask middle digits)
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return null;
+    const phoneStr = String(phone);
+    if (phoneStr.length >= 10) {
+      return phoneStr.slice(0, 4) + "****" + phoneStr.slice(-4);
+    }
+    return phoneStr;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -179,7 +193,9 @@ export default function Wallet({ onNavigate }) {
                       "Player"}
                   </p>
                   {displayPhone && (
-                    <p className="text-white/30 text-[9px]">{displayPhone}</p>
+                    <p className="text-white/40 text-[10px]">
+                      {formatPhoneNumber(displayPhone)}
+                    </p>
                   )}
                 </div>
               </div>
@@ -191,7 +207,7 @@ export default function Wallet({ onNavigate }) {
               ) : (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
                   <FaExclamationCircle className="text-yellow-400" size={10} />
-                  <span className="text-yellow-400 text-[9px]">Unverified</span>
+                  <span className="text-yellow-400 text-[9px]">Register</span>
                 </div>
               )}
             </div>
@@ -331,53 +347,62 @@ export default function Wallet({ onNavigate }) {
                 </div>
               ) : (
                 <div className="divide-y divide-white/5">
-                  {transactions.slice(0, 20).map((transaction, idx) => (
-                    <div key={transaction.id || idx} className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white ${
-                              transaction.amount > 0
-                                ? "bg-green-500/30"
-                                : "bg-red-500/30"
-                            }`}
-                          >
-                            {getTransactionIcon(transaction.type)}
+                  {transactions.slice(0, 20).map((transaction, idx) => {
+                    const isPositive = transaction.amount > 0;
+                    return (
+                      <div key={transaction.id || idx} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                                isPositive
+                                  ? "bg-green-500/30 text-green-400"
+                                  : "bg-red-500/30 text-red-400"
+                              }`}
+                            >
+                              {getTransactionIcon(
+                                transaction.type,
+                                transaction.amount,
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-white text-xs font-medium">
+                                {transaction.description ||
+                                  (transaction.type === "deposit"
+                                    ? "Deposit"
+                                    : transaction.type === "game_win"
+                                      ? "Game Win"
+                                      : transaction.type === "game_bet"
+                                        ? "Game Bet"
+                                        : "Transaction")}
+                              </p>
+                              <p className="text-white/40 text-[9px]">
+                                {new Date(
+                                  transaction.createdAt,
+                                ).toLocaleString()}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-white text-xs font-medium">
-                              {transaction.description ||
-                                (transaction.type === "deposit"
-                                  ? "Deposit"
-                                  : "Transaction")}
+                          <div className="text-right">
+                            <p
+                              className={`text-xs font-bold ${
+                                isPositive ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {isPositive
+                                ? `+${transaction.amount}`
+                                : `${transaction.amount}`}
                             </p>
-                            <p className="text-white/50 text-[10px]">
-                              {new Date(
-                                transaction.createdAt,
-                              ).toLocaleDateString()}
+                            <p className="text-white/40 text-[9px] uppercase">
+                              {transaction.status === "completed" || isPositive
+                                ? "Success"
+                                : transaction.status || "Pending"}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p
-                            className={`text-xs font-bold ${
-                              transaction.amount > 0
-                                ? "text-green-400"
-                                : "text-red-400"
-                            }`}
-                          >
-                            {transaction.amount > 0
-                              ? `+${transaction.amount}`
-                              : `${transaction.amount}`}
-                          </p>
-                          <p className="text-white/60 text-[9px] uppercase">
-                            {transaction.status ||
-                              (transaction.amount > 0 ? "Completed" : "")}
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
