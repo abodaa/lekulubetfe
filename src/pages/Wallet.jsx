@@ -141,7 +141,7 @@ export default function Wallet({ onNavigate }) {
     if (type === "game_win") return <FaArrowTrendDown size={14} />;
     if (type === "game_bet")
       return (
-        <FaArrowTrendUp size={14} style={{ transform: "rotate(180deg)" }} />
+        <FaArrowTrendUp size={14} style={{ transform: "rotate(90deg)" }} />
       );
     return <FaHistory size={14} />;
   };
