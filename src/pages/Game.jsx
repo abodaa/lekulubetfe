@@ -4,6 +4,7 @@ import { useAuth } from "../lib/auth/AuthProvider";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import lbLogo from "../assets/lb.png";
 import { apiFetch, getApiBase } from "../lib/api/client";
+import { motion } from "framer-motion";
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [adminPost, setAdminPost] = useState(null);
@@ -47,138 +48,176 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   // Show initial screen when no stake is selected
   if (!selectedStake) {
     return (
-      <div
-        className="min-h-screen"
-        style={{ position: "relative", backgroundColor: "#e6e6fa" }}
-      >
-        <header className="p-4">
-          <div className="app-header">
-            <div className="app-logo">
-              <div className="logo-circle">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <header className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
                 <img
                   src={lbLogo}
                   alt="Lekulu Bingo Logo"
-                  className="logo-image"
+                  className="w-6 h-6 object-contain"
                 />
               </div>
-              <span className="app-title" style={{ color: "#facc15" }}>
+              <span className="text-white font-bold text-lg tracking-wide">
                 Lekulu Bingo
               </span>
             </div>
             <button
-              className="rules-button"
               onClick={() => onNavigate?.("rules")}
+              className="px-4 py-2 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
             >
-              <span className="rules-icon">❓</span>
-              <span>Rules</span>
+              <span className="flex items-center gap-1">
+                <span>❓</span>
+                <span>Rules</span>
+              </span>
             </button>
-          </div>
-          <h1 className="text-center text-3xl md:text-4xl font-extrabold leading-tight mt-6 text-white">
-            Welcome to Lekulu Bingo
-          </h1>
-          <div className="text-center text-white mt-4">
-            <p>Choose your stake amount to start playing</p>
           </div>
         </header>
 
-        <main className="p-4 mb-8">
-          <div className="stake-card rounded-2xl p-4 mx-auto max-w-md fade-in-up">
-            <div className="stake-card__header">
-              <div className="play-icon">▶</div>
-              <div className="stake-card__title">Choose Your Stake</div>
-            </div>
-            <div className="grid grid-cols-1 gap-6 mt-8 max-w-sm mx-auto">
-              <button
-                onClick={() => joinStake(10)}
-                className="stake-btn stake-green"
-              >
-                <div className="play-icon-small">▶</div>
-                <span>Play 10 ETB</span>
-              </button>
-              <button
-                onClick={() => joinStake(20)}
-                className="stake-btn stake-blue"
-              >
-                <div className="play-icon-small">▶</div>
-                <span>Play 20 ETB</span>
-              </button>
-              <button
-                onClick={() => joinStake(50)}
-                className="stake-btn stake-gold"
-              >
-                <div className="play-icon-small">▶</div>
-                <span>Play 50 ETB</span>
-              </button>
-            </div>
-          </div>
+        <main className="flex-1 px-4 pb-24">
+          {/* Hero Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mt-8 mb-8"
+          >
+            <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">
+              Welcome to Lekulu Bingo
+            </h1>
+            <p className="text-white/60 text-sm">
+              Choose your stake to start playing
+            </p>
+          </motion.div>
 
-          {/* Admin Announcement - TV Screen Style */}
-          {adminPost && (
-            <div className="mx-auto max-w-md w-full px-2 mt-2">
-              <div className="relative">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-3 shadow-2xl">
-                  <div className="relative bg-black rounded-xl overflow-hidden border-4 border-gray-700 shadow-inner">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
-                    <div className="relative">
-                      <div className="absolute top-3 left-3 z-20">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                          <span className="px-3 py-1 text-xs font-bold rounded-full bg-black/80 text-white border border-gray-600 backdrop-blur-sm">
-                            {adminPost.kind === "image"
-                              ? "📺 LIVE"
-                              : "📺 VIDEO"}
-                          </span>
-                        </div>
-                      </div>
-                      {adminPost.kind === "image" ? (
-                        <img
-                          src={adminPost.url}
-                          alt={adminPost.caption || "Announcement"}
-                          className="w-full h-48 sm:h-56 md:h-64 object-cover"
-                          onError={(e) => {
-                            e.target.src = lbLogo;
-                            e.target.alt = "Lekulu Bingo Logo";
-                          }}
-                        />
-                      ) : (
-                        <video
-                          src={adminPost.url}
-                          className="w-full h-48 sm:h-56 md:h-64 object-cover"
-                          controls
-                          muted
-                          playsInline
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            const fallbackImg = document.createElement("img");
-                            fallbackImg.src = lbLogo;
-                            fallbackImg.alt = "Lekulu Bingo Logo";
-                            fallbackImg.className =
-                              "w-full h-48 sm:h-56 md:h-64 object-cover";
-                            e.target.parentNode.insertBefore(
-                              fallbackImg,
-                              e.target,
-                            );
-                          }}
-                        />
-                      )}
-                      <div className="absolute inset-0 pointer-events-none">
-                        <div className="h-full bg-gradient-to-b from-transparent via-white/2 to-transparent animate-pulse"></div>
-                      </div>
-                    </div>
-                    {adminPost.caption && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-4">
-                        <div className="text-white text-sm leading-relaxed font-medium">
-                          {adminPost.caption}
-                        </div>
-                      </div>
-                    )}
+          {/* Stake Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="max-w-sm mx-auto"
+          >
+            {/* 10 ETB Card */}
+            <div
+              onClick={() => joinStake(10)}
+              className="mb-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-green-600/20 backdrop-blur border border-emerald-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center">
+                    <span className="text-2xl">🎮</span>
                   </div>
-                  <div className="flex justify-center mt-2">
-                    <div className="w-16 h-2 bg-gradient-to-r from-gray-600 to-gray-700 rounded-full"></div>
+                  <div>
+                    <h3 className="text-white font-bold text-xl">10 ETB</h3>
+                    <p className="text-white/50 text-xs">Starter Pack</p>
                   </div>
+                </div>
+                <div className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold">
+                  Play →
                 </div>
               </div>
             </div>
+
+            {/* 20 ETB Card */}
+            <div
+              onClick={() => joinStake(20)}
+              className="mb-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-indigo-600/20 backdrop-blur border border-blue-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-blue-500/30 flex items-center justify-center">
+                    <span className="text-2xl">🎯</span>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-xl">20 ETB</h3>
+                    <p className="text-white/50 text-xs">Popular Choice</p>
+                  </div>
+                </div>
+                <div className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-bold">
+                  Play →
+                </div>
+              </div>
+            </div>
+
+            {/* 50 ETB Card */}
+            <div
+              onClick={() => joinStake(50)}
+              className="mb-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-600/20 backdrop-blur border border-amber-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-500/30 flex items-center justify-center">
+                    <span className="text-2xl">🏆</span>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-xl">50 ETB</h3>
+                    <p className="text-white/50 text-xs">High Roller</p>
+                  </div>
+                </div>
+                <div className="px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-bold">
+                  Play →
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Admin Announcement */}
+          {adminPost && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="max-w-sm mx-auto mt-6"
+            >
+              <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
+                {/* Live Badge */}
+                <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">
+                    {adminPost.kind === "image" ? "LIVE" : "VIDEO"}
+                  </span>
+                </div>
+
+                {/* Media */}
+                {adminPost.kind === "image" ? (
+                  <img
+                    src={adminPost.url}
+                    alt={adminPost.caption || "Announcement"}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.target.src = lbLogo;
+                      e.target.alt = "Lekulu Bingo Logo";
+                    }}
+                  />
+                ) : (
+                  <video
+                    src={adminPost.url}
+                    className="w-full h-48 object-cover"
+                    controls
+                    muted
+                    playsInline
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      const fallbackImg = document.createElement("img");
+                      fallbackImg.src = lbLogo;
+                      fallbackImg.alt = "Lekulu Bingo Logo";
+                      fallbackImg.className = "w-full h-48 object-cover";
+                      e.target.parentNode.insertBefore(fallbackImg, e.target);
+                    }}
+                  />
+                )}
+
+                {/* Caption */}
+                {adminPost.caption && (
+                  <div className="p-3 border-t border-white/10">
+                    <p className="text-white/70 text-xs leading-relaxed">
+                      {adminPost.caption}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
         </main>
 
@@ -189,21 +228,20 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
 
   // If stake is selected, this component shouldn't be rendered
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ backgroundColor: "#e6e6fa" }}
-    >
-      <div className="text-center text-white">
-        <div className="text-6xl mb-4">⚠️</div>
-        <h1 className="text-2xl font-bold mb-4">Navigation Error</h1>
-        <p className="text-white/80 mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+      <div className="text-center">
+        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+          <span className="text-4xl">⚠️</span>
+        </div>
+        <h2 className="text-white text-xl font-bold mb-2">Navigation Error</h2>
+        <p className="text-white/50 text-sm mb-6">
           You have a stake selected but are on the wrong page.
         </p>
         <button
           onClick={() => onNavigate?.("cartela-selection")}
-          className="px-6 py-3 bg-pink-600 text-white rounded-lg font-semibold hover:bg-pink-700 transition-colors"
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
         >
-          Go to Cartella Selection
+          Go to Cartella Selection →
         </button>
       </div>
     </div>
