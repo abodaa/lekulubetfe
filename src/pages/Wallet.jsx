@@ -145,7 +145,7 @@ export default function Wallet({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -251,7 +251,7 @@ export default function Wallet({ onNavigate }) {
                     Main Wallet
                   </span>
                 </div>
-                <span className="text-white/30 text-[10px]">Withdrawable</span>
+                <span className="text-white/50 text-xs">Withdrawable</span>
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.main?.toLocaleString() || 0}{" "}
@@ -270,7 +270,7 @@ export default function Wallet({ onNavigate }) {
                     Play Wallet
                   </span>
                 </div>
-                <span className="text-white/30 text-[10px]">Gaming Funds</span>
+                <span className="text-white/50 text-xs">Gaming Funds</span>
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.play?.toLocaleString() || 0}{" "}
@@ -278,7 +278,7 @@ export default function Wallet({ onNavigate }) {
               </div>
               {wallet.playDeposited > 0 && (
                 <div className="mt-2 text-right">
-                  <span className="text-white/20 text-[9px]">
+                  <span className="text-white/50 text-xs">
                     Transferable: {wallet.playDeposited.toLocaleString()} ETB
                   </span>
                 </div>
@@ -296,9 +296,7 @@ export default function Wallet({ onNavigate }) {
                     Coins
                   </span>
                 </div>
-                <span className="text-white/30 text-[10px]">
-                  Earn from bets
-                </span>
+                <span className="text-white/50 text-xs">Earn from bets</span>
               </div>
               <div className="text-yellow-400 text-2xl font-bold">
                 {wallet.coins?.toLocaleString() || 0}
@@ -327,7 +325,7 @@ export default function Wallet({ onNavigate }) {
                   <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
                     <FaHistory className="text-white/20" size={24} />
                   </div>
-                  <p className="text-white/30 text-xs">No transactions yet</p>
+                  <p className="text-white/50 text-xs">No transactions yet</p>
                 </div>
               ) : (
                 <div className="divide-y divide-white/5">
@@ -336,10 +334,10 @@ export default function Wallet({ onNavigate }) {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white ${
                               transaction.amount > 0
-                                ? "bg-green-500/20"
-                                : "bg-red-500/20"
+                                ? "bg-green-500/50"
+                                : "bg-red-500/50"
                             }`}
                           >
                             {getTransactionIcon(transaction.type)}
@@ -351,7 +349,7 @@ export default function Wallet({ onNavigate }) {
                                   ? "Deposit"
                                   : "Transaction")}
                             </p>
-                            <p className="text-white/20 text-[9px]">
+                            <p className="text-white/50 text-[10px]">
                               {new Date(
                                 transaction.createdAt,
                               ).toLocaleDateString()}
@@ -370,7 +368,7 @@ export default function Wallet({ onNavigate }) {
                               ? `+${transaction.amount}`
                               : `${transaction.amount}`}
                           </p>
-                          <p className="text-white/20 text-[9px] uppercase">
+                          <p className="text-white/60 text-[9px] uppercase">
                             {transaction.status ||
                               (transaction.amount > 0 ? "Completed" : "")}
                           </p>
