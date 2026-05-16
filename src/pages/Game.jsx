@@ -49,8 +49,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   if (!selectedStake) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <header className="px-4 pt-4 pb-2">
-          <div className="flex items-center justify-between">
+        {/* Fixed Header with safe area for Telegram */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md pt-safe pb-3 px-4">
+          <div className="flex items-center justify-between max-w-md mx-auto">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shadow-lg">
                 <img
@@ -69,24 +70,36 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             >
               <span className="flex items-center gap-1">
                 <span>❓</span>
-                <span>Rules</span>
+                <span className="hidden sm:inline">Rules</span>
               </span>
             </button>
           </div>
-        </header>
+        </div>
 
-        <main className="flex-1 px-4 pb-24">
-          {/* Hero Section */}
+        <main className="px-4 pb-24 pt-24">
+          {/* Hero Section with Animated Bingo Ball */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mt-8 mb-8"
+            className="text-center mb-10"
           >
+            <div className="relative inline-block mb-4">
+              <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-2xl animate-bounce-slow">
+                <span className="text-5xl">🎲</span>
+              </div>
+              <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold animate-pulse">
+                HOT
+              </div>
+            </div>
             <h1 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">
-              Welcome to Lekulu Bingo
+              Welcome to
+              <br />
+              <span className="bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text text-transparent">
+                Lekulu Bingo
+              </span>
             </h1>
-            <p className="text-white/60 text-sm">
+            <p className="text-white/50 text-sm">
               Choose your stake to start playing
             </p>
           </motion.div>
@@ -96,70 +109,84 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="max-w-sm mx-auto"
+            className="max-w-sm mx-auto space-y-4"
           >
             {/* 10 ETB Card */}
-            <div
+            <motion.div
+              whileHover={{ scale: 1.02, x: 5 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(10)}
-              className="mb-4 rounded-2xl bg-gradient-to-r from-emerald-500/20 to-green-600/20 backdrop-blur border border-emerald-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+              className="group relative rounded-2xl bg-gradient-to-r from-emerald-500/20 to-green-600/20 backdrop-blur border border-emerald-400/30 p-4 cursor-pointer overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/30 flex items-center justify-center">
-                    <span className="text-2xl">🎮</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-3xl">🎮</span>
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-xl">10 ETB</h3>
-                    <p className="text-white/50 text-xs">Starter Pack</p>
+                    <h3 className="text-white font-bold text-2xl">10 ETB</h3>
+                    <p className="text-white/40 text-xs">Starter Pack</p>
                   </div>
                 </div>
-                <div className="px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-bold">
+                <div className="px-5 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/30 group-hover:shadow-emerald-500/50 transition-all">
                   Play →
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* 20 ETB Card */}
-            <div
+            {/* 20 ETB Card - Featured */}
+            <motion.div
+              whileHover={{ scale: 1.02, x: 5 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(20)}
-              className="mb-4 rounded-2xl bg-gradient-to-r from-blue-500/20 to-indigo-600/20 backdrop-blur border border-blue-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+              className="group relative rounded-2xl bg-gradient-to-r from-blue-500/20 to-indigo-600/20 backdrop-blur border-2 border-blue-400/50 p-4 cursor-pointer overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/30 flex items-center justify-center">
-                    <span className="text-2xl">🎯</span>
+              <div className="absolute -top-2 -right-2">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                  ⭐ MOST POPULAR
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-3xl">🎯</span>
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-xl">20 ETB</h3>
-                    <p className="text-white/50 text-xs">Popular Choice</p>
+                    <h3 className="text-white font-bold text-2xl">20 ETB</h3>
+                    <p className="text-white/40 text-xs">Popular Choice</p>
                   </div>
                 </div>
-                <div className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-bold">
+                <div className="px-5 py-2.5 rounded-full bg-blue-500 text-white text-sm font-bold shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
                   Play →
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* 50 ETB Card */}
-            <div
+            <motion.div
+              whileHover={{ scale: 1.02, x: 5 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(50)}
-              className="mb-4 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-600/20 backdrop-blur border border-amber-400/30 p-4 cursor-pointer transition-all hover:scale-[1.02] active:scale-98"
+              className="group relative rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-600/20 backdrop-blur border border-amber-400/30 p-4 cursor-pointer overflow-hidden"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-500/30 flex items-center justify-center">
-                    <span className="text-2xl">🏆</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-amber-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-3xl">🏆</span>
                   </div>
                   <div>
-                    <h3 className="text-white font-bold text-xl">50 ETB</h3>
-                    <p className="text-white/50 text-xs">High Roller</p>
+                    <h3 className="text-white font-bold text-2xl">50 ETB</h3>
+                    <p className="text-white/40 text-xs">High Roller</p>
                   </div>
                 </div>
-                <div className="px-4 py-2 rounded-full bg-amber-500 text-white text-sm font-bold">
+                <div className="px-5 py-2.5 rounded-full bg-amber-500 text-white text-sm font-bold shadow-lg shadow-amber-500/30 group-hover:shadow-amber-500/50 transition-all">
                   Play →
                 </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* Admin Announcement */}
@@ -167,19 +194,22 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="max-w-sm mx-auto mt-6"
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="max-w-sm mx-auto mt-8"
             >
               <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
-                {/* Live Badge */}
-                <div className="px-4 pt-3 pb-2 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-white/60 text-xs font-bold uppercase tracking-wider">
-                    {adminPost.kind === "image" ? "LIVE" : "VIDEO"}
-                  </span>
+                <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-white/60 text-xs font-bold uppercase tracking-wider">
+                      {adminPost.kind === "image" ? "LIVE" : "VIDEO"}
+                    </span>
+                  </div>
+                  <div className="text-white/30 text-[10px]">
+                    📢 ANNOUNCEMENT
+                  </div>
                 </div>
 
-                {/* Media */}
                 {adminPost.kind === "image" ? (
                   <img
                     src={adminPost.url}
@@ -208,7 +238,6 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   />
                 )}
 
-                {/* Caption */}
                 {adminPost.caption && (
                   <div className="p-3 border-t border-white/10">
                     <p className="text-white/70 text-xs leading-relaxed">
@@ -229,7 +258,11 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   // If stake is selected, this component shouldn't be rendered
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
-      <div className="text-center">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="text-center"
+      >
         <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
           <span className="text-4xl">⚠️</span>
         </div>
@@ -243,7 +276,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
         >
           Go to Cartella Selection →
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 }

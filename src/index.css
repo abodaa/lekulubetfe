@@ -228,6 +228,32 @@ body {
     inset 0 1px 0 rgba(255, 182, 193, 0.15);
 }
 
+/* Safe area padding for Telegram Mini App */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+  padding-top: constant(safe-area-inset-top);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: constant(safe-area-inset-bottom);
+}
+
+/* Slow bounce animation for hero icon */
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
 /* Ensure nav layout even without utilities */
 .nav-wrap {
   position: fixed;
