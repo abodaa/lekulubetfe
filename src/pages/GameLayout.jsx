@@ -518,20 +518,15 @@ export default function GameLayout({ stake, onNavigate }) {
   };
 
   useEffect(() => {
-    if (gameState.phase === "announce" && !isRefreshing) {
+    if (gameState.phase === "announce" && !isRefreshing && !isWatchMode) {
       const winners = gameState.winners || [];
-      const isWatchMode = yourCards.length === 0;
-
-      // Only navigate to winner page if user has cartellas (not watch mode)
-      if (!isWatchMode) {
-        if (winners.length > 0) {
-          const userWon = winners.some((w) => w.userId === sessionId);
-          if (userWon) {
-            showSuccess("🎉 You won!");
-          }
+      if (winners.length > 0) {
+        const userWon = winners.some((w) => w.userId === sessionId);
+        if (userWon) {
+          showSuccess("🎉 You won!");
         }
-        onNavigate?.("winner");
       }
+      onNavigate?.("winner");
     }
   }, [
     gameState.phase,
@@ -540,7 +535,6 @@ export default function GameLayout({ stake, onNavigate }) {
     onNavigate,
     isRefreshing,
     showSuccess,
-    yourCards.length,
   ]);
 
   useEffect(() => {
@@ -1181,7 +1175,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 )}
               </div>
             ) : isWatchMode ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full max-w-full mx-auto overflow-hidden">
                 <div className="text-center px-6">
                   <div className="relative mb-6">
                     <div className="w-24 h-24 mx-auto rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center">
@@ -1193,7 +1187,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         👀
                       </motion.div>
                     </div>
-                    <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div>
+                    {/* <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div> */}
                   </div>
 
                   <h3 className="text-white text-xl font-black mb-2 tracking-wide">
@@ -1223,7 +1217,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
                   <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
                     <div className="flex items-start gap-3">
-                      <span className="text-2xl">
+                      <span className="text-2xl text-white">
                         <BsInfoCircle />
                       </span>
                       <div className="text-left">
