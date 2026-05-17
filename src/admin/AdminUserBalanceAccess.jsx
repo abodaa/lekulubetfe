@@ -12,7 +12,6 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
-  FaCalendarMonth,
   FaCalendar,
   FaArrowUp,
   FaArrowDown,
@@ -458,7 +457,7 @@ export default function AdminStats() {
             <PeriodButton
               period="monthly"
               label="Monthly"
-              icon={<FaCalendarMonth size={12} />}
+              icon={<FaCalendar size={12} />}
             />
             <PeriodButton
               period="yearly"
