@@ -14,6 +14,7 @@ import { CgLivePhoto } from "react-icons/cg";
 import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 import { BsInfoCircle } from "react-icons/bs";
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -1130,7 +1131,7 @@ export default function GameLayout({ stake, onNavigate }) {
                           : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
                       }`}
                     >
-                      ◀
+                      <MdKeyboardArrowLeft />
                     </button>
 
                     <div className="flex gap-1.5">
@@ -1160,7 +1161,7 @@ export default function GameLayout({ stake, onNavigate }) {
                           : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
                       }`}
                     >
-                      ▶
+                      <MdKeyboardArrowRight />
                     </button>
                   </div>
                 )}

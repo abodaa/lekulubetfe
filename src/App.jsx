@@ -137,8 +137,15 @@ function AppContent() {
       return "game-layout";
     }
 
-    // If we have a game in announce phase (finished), go to winner page
-    if (gameState.phase === "announce" && gameState.gameId) {
+    // If we have a game in announce phase (finished), go to winner page only if user has cards
+    const hasCardsForWinner =
+      (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+      selectedCartelas.length > 0;
+    if (
+      gameState.phase === "announce" &&
+      gameState.gameId &&
+      hasCardsForWinner
+    ) {
       console.log("→ Routing to winner (game finished)");
       return "winner";
     }
@@ -185,7 +192,7 @@ function AppContent() {
     // Default: go to main game page (stake selection)
     console.log("→ Routing to game (default - stake selection)");
     return "game";
-  };
+  };;
 
   // Listen for custom gameStarted event as backup navigation trigger
   useEffect(() => {
@@ -259,10 +266,13 @@ function AppContent() {
       gameState.gameId &&
       hasPlayers;
     const isGameFinished = gameState.phase === "announce" && gameState.gameId;
+    const hasCardsForWinner =
+      (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+      selectedCartelas.length > 0;
 
     const shouldNavigate =
       (isGameStartingOrRunning && currentPage !== "game-layout") ||
-      (isGameFinished && currentPage !== "winner");
+      (isGameFinished && hasCardsForWinner && currentPage !== "winner");
 
     console.log("🤔 Should navigate?", shouldNavigate, {
       phase: gameState.phase,
@@ -278,9 +288,14 @@ function AppContent() {
     });
 
     if (shouldNavigate) {
+      const targetPage = isGameStartingOrRunning
+        ? "game-layout"
+        : isGameFinished && hasCardsForWinner
+          ? "winner"
+          : currentPage;
       console.log("✅ NAVIGATING! Auto-navigating based on game state:", {
         from: currentPage,
-        to: isGameStartingOrRunning ? "game-layout" : "winner",
+        to: targetPage,
         phase: gameState.phase,
         gameId: gameState.gameId,
         hasCards:
