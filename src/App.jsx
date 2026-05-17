@@ -150,6 +150,19 @@ function AppContent() {
       return "winner";
     }
 
+    // If game is finished and user has no cards (watch mode), go to cartela selection for next game
+    if (
+      gameState.phase === "announce" &&
+      gameState.gameId &&
+      !hasCardsForWinner &&
+      selectedStake
+    ) {
+      console.log(
+        "→ Routing to cartela-selection (watch mode - next game starting)",
+      );
+      return "cartela-selection";
+    }
+
     // If we have a stake and game is in registration, go to cartela selection
     if (
       selectedStake &&
@@ -192,7 +205,7 @@ function AppContent() {
     // Default: go to main game page (stake selection)
     console.log("→ Routing to game (default - stake selection)");
     return "game";
-  };;
+  };
 
   // Listen for custom gameStarted event as backup navigation trigger
   useEffect(() => {
@@ -269,10 +282,12 @@ function AppContent() {
     const hasCardsForWinner =
       (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
       selectedCartelas.length > 0;
+    const isWatchMode = !hasCardsForWinner && selectedStake;
 
     const shouldNavigate =
       (isGameStartingOrRunning && currentPage !== "game-layout") ||
-      (isGameFinished && hasCardsForWinner && currentPage !== "winner");
+      (isGameFinished && hasCardsForWinner && currentPage !== "winner") ||
+      (isGameFinished && isWatchMode && currentPage !== "cartela-selection");
 
     console.log("🤔 Should navigate?", shouldNavigate, {
       phase: gameState.phase,
