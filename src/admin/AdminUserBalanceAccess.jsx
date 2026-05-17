@@ -14,8 +14,6 @@ import {
   FaCalendarWeek,
   //   FaCalendarMonth,
   FaCalendar,
-  FaArrowUp,
-  FaArrowDown,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
@@ -69,14 +67,17 @@ export default function AdminStats() {
       ]);
 
       let allStats = [];
-      if (dailyRes.status === "fulfilled") {
-        allStats = dailyRes.value?.days || [];
+      if (dailyRes.status === "fulfilled" && dailyRes.value?.days) {
+        allStats = dailyRes.value.days;
         setAllStatsData(allStats);
       }
 
       let nextGameHistory = [];
-      if (gameHistoryRes.status === "fulfilled") {
-        nextGameHistory = gameHistoryRes.value?.games || [];
+      if (
+        gameHistoryRes.status === "fulfilled" &&
+        gameHistoryRes.value?.games
+      ) {
+        nextGameHistory = gameHistoryRes.value.games;
       }
 
       const depositTotals =
@@ -104,11 +105,36 @@ export default function AdminStats() {
     })();
   }, []);
 
+  const getWeekNumber = (date) => {
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  };
+
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
+  const getEndOfWeek = (date) => {
+    const start = getStartOfWeek(date);
+    return new Date(start.setDate(start.getDate() + 6));
+  };
+
   // Process weekly stats
   const processWeeklyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
     const weeks = {};
 
     stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
       const date = new Date(stat.day);
       const weekNumber = getWeekNumber(date);
       const weekKey = `${date.getFullYear()}-W${weekNumber}`;
@@ -150,9 +176,12 @@ export default function AdminStats() {
 
   // Process monthly stats
   const processMonthlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
     const months = {};
 
     stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
       const date = new Date(stat.day);
       const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
       const monthName = date.toLocaleDateString("en-US", {
@@ -197,9 +226,12 @@ export default function AdminStats() {
 
   // Process yearly stats
   const processYearlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
     const years = {};
 
     stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
       const date = new Date(stat.day);
       const yearKey = date.getFullYear();
 
@@ -234,28 +266,6 @@ export default function AdminStats() {
             .join(", ") || "N/A",
       }))
       .reverse();
-  };
-
-  const getWeekNumber = (date) => {
-    const d = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-  };
-
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
-
-  const getEndOfWeek = (date) => {
-    const start = getStartOfWeek(date);
-    return new Date(start.setDate(start.getDate() + 6));
   };
 
   const groupedGameHistory = useMemo(() => {
@@ -299,8 +309,19 @@ export default function AdminStats() {
 
   // Get data for overview cards based on selected period
   const getOverviewData = () => {
+    if (!allStatsData || allStatsData.length === 0) {
+      return {
+        title: "No Data",
+        systemRevenue: 0,
+        totalPlayers: 0,
+        totalGames: 0,
+        totalDeposits: 0,
+        totalWithdrawals: 0,
+        botWins: 0,
+      };
+    }
+
     if (activePeriod === "daily") {
-      // Last 7 days
       const last7Days = allStatsData.slice(0, 7);
       return {
         title: "Last 7 Days",
@@ -321,12 +342,9 @@ export default function AdminStats() {
           (sum, d) => sum + (d.totalWithdrawals || 0),
           0,
         ),
-        botWins: allStatsData
-          .slice(0, 7)
-          .reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
       };
     } else if (activePeriod === "weekly") {
-      // Current week (most recent week)
       const weeklyStats = processWeeklyStats(allStatsData);
       const currentWeek = weeklyStats[0] || {};
       return {
@@ -339,7 +357,6 @@ export default function AdminStats() {
         botWins: 0,
       };
     } else if (activePeriod === "monthly") {
-      // Current month (most recent month)
       const monthlyStats = processMonthlyStats(allStatsData);
       const currentMonth = monthlyStats[0] || {};
       return {
@@ -352,7 +369,6 @@ export default function AdminStats() {
         botWins: 0,
       };
     } else {
-      // Current year (most recent year)
       const yearlyStats = processYearlyStats(allStatsData);
       const currentYear = yearlyStats[0] || {};
       return {
@@ -369,6 +385,8 @@ export default function AdminStats() {
 
   // Get detailed table data based on selected period
   const getTableData = () => {
+    if (!allStatsData || allStatsData.length === 0) return [];
+
     if (activePeriod === "daily") {
       return allStatsData;
     } else if (activePeriod === "weekly") {
@@ -637,10 +655,10 @@ export default function AdminStats() {
                               year: "numeric",
                             })
                           : activePeriod === "weekly"
-                            ? `${stat.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${stat.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                            ? `${stat.startDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""} - ${stat.endDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""}`
                             : activePeriod === "monthly"
-                              ? stat.monthName
-                              : stat.year}
+                              ? stat.monthName || ""
+                              : stat.year || ""}
                       </td>
                       <td className="text-center py-2 px-2 text-white">
                         {stat.totalGames || 0}
@@ -649,7 +667,7 @@ export default function AdminStats() {
                         {stat.totalPlayers || 0}
                       </td>
                       <td className="text-center py-2 px-2 text-white/60 text-[9px]">
-                        {stat.stakesDisplay}
+                        {stat.stakesDisplay || "N/A"}
                       </td>
                       <td className="text-right py-2 px-2 text-amber-400">
                         ETB {(stat.systemRevenue || 0).toFixed(2)}
