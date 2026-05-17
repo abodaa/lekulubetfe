@@ -150,7 +150,7 @@ export default function Scores({ onNavigate }) {
           className="mb-6"
         >
           <div
-            onClick={() => onNavigate?.("history")}
+            // onClick={() => onNavigate?.("history")}
             className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4 cursor-pointer hover:bg-white/10 transition-all"
           >
             <div className="flex items-center justify-between mb-3">
@@ -169,10 +169,10 @@ export default function Scores({ onNavigate }) {
                   <p className="text-white/50 text-xs">Your Stats</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-white/90 text-sm border border-white/20 rounded-full px-2 py-1">
+              {/* <div className="flex items-center gap-1 text-white/90 text-sm border border-white/20 rounded-full px-2 py-1">
                 <FaChartLine size={15} />
                 <span>View History →</span>
-              </div>
+              </div> */}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
