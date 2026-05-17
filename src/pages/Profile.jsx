@@ -124,11 +124,11 @@ export default function Profile({ onNavigate }) {
       >
         {value}
       </div>
-      <div className="text-white/40 text-[10px] uppercase tracking-wider">
+      <div className="text-white/50 text-xs uppercase tracking-wider">
         {label}
       </div>
       {sublabel && (
-        <div className="text-white/20 text-[8px] mt-1">{sublabel}</div>
+        <div className="text-white/50 text-[10px] mt-1">{sublabel}</div>
       )}
     </div>
   );
@@ -246,13 +246,13 @@ export default function Profile({ onNavigate }) {
               </div>
               <div className="flex justify-between items-center mb-3">
                 <div>
-                  <p className="text-white/40 text-[10px]">Total Invites</p>
+                  <p className="text-white/50 text-xs">Total Invites</p>
                   <p className="text-white text-xl font-bold">
                     {inviteStats.totalInvites || 0}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white/40 text-[10px]">Rewards Earned</p>
+                  <p className="text-white/50 text-xs">Rewards Earned</p>
                   <p className="text-green-400 text-xl font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
                   </p>
@@ -279,7 +279,7 @@ export default function Profile({ onNavigate }) {
             </motion.div>
 
             {/* Settings Section */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -290,7 +290,7 @@ export default function Profile({ onNavigate }) {
                   Settings
                 </h3>
               </div>
-              {/* <div className="p-4 flex items-center justify-between">
+              <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
                     {sound ? (
@@ -320,8 +320,8 @@ export default function Profile({ onNavigate }) {
                     }`}
                   />
                 </button>
-              </div> */}
-            </motion.div>
+              </div>
+            </motion.div> */}
           </>
         )}
       </main>
