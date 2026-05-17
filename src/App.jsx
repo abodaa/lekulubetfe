@@ -46,26 +46,12 @@ function AppContent() {
     }
   }, [selectedStake, connected]);
 
-  // Helper functions - MORE ROBUST
+  // Helper functions
   const hasUserCards = () => {
-    // Check if user has cards in gameState
-    if (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) {
-      return true;
-    }
-    // Check if user has selected cartelas
-    if (selectedCartelas.length > 0) {
-      return true;
-    }
-    // Check if user is in winners list (means they had cards)
-    if (gameState.winners && gameState.winners.length > 0) {
-      const isUserInWinners = gameState.winners.some(
-        (w) => w.userId === sessionId,
-      );
-      if (isUserInWinners) {
-        return true;
-      }
-    }
-    return false;
+    return (
+      (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
+      selectedCartelas.length > 0
+    );
   };
 
   const hasEnoughPlayers = () => {
@@ -81,8 +67,6 @@ function AppContent() {
     console.log("hasUserCards:", hasUserCards());
     console.log("hasEnoughPlayers:", hasEnoughPlayers());
     console.log("selectedStake:", selectedStake);
-    console.log("yourCards:", gameState.yourCards);
-    console.log("winners:", gameState.winners);
 
     // No stake selected - go to game selection
     if (!selectedStake) {
@@ -149,7 +133,6 @@ function AppContent() {
     gameState.winners,
     selectedStake,
     currentPage,
-    sessionId,
   ]);
 
   // Handle query parameter routing
