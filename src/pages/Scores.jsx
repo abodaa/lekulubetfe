@@ -76,6 +76,7 @@ export default function Scores({ onNavigate }) {
               const res = await apiFetch(path, { sessionId });
               return res;
             } catch (e) {
+              console.warn(`Failed to fetch from ${path}:`, e);
               // continue to next
             }
           }
