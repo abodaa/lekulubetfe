@@ -100,7 +100,7 @@ export default function AdminHome() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       <div className="max-w-md mx-auto px-4 pb-24 pt-16">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
           <div className="flex items-center justify-between max-w-md mx-auto">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -252,7 +252,6 @@ export default function AdminHome() {
           className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4"
         >
           <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider mb-3 flex items-center gap-2">
-            <FaFileAlt size={12} />
             Currently Active
           </h3>
 
@@ -336,8 +335,8 @@ export default function AdminHome() {
                 <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
                   <FaExclamationTriangle className="text-white/20" size={20} />
                 </div>
-                <p className="text-white/30 text-xs">No active post</p>
-                <p className="text-white/20 text-[10px] mt-1">
+                <p className="text-white/50 text-sm">No active post</p>
+                <p className="text-white/30 text-xs mt-1">
                   Create your first announcement above
                 </p>
               </motion.div>
