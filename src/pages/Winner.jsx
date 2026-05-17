@@ -55,6 +55,18 @@ export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
   const { sessionId } = useAuth();
   const [countdown, setCountdown] = useState(0);
+  // const { gameState } = useWebSocket();
+  // const { sessionId } = useAuth();
+  const { yourCards } = gameState;
+
+  // If user has no cards (watch mode), redirect to cartela selection
+  const hasCards = yourCards?.length > 0;
+
+  useEffect(() => {
+    if (!hasCards && gameState.phase === "announce") {
+      onNavigate?.("cartela-selection");
+    }
+  }, [hasCards, gameState.phase, onNavigate]);
 
   useEffect(() => {
     const updateCountdown = () => {
