@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import CartellaCard from "../components/CartellaCard";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaTrophy, FaCrown, FaUsers, FaClock } from "react-icons/fa";
+import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
 
 function cardDataFromWinner(winner) {
   if (!winner) return null;
@@ -119,58 +122,67 @@ export default function Winner({ onNavigate, onResetToGame }) {
   if (!hasWinners) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          {/* BINGO Banner */}
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-3xl p-8 text-center mb-6">
-            <h1 className="text-white font-extrabold text-5xl tracking-wider mb-4">
-              BINGO!
-            </h1>
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2 inline-flex items-center gap-2">
-              <span className="text-2xl">🎯</span>
-              <span className="text-amber-300/80 text-sm font-medium">
-                No Winner This Game
-              </span>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-sm"
+        >
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 text-center mb-4">
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <GiTrophyCup className="text-yellow-400" size={28} />
             </div>
+            <h1 className="text-white font-bold text-2xl mb-2">Game Over</h1>
+            <p className="text-white/40 text-sm">No winners this round</p>
           </div>
 
-          {/* Countdown */}
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-6 px-4 text-center">
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2">
-              Next Game
-            </p>
-            <div className="text-white font-extrabold text-6xl tracking-wider">
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-5 px-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <FaClock className="text-white/30" size={14} />
+              <p className="text-white/40 text-xs uppercase tracking-wider">
+                Next Game
+              </p>
+            </div>
+            <div className="text-white font-bold text-5xl">
               {countdown > 0 ? countdown : "--"}
             </div>
             <p className="text-white/30 text-xs mt-2">
-              {countdown > 0 ? `Starting in ${countdown}s` : "Loading..."}
+              {countdown > 0 ? `Starting in ${countdown}s` : "Preparing..."}
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col items-center px-4 py-6">
-      <div className="w-full max-w-md flex flex-col flex-1">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      <div className="max-w-md mx-auto px-4 py-6 pb-24">
         {/* Winner Banner */}
-        <div className="bg-white/5 backdrop-blur border border-amber-500/20 rounded-3xl p-6 text-center mb-4">
-          {/* Confetti */}
-          <div className="flex justify-center gap-2 mb-3 text-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/5 backdrop-blur border border-yellow-500/30 rounded-2xl p-5 text-center mb-4"
+        >
+          <div className="flex justify-center gap-2 mb-3">
             {["🎉", "🏆", "🎊"].map((emoji, i) => (
-              <span
+              <motion.span
                 key={i}
-                className="animate-bounce"
-                style={{ animationDelay: `${i * 0.15}s` }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.1, type: "spring" }}
+                className="text-2xl"
               >
                 {emoji}
-              </span>
+              </motion.span>
             ))}
           </div>
 
-          <h1 className="text-white font-extrabold text-5xl tracking-wider mb-4">
-            BINGO!
-          </h1>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <FaTrophy className="text-yellow-400" size={24} />
+            <h1 className="text-white font-black text-3xl tracking-wider">
+              BINGO!
+            </h1>
+          </div>
 
           {/* Winner names */}
           <div className="space-y-2">
@@ -179,16 +191,21 @@ export default function Winner({ onNavigate, onResetToGame }) {
                 key={`${name}-${idx}`}
                 className="flex items-center justify-center gap-2 flex-wrap"
               >
-                <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-3 py-1.5 text-emerald-200 font-bold text-sm max-w-[180px] truncate">
-                  {idx === 0 ? "👑 " : ""}
+                <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-full px-3 py-1 text-emerald-200 font-bold text-sm">
+                  {idx === 0 && (
+                    <FaCrown
+                      className="inline mr-1 text-yellow-400"
+                      size={12}
+                    />
+                  )}
                   {name}
                 </div>
                 {idx === 0 && winnerNames.length === 1 && (
-                  <span className="text-white/70 text-sm">won the game!</span>
+                  <span className="text-white/50 text-xs">won the game!</span>
                 )}
                 {idx === 0 && winnerNames.length > 1 && (
-                  <span className="text-amber-300/80 text-sm font-medium">
-                    +{winnerNames.length - 1} more
+                  <span className="text-amber-400/80 text-xs font-medium flex items-center gap-1">
+                    <FaUsers size={10} /> +{winnerNames.length - 1} more
                   </span>
                 )}
               </div>
@@ -197,18 +214,17 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
           {/* Current user won badge */}
           {isCurrentUserWinner && (
-            <div className="mt-3 bg-amber-500/20 border border-amber-400/30 rounded-full px-4 py-1.5 inline-block">
-              <span className="text-amber-200 text-sm font-bold">
-                🎉 That's you!
-              </span>
+            <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-400/30">
+              <GiConfirmed size={12} className="text-green-400" />
+              <span className="text-green-400 text-xs font-bold">You won!</span>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Winning Cards */}
         {displayWinners.length > 0 && (
           <div
-            className={`flex-1 ${isMultiCartelas ? "overflow-y-auto" : ""} space-y-3 mb-4`}
+            className={`space-y-3 mb-4 ${isMultiCartelas ? "max-h-[50vh] overflow-y-auto" : ""}`}
           >
             {displayWinners.map((w, idx) => {
               const cardData = cardDataFromWinner(w);
@@ -217,17 +233,23 @@ export default function Winner({ onNavigate, onResetToGame }) {
               const label = getWinnerDisplayName(w);
 
               return (
-                <div
+                <motion.div
                   key={`${String(w.userId)}-${boardNumber}-${idx}`}
-                  className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-3"
                 >
                   {isMultiCartelas && (
-                    <div className="text-center mb-3">
-                      <span className="text-white/70 text-sm font-bold">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <span className="text-white/50 text-[10px] font-medium">
+                        Winner
+                      </span>
+                      <span className="text-yellow-400 text-xs font-bold">
                         {label}
                       </span>
-                      <span className="text-white/30 text-xs ml-2">
-                        · Board #{boardNumber}
+                      <span className="text-white/30 text-[10px]">
+                        · #{boardNumber}
                       </span>
                     </div>
                   )}
@@ -239,43 +261,50 @@ export default function Winner({ onNavigate, onResetToGame }) {
                         called={calledNumbers}
                         isPreview={false}
                         showWinningPattern={true}
-                        showHeader={true}
+                        showHeader={!isMultiCartelas}
+                        size={isMultiCartelas ? "small" : "normal"}
                       />
                     ) : (
-                      <div className="bg-white/5 rounded-xl p-6 text-center w-full max-w-xs">
-                        <div className="text-3xl mb-2">🏆</div>
-                        <p className="text-white/50 text-sm">
+                      <div className="bg-white/5 rounded-xl p-4 text-center w-full max-w-xs">
+                        <div className="text-2xl mb-1">🏆</div>
+                        <p className="text-white/40 text-xs">
                           Cartella #{boardNumber}
-                        </p>
-                        <p className="text-white/20 text-xs mt-1">
-                          Preview unavailable
                         </p>
                       </div>
                     )}
                   </div>
                   {!isMultiCartelas && (
-                    <p className="text-center text-white/20 text-xs mt-2">
-                      Board #{boardNumber}
+                    <p className="text-center text-white/30 text-[10px] mt-2">
+                      Cartella #{boardNumber}
                     </p>
                   )}
-                </div>
+                </motion.div>
               );
             })}
           </div>
         )}
 
         {/* Countdown */}
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-5 px-4 text-center">
-          <p className="text-white/40 text-xs uppercase tracking-wider mb-2">
-            Next Game
-          </p>
-          <div className="text-white font-extrabold text-5xl tracking-wider">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/5 backdrop-blur border border-white/10 rounded-xl py-4 px-4 text-center"
+        >
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <FaClock className="text-white/30" size={12} />
+            <p className="text-white/40 text-[10px] uppercase tracking-wider">
+              Next Game
+            </p>
+          </div>
+          <div className="text-white font-bold text-4xl">
             {countdown > 0 ? countdown : "--"}
           </div>
-          <p className="text-white/30 text-xs mt-2">
-            {countdown > 0 ? `Starting in ${countdown}s` : "Loading..."}
+          <p className="text-white/30 text-[10px] mt-1">
+            {countdown > 0
+              ? `Starting in ${countdown} seconds`
+              : "Preparing next game..."}
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
