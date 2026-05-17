@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, Fragment } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { apiFetch } from "../lib/api/client";
 import { motion } from "framer-motion";
 import {
@@ -12,35 +12,21 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
+  //   FaCalendarMonth,
   FaCalendar,
-  FaArrowUp,
-  FaArrowDown,
-  FaDollarSign,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
 
 export default function AdminStats() {
-  const [today, setToday] = useState({
-    totalPlayers: 0,
-    systemCut: 0,
-    botWinningsFromRealGames: 0,
-  });
-  const [dailyStats, setDailyStats] = useState([]);
-  const [weeklyStats, setWeeklyStats] = useState([]);
-  const [monthlyStats, setMonthlyStats] = useState([]);
+  const [allStatsData, setAllStatsData] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
-  const [todayFinance, setTodayFinance] = useState({
-    totalGames: 0,
-    totalDeposit: 0,
-    totalWithdraw: 0,
-  });
+  const [totalMainWallet, setTotalMainWallet] = useState(0);
+  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
   const [todayDepositMeta, setTodayDepositMeta] = useState({
     pendingCount: 0,
     pendingTotal: 0,
   });
-  const [totalMainWallet, setTotalMainWallet] = useState(0);
-  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
   const [activePeriod, setActivePeriod] = useState("daily");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,85 +50,40 @@ export default function AdminStats() {
       const to = endUTC.toISOString();
 
       const [
-        todayRes,
         dailyRes,
         gameHistoryRes,
-        overviewRes,
         depositTotalsRes,
-        withdrawalsCompletedRes,
         totalMainRes,
         totalPlayRes,
       ] = await Promise.allSettled([
-        apiFetch("/admin/stats/today", { timeoutMs: 15000 }),
-        apiFetch("/admin/stats/daily?days=30", { timeoutMs: 30000 }),
+        apiFetch("/admin/stats/daily?days=365", { timeoutMs: 30000 }),
         apiFetch("/admin/stats/game-history?days=7", { timeoutMs: 20000 }),
-        apiFetch("/admin/stats/overview", { timeoutMs: 20000 }),
         apiFetch(
           `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
           { timeoutMs: 20000 },
         ),
-        apiFetch("/admin/balances/withdrawals?status=completed", {
-          timeoutMs: 20000,
-        }),
         apiFetch("/admin/stats/wallets/total-main", { timeoutMs: 20000 }),
         apiFetch("/admin/stats/wallets/total-play", { timeoutMs: 20000 }),
       ]);
 
-      const nextToday =
-        todayRes.status === "fulfilled"
-          ? {
-              totalPlayers: todayRes.value?.totalPlayers || 0,
-              systemCut: todayRes.value?.systemCut || 0,
-              botWinningsFromRealGames:
-                todayRes.value?.botWinningsFromRealGames || 0,
-            }
-          : { totalPlayers: 0, systemCut: 0, botWinningsFromRealGames: 0 };
-
       let allStats = [];
-      if (dailyRes.status === "fulfilled") {
-        allStats = dailyRes.value?.days || [];
+      if (dailyRes.status === "fulfilled" && dailyRes.value?.days) {
+        allStats = dailyRes.value.days;
+        setAllStatsData(allStats);
       }
-
-      // Daily stats (last 7 days)
-      const daily = allStats.slice(0, 7);
-
-      // Weekly stats aggregation
-      const weekly = processWeeklyStats(allStats);
-
-      // Monthly stats aggregation
-      const monthly = processMonthlyStats(allStats);
 
       let nextGameHistory = [];
-      if (gameHistoryRes.status === "fulfilled") {
-        nextGameHistory = gameHistoryRes.value?.games || [];
+      if (
+        gameHistoryRes.status === "fulfilled" &&
+        gameHistoryRes.value?.games
+      ) {
+        nextGameHistory = gameHistoryRes.value.games;
       }
 
-      const overview =
-        overviewRes.status === "fulfilled" ? overviewRes.value : null;
       const depositTotals =
         depositTotalsRes.status === "fulfilled"
           ? depositTotalsRes.value || {}
           : {};
-      const withdrawalsCompleted =
-        withdrawalsCompletedRes.status === "fulfilled"
-          ? withdrawalsCompletedRes.value?.withdrawals || []
-          : [];
-
-      const totalGames = overview?.today?.totalGames || 0;
-      const totalDeposit = Number(depositTotals.completedTotal) || 0;
-
-      const totalWithdraw = withdrawalsCompleted
-        .filter((w) => {
-          const processedDate = w.processedBy?.processedAt || w.processedAt;
-          return (
-            processedDate &&
-            new Date(processedDate) >= startUTC &&
-            new Date(processedDate) <= endUTC
-          );
-        })
-        .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
-
-      const nextTodayFinance = { totalGames, totalDeposit, totalWithdraw };
       const nextTodayDepositMeta = {
         pendingCount: Number(depositTotals.pendingCount) || 0,
         pendingTotal: Number(depositTotals.pendingTotal) || 0,
@@ -156,12 +97,7 @@ export default function AdminStats() {
           ? totalPlayRes.value?.totalPlay || 0
           : 0;
 
-      setToday(nextToday);
-      setDailyStats(daily);
-      setWeeklyStats(weekly);
-      setMonthlyStats(monthly);
       setGameHistory(nextGameHistory);
-      setTodayFinance(nextTodayFinance);
       setTodayDepositMeta(nextTodayDepositMeta);
       setTotalMainWallet(nextTotalMain);
       setTotalPlayWallet(nextTotalPlay);
@@ -169,10 +105,36 @@ export default function AdminStats() {
     })();
   }, []);
 
+  const getWeekNumber = (date) => {
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  };
+
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
+  const getEndOfWeek = (date) => {
+    const start = getStartOfWeek(date);
+    return new Date(start.setDate(start.getDate() + 6));
+  };
+
+  // Process weekly stats
   const processWeeklyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
     const weeks = {};
 
     stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
       const date = new Date(stat.day);
       const weekNumber = getWeekNumber(date);
       const weekKey = `${date.getFullYear()}-W${weekNumber}`;
@@ -212,10 +174,14 @@ export default function AdminStats() {
       .reverse();
   };
 
+  // Process monthly stats
   const processMonthlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
     const months = {};
 
     stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
       const date = new Date(stat.day);
       const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
       const monthName = date.toLocaleDateString("en-US", {
@@ -258,26 +224,48 @@ export default function AdminStats() {
       .reverse();
   };
 
-  const getWeekNumber = (date) => {
-    const d = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-    );
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-  };
+  // Process yearly stats
+  const processYearlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
 
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
+    const years = {};
 
-  const getEndOfWeek = (date) => {
-    const start = getStartOfWeek(date);
-    return new Date(start.setDate(start.getDate() + 6));
+    stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
+      const date = new Date(stat.day);
+      const yearKey = date.getFullYear();
+
+      if (!years[yearKey]) {
+        years[yearKey] = {
+          year: yearKey,
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakes: new Set(),
+        };
+      }
+
+      years[yearKey].totalGames += stat.totalGames || 0;
+      years[yearKey].totalPlayers += stat.totalPlayers || 0;
+      years[yearKey].systemRevenue += stat.systemRevenue || 0;
+      years[yearKey].totalDeposits += stat.totalDeposits || 0;
+      years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes) stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
+    });
+
+    return Object.values(years)
+      .map((year) => ({
+        ...year,
+        stakesDisplay:
+          Array.from(year.stakes)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .reverse();
   };
 
   const groupedGameHistory = useMemo(() => {
@@ -319,12 +307,107 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
-  const currentStats =
+  // Get data for overview cards based on selected period
+  const getOverviewData = () => {
+    if (!allStatsData || allStatsData.length === 0) {
+      return {
+        title: "No Data",
+        systemRevenue: 0,
+        totalPlayers: 0,
+        totalGames: 0,
+        totalDeposits: 0,
+        totalWithdrawals: 0,
+        botWins: 0,
+      };
+    }
+
+    if (activePeriod === "daily") {
+      const last7Days = allStatsData.slice(0, 7);
+      return {
+        title: "Last 7 Days",
+        systemRevenue: last7Days.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalPlayers: last7Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalDeposits: last7Days.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: last7Days.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+      };
+    } else if (activePeriod === "weekly") {
+      const weeklyStats = processWeeklyStats(allStatsData);
+      const currentWeek = weeklyStats[0] || {};
+      return {
+        title: "This Week",
+        systemRevenue: currentWeek.systemRevenue || 0,
+        totalPlayers: currentWeek.totalPlayers || 0,
+        totalGames: currentWeek.totalGames || 0,
+        totalDeposits: currentWeek.totalDeposits || 0,
+        totalWithdrawals: currentWeek.totalWithdrawals || 0,
+        botWins: 0,
+      };
+    } else if (activePeriod === "monthly") {
+      const monthlyStats = processMonthlyStats(allStatsData);
+      const currentMonth = monthlyStats[0] || {};
+      return {
+        title: "This Month",
+        systemRevenue: currentMonth.systemRevenue || 0,
+        totalPlayers: currentMonth.totalPlayers || 0,
+        totalGames: currentMonth.totalGames || 0,
+        totalDeposits: currentMonth.totalDeposits || 0,
+        totalWithdrawals: currentMonth.totalWithdrawals || 0,
+        botWins: 0,
+      };
+    } else {
+      const yearlyStats = processYearlyStats(allStatsData);
+      const currentYear = yearlyStats[0] || {};
+      return {
+        title: "This Year",
+        systemRevenue: currentYear.systemRevenue || 0,
+        totalPlayers: currentYear.totalPlayers || 0,
+        totalGames: currentYear.totalGames || 0,
+        totalDeposits: currentYear.totalDeposits || 0,
+        totalWithdrawals: currentYear.totalWithdrawals || 0,
+        botWins: 0,
+      };
+    }
+  };
+
+  // Get detailed table data based on selected period
+  const getTableData = () => {
+    if (!allStatsData || allStatsData.length === 0) return [];
+
+    if (activePeriod === "daily") {
+      return allStatsData;
+    } else if (activePeriod === "weekly") {
+      return processWeeklyStats(allStatsData);
+    } else if (activePeriod === "monthly") {
+      return processMonthlyStats(allStatsData);
+    } else {
+      return processYearlyStats(allStatsData);
+    }
+  };
+
+  const overviewData = getOverviewData();
+  const tableData = getTableData();
+  const tableTitle =
     activePeriod === "daily"
-      ? dailyStats
+      ? "Daily Statistics"
       : activePeriod === "weekly"
-        ? weeklyStats
-        : monthlyStats;
+        ? "Weekly Statistics"
+        : activePeriod === "monthly"
+          ? "Monthly Statistics"
+          : "Yearly Statistics";
 
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
@@ -383,107 +466,10 @@ export default function AdminStats() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       <div className="max-w-md mx-auto px-4 pb-24 pt-4">
-        {/* Today's Overview Cards */}
+        {/* Period Selector Tabs - Top */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <FaChartLine className="text-amber-400" size={12} />
-            </div>
-            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              Today's Overview
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard
-              icon={<GiProfit size={14} />}
-              label="System Revenue"
-              value={`ETB ${isLoading ? "..." : today.systemCut.toLocaleString()}`}
-              color="amber"
-            />
-            <StatCard
-              icon={<FaUsers size={14} />}
-              label="Total Players"
-              value={isLoading ? "..." : today.totalPlayers.toLocaleString()}
-              color="green"
-            />
-            <StatCard
-              icon={<FaGamepad size={14} />}
-              label="Total Games"
-              value={
-                isLoading ? "..." : todayFinance.totalGames.toLocaleString()
-              }
-              color="blue"
-            />
-            <StatCard
-              icon={<GiCash size={14} />}
-              label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : todayFinance.totalDeposit.toLocaleString()}`}
-              color="green"
-              subtext={
-                !isLoading
-                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
-                  : null
-              }
-            />
-            <StatCard
-              icon={<FaMoneyBillWave size={14} />}
-              label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : todayFinance.totalWithdraw.toLocaleString()}`}
-              color="red"
-            />
-            <StatCard
-              icon={<FaRobot size={14} />}
-              label="Bot Wins"
-              value={
-                isLoading
-                  ? "..."
-                  : (today.botWinningsFromRealGames || 0).toLocaleString()
-              }
-              color="purple"
-            />
-          </div>
-        </motion.div>
-
-        {/* Wallet Totals */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <FaWallet className="text-purple-400" size={12} />
-            </div>
-            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              Wallet Totals
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard
-              icon={<GiMoneyStack size={14} />}
-              label="Main Wallet"
-              value={`ETB ${isLoading ? "..." : totalMainWallet.toFixed(2)}`}
-              color="blue"
-            />
-            <StatCard
-              icon={<FaCoins size={14} />}
-              label="Play Wallet"
-              value={`ETB ${isLoading ? "..." : totalPlayWallet.toFixed(2)}`}
-              color="cyan"
-            />
-          </div>
-        </motion.div>
-
-        {/* Period Selector Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
           className="bg-white/5 backdrop-blur rounded-xl p-1 mb-4"
         >
           <div className="flex gap-1">
@@ -502,36 +488,166 @@ export default function AdminStats() {
               label="Monthly"
               icon={<FaCalendar size={12} />}
             />
+            <PeriodButton
+              period="yearly"
+              label="Yearly"
+              icon={<FaCalendar size={12} />}
+            />
           </div>
         </motion.div>
 
-        {/* Statistics Cards by Period */}
+        {/* Overview Cards - Filtered by Period */}
+        <motion.div
+          key={activePeriod}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <FaChartLine className="text-amber-400" size={12} />
+            </div>
+            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
+              {overviewData.title} Overview
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard
+              icon={<GiProfit size={14} />}
+              label="System Revenue"
+              value={`ETB ${isLoading ? "..." : overviewData.systemRevenue.toLocaleString()}`}
+              color="amber"
+            />
+            <StatCard
+              icon={<FaUsers size={14} />}
+              label="Total Players"
+              value={
+                isLoading ? "..." : overviewData.totalPlayers.toLocaleString()
+              }
+              color="green"
+            />
+            <StatCard
+              icon={<FaGamepad size={14} />}
+              label="Total Games"
+              value={
+                isLoading ? "..." : overviewData.totalGames.toLocaleString()
+              }
+              color="blue"
+            />
+            <StatCard
+              icon={<GiCash size={14} />}
+              label="Total Deposits"
+              value={`ETB ${isLoading ? "..." : overviewData.totalDeposits.toLocaleString()}`}
+              color="green"
+              subtext={
+                !isLoading
+                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
+                  : null
+              }
+            />
+            <StatCard
+              icon={<FaMoneyBillWave size={14} />}
+              label="Total Withdrawals"
+              value={`ETB ${isLoading ? "..." : overviewData.totalWithdrawals.toLocaleString()}`}
+              color="red"
+            />
+            <StatCard
+              icon={<FaRobot size={14} />}
+              label="Bot Wins"
+              value={
+                isLoading ? "..." : (overviewData.botWins || 0).toLocaleString()
+              }
+              color="purple"
+            />
+          </div>
+        </motion.div>
+
+        {/* Wallet Totals - All Time (Static) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="space-y-3 mb-4"
+          transition={{ delay: 0.1 }}
+          className="mb-4"
         >
-          {!isLoading && currentStats.length > 0 ? (
-            currentStats.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden"
-              >
-                {/* Period Header */}
-                <div className="px-3 py-2 bg-white/5 border-b border-white/10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {activePeriod === "daily" && (
-                        <FaCalendarAlt className="text-amber-400" size={10} />
-                      )}
-                      {activePeriod === "weekly" && (
-                        <FaCalendarWeek className="text-amber-400" size={10} />
-                      )}
-                      {activePeriod === "monthly" && (
-                        <FaCalendarMonth className="text-amber-400" size={10} />
-                      )}
-                      <span className="text-white/70 text-[11px] font-medium">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <FaWallet className="text-purple-400" size={12} />
+            </div>
+            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
+              Wallet Totals (All Time)
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard
+              icon={<GiMoneyStack size={14} />}
+              label="Main Wallet"
+              value={`ETB ${isLoading ? "..." : totalMainWallet.toFixed(2)}`}
+              color="blue"
+            />
+            <StatCard
+              icon={<FaCoins size={14} />}
+              label="Play Wallet"
+              value={`ETB ${isLoading ? "..." : totalPlayWallet.toFixed(2)}`}
+              color="cyan"
+            />
+          </div>
+        </motion.div>
+
+        {/* Detailed Statistics Table */}
+        <motion.div
+          key={`table-${activePeriod}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden mb-4"
+        >
+          <div className="px-3 py-2 border-b border-white/10">
+            <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
+              {tableTitle}
+            </h3>
+          </div>
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            {!isLoading && tableData.length > 0 ? (
+              <table className="w-full text-[10px]">
+                <thead className="border-b border-white/10 sticky top-0 bg-purple-900/90">
+                  <tr>
+                    <th className="text-left py-2 px-2 text-white/30 font-medium">
+                      {activePeriod === "daily"
+                        ? "Date"
+                        : activePeriod === "weekly"
+                          ? "Week"
+                          : activePeriod === "monthly"
+                            ? "Month"
+                            : "Year"}
+                    </th>
+                    <th className="text-center py-2 px-2 text-white/30 font-medium">
+                      Games
+                    </th>
+                    <th className="text-center py-2 px-2 text-white/30 font-medium">
+                      Players
+                    </th>
+                    <th className="text-center py-2 px-2 text-white/30 font-medium">
+                      Stake
+                    </th>
+                    <th className="text-right py-2 px-2 text-white/30 font-medium">
+                      Revenue
+                    </th>
+                    <th className="text-right py-2 px-2 text-white/30 font-medium">
+                      Deposits
+                    </th>
+                    <th className="text-right py-2 px-2 text-white/30 font-medium">
+                      Withdrawals
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((stat, index) => (
+                    <tr
+                      key={index}
+                      className="border-b border-white/5 hover:bg-white/5"
+                    >
+                      <td className="py-2 px-2 text-white/70 text-[9px]">
                         {activePeriod === "daily"
                           ? new Date(stat.day).toLocaleDateString("en-US", {
                               month: "short",
@@ -539,78 +655,41 @@ export default function AdminStats() {
                               year: "numeric",
                             })
                           : activePeriod === "weekly"
-                            ? `${stat.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${stat.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
-                            : stat.monthName}
-                      </span>
-                    </div>
-                    <span className="text-amber-400 text-[9px] font-medium">
-                      Revenue: ETB {(stat.systemRevenue || 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="p-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Games
-                      </div>
-                      <div className="text-white font-bold text-sm">
+                            ? `${stat.startDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""} - ${stat.endDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""}`
+                            : activePeriod === "monthly"
+                              ? stat.monthName || ""
+                              : stat.year || ""}
+                      </td>
+                      <td className="text-center py-2 px-2 text-white">
                         {stat.totalGames || 0}
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Players
-                      </div>
-                      <div className="text-white font-bold text-sm">
+                      </td>
+                      <td className="text-center py-2 px-2 text-white">
                         {stat.totalPlayers || 0}
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Stakes
-                      </div>
-                      <div className="text-white/60 text-[9px]">
-                        {stat.stakesDisplay}
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Deposits
-                      </div>
-                      <div className="text-emerald-400 font-bold text-sm">
-                        ETB {(stat.totalDeposits || 0).toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Withdrawals
-                      </div>
-                      <div className="text-red-400 font-bold text-sm">
-                        ETB {(stat.totalWithdrawals || 0).toFixed(2)}
-                      </div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
-                      <div className="text-white/30 text-[8px] uppercase mb-1">
-                        Revenue
-                      </div>
-                      <div className="text-amber-400 font-bold text-sm">
+                      </td>
+                      <td className="text-center py-2 px-2 text-white/60 text-[9px]">
+                        {stat.stakesDisplay || "N/A"}
+                      </td>
+                      <td className="text-right py-2 px-2 text-amber-400">
                         ETB {(stat.systemRevenue || 0).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
+                      </td>
+                      <td className="text-right py-2 px-2 text-emerald-400">
+                        ETB {(stat.totalDeposits || 0).toFixed(2)}
+                      </td>
+                      <td className="text-right py-2 px-2 text-red-400">
+                        ETB {(stat.totalWithdrawals || 0).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-white/30 text-xs">
+                  {isLoading ? "Loading..." : "No data available"}
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-8 text-center">
-              <div className="text-white/30 text-xs">
-                {isLoading ? "Loading..." : "No data available"}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
 
         {/* Game History */}

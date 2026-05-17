@@ -1,802 +1,336 @@
-import React, { useEffect, useState, useMemo } from "react";
-import { apiFetch } from "../lib/api/client";
-import { motion } from "framer-motion";
-import {
-  FaTrophy,
-  FaUsers,
-  FaGamepad,
-  FaMoneyBillWave,
-  FaWallet,
-  FaCoins,
-  FaChartLine,
-  FaRobot,
-  FaCalendarAlt,
-  FaCalendarWeek,
-  //   FaCalendarMonth,
-  FaCalendar,
-} from "react-icons/fa";
-import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
-import { MdPending } from "react-icons/md";
+import React, { useMemo, useState } from 'react';
+import { apiFetch } from '../lib/api/client';
 
-export default function AdminStats() {
-  const [allStatsData, setAllStatsData] = useState([]);
-  const [gameHistory, setGameHistory] = useState([]);
-  const [totalMainWallet, setTotalMainWallet] = useState(0);
-  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
-  const [todayDepositMeta, setTodayDepositMeta] = useState({
-    pendingCount: 0,
-    pendingTotal: 0,
-  });
-  const [activePeriod, setActivePeriod] = useState("daily");
-  const [isLoading, setIsLoading] = useState(true);
+export default function AdminUserBalanceAccess() {
+    const [query, setQuery] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
+    const [results, setResults] = useState([]);
+    const [searchError, setSearchError] = useState(null);
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [adjustment, setAdjustment] = useState({
+        mainDelta: '',
+        playDelta: '',
+        reason: ''
+    });
+    const [isAdjusting, setIsAdjusting] = useState(false);
+    const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
 
-  useEffect(() => {
-    (async () => {
-      setIsLoading(true);
-
-      const now = new Date();
-      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-      const addisAbabaTime = new Date(utcTime + 3 * 3600000);
-
-      const start = new Date(addisAbabaTime);
-      start.setHours(0, 0, 0, 0);
-      const startUTC = new Date(start.getTime() - 3 * 3600000);
-
-      const end = new Date(addisAbabaTime);
-      end.setHours(23, 59, 59, 999);
-      const endUTC = new Date(end.getTime() - 3 * 3600000);
-
-      const from = startUTC.toISOString();
-      const to = endUTC.toISOString();
-
-      const [
-        dailyRes,
-        gameHistoryRes,
-        depositTotalsRes,
-        totalMainRes,
-        totalPlayRes,
-      ] = await Promise.allSettled([
-        apiFetch("/admin/stats/daily?days=365", { timeoutMs: 30000 }),
-        apiFetch("/admin/stats/game-history?days=7", { timeoutMs: 20000 }),
-        apiFetch(
-          `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-          { timeoutMs: 20000 },
-        ),
-        apiFetch("/admin/stats/wallets/total-main", { timeoutMs: 20000 }),
-        apiFetch("/admin/stats/wallets/total-play", { timeoutMs: 20000 }),
-      ]);
-
-      let allStats = [];
-      if (dailyRes.status === "fulfilled" && dailyRes.value?.days) {
-        allStats = dailyRes.value.days;
-        setAllStatsData(allStats);
-      }
-
-      let nextGameHistory = [];
-      if (
-        gameHistoryRes.status === "fulfilled" &&
-        gameHistoryRes.value?.games
-      ) {
-        nextGameHistory = gameHistoryRes.value.games;
-      }
-
-      const depositTotals =
-        depositTotalsRes.status === "fulfilled"
-          ? depositTotalsRes.value || {}
-          : {};
-      const nextTodayDepositMeta = {
-        pendingCount: Number(depositTotals.pendingCount) || 0,
-        pendingTotal: Number(depositTotals.pendingTotal) || 0,
-      };
-      const nextTotalMain =
-        totalMainRes.status === "fulfilled"
-          ? totalMainRes.value?.totalMain || 0
-          : 0;
-      const nextTotalPlay =
-        totalPlayRes.status === "fulfilled"
-          ? totalPlayRes.value?.totalPlay || 0
-          : 0;
-
-      setGameHistory(nextGameHistory);
-      setTodayDepositMeta(nextTodayDepositMeta);
-      setTotalMainWallet(nextTotalMain);
-      setTotalPlayWallet(nextTotalPlay);
-      setIsLoading(false);
-    })();
-  }, []);
-
-  const getWeekNumber = (date) => {
-    const d = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    const selectedUser = useMemo(
+        () => results.find(user => user.id === selectedUserId) || null,
+        [results, selectedUserId]
     );
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-  };
 
-  const getStartOfWeek = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
+    const throttledSearchRef = React.useRef(null);
 
-  const getEndOfWeek = (date) => {
-    const start = getStartOfWeek(date);
-    return new Date(start.setDate(start.getDate() + 6));
-  };
+    const performSearch = React.useCallback(async (term) => {
+        const trimmed = term.trim();
+        if (!trimmed) {
+            setResults([]);
+            setSelectedUserId(null);
+            setSearchError(null);
+            return;
+        }
 
-  // Process weekly stats
-  const processWeeklyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
+        setIsSearching(true);
+        setSearchError(null);
+        setFeedback(null);
 
-    const weeks = {};
+        try {
+            const response = await apiFetch(`/admin/users/search?query=${encodeURIComponent(trimmed)}`);
+            const users = response?.users || [];
+            setResults(users);
+        } catch (error) {
+            console.error('Admin user search failed:', error);
+            setSearchError('Search failed. Please try again.');
+            setResults([]);
+            setSelectedUserId(null);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
 
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const weekNumber = getWeekNumber(date);
-      const weekKey = `${date.getFullYear()}-W${weekNumber}`;
-
-      if (!weeks[weekKey]) {
-        weeks[weekKey] = {
-          weekKey,
-          startDate: getStartOfWeek(date),
-          endDate: getEndOfWeek(date),
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
-        };
-      }
-
-      weeks[weekKey].totalGames += stat.totalGames || 0;
-      weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
-      weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
-      weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
-      weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes) stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
-    });
-
-    return Object.values(weeks)
-      .map((week) => ({
-        ...week,
-        stakesDisplay:
-          Array.from(week.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .reverse();
-  };
-
-  // Process monthly stats
-  const processMonthlyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
-
-    const months = {};
-
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      const monthName = date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      });
-
-      if (!months[monthKey]) {
-        months[monthKey] = {
-          monthKey,
-          monthName,
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
-        };
-      }
-
-      months[monthKey].totalGames += stat.totalGames || 0;
-      months[monthKey].totalPlayers += stat.totalPlayers || 0;
-      months[monthKey].systemRevenue += stat.systemRevenue || 0;
-      months[monthKey].totalDeposits += stat.totalDeposits || 0;
-      months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes)
-        stat.stakes.forEach((s) => months[monthKey].stakes.add(s));
-    });
-
-    return Object.values(months)
-      .map((month) => ({
-        ...month,
-        stakesDisplay:
-          Array.from(month.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .reverse();
-  };
-
-  // Process yearly stats
-  const processYearlyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
-
-    const years = {};
-
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const yearKey = date.getFullYear();
-
-      if (!years[yearKey]) {
-        years[yearKey] = {
-          year: yearKey,
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
-        };
-      }
-
-      years[yearKey].totalGames += stat.totalGames || 0;
-      years[yearKey].totalPlayers += stat.totalPlayers || 0;
-      years[yearKey].systemRevenue += stat.systemRevenue || 0;
-      years[yearKey].totalDeposits += stat.totalDeposits || 0;
-      years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes) stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
-    });
-
-    return Object.values(years)
-      .map((year) => ({
-        ...year,
-        stakesDisplay:
-          Array.from(year.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .reverse();
-  };
-
-  const groupedGameHistory = useMemo(() => {
-    if (!Array.isArray(gameHistory) || gameHistory.length === 0) {
-      return [];
-    }
-
-    const byDate = {};
-
-    gameHistory.forEach((game) => {
-      if (!game || !game.finishedAt) return;
-
-      const finished = new Date(game.finishedAt);
-      if (Number.isNaN(finished.getTime())) return;
-
-      const dateKey = finished.toISOString().slice(0, 10);
-      const dateLabel = finished.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-
-      if (!byDate[dateKey]) {
-        byDate[dateKey] = {
-          dateKey,
-          dateLabel,
-          netRevenueSum: 0,
-          games: [],
-        };
-      }
-
-      const net = typeof game.netRevenue === "number" ? game.netRevenue : 0;
-      byDate[dateKey].netRevenueSum += net;
-      byDate[dateKey].games.push(game);
-    });
-
-    return Object.values(byDate).sort((a, b) =>
-      a.dateKey < b.dateKey ? 1 : -1,
-    );
-  }, [gameHistory]);
-
-  // Get data for overview cards based on selected period
-  const getOverviewData = () => {
-    if (!allStatsData || allStatsData.length === 0) {
-      return {
-        title: "No Data",
-        systemRevenue: 0,
-        totalPlayers: 0,
-        totalGames: 0,
-        totalDeposits: 0,
-        totalWithdrawals: 0,
-        botWins: 0,
-      };
-    }
-
-    if (activePeriod === "daily") {
-      const last7Days = allStatsData.slice(0, 7);
-      return {
-        title: "Last 7 Days",
-        systemRevenue: last7Days.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: last7Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: last7Days.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: last7Days.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
-    } else if (activePeriod === "weekly") {
-      const weeklyStats = processWeeklyStats(allStatsData);
-      const currentWeek = weeklyStats[0] || {};
-      return {
-        title: "This Week",
-        systemRevenue: currentWeek.systemRevenue || 0,
-        totalPlayers: currentWeek.totalPlayers || 0,
-        totalGames: currentWeek.totalGames || 0,
-        totalDeposits: currentWeek.totalDeposits || 0,
-        totalWithdrawals: currentWeek.totalWithdrawals || 0,
-        botWins: 0,
-      };
-    } else if (activePeriod === "monthly") {
-      const monthlyStats = processMonthlyStats(allStatsData);
-      const currentMonth = monthlyStats[0] || {};
-      return {
-        title: "This Month",
-        systemRevenue: currentMonth.systemRevenue || 0,
-        totalPlayers: currentMonth.totalPlayers || 0,
-        totalGames: currentMonth.totalGames || 0,
-        totalDeposits: currentMonth.totalDeposits || 0,
-        totalWithdrawals: currentMonth.totalWithdrawals || 0,
-        botWins: 0,
-      };
-    } else {
-      const yearlyStats = processYearlyStats(allStatsData);
-      const currentYear = yearlyStats[0] || {};
-      return {
-        title: "This Year",
-        systemRevenue: currentYear.systemRevenue || 0,
-        totalPlayers: currentYear.totalPlayers || 0,
-        totalGames: currentYear.totalGames || 0,
-        totalDeposits: currentYear.totalDeposits || 0,
-        totalWithdrawals: currentYear.totalWithdrawals || 0,
-        botWins: 0,
-      };
-    }
-  };
-
-  // Get detailed table data based on selected period
-  const getTableData = () => {
-    if (!allStatsData || allStatsData.length === 0) return [];
-
-    if (activePeriod === "daily") {
-      return allStatsData;
-    } else if (activePeriod === "weekly") {
-      return processWeeklyStats(allStatsData);
-    } else if (activePeriod === "monthly") {
-      return processMonthlyStats(allStatsData);
-    } else {
-      return processYearlyStats(allStatsData);
-    }
-  };
-
-  const overviewData = getOverviewData();
-  const tableData = getTableData();
-  const tableTitle =
-    activePeriod === "daily"
-      ? "Daily Statistics"
-      : activePeriod === "weekly"
-        ? "Weekly Statistics"
-        : activePeriod === "monthly"
-          ? "Monthly Statistics"
-          : "Yearly Statistics";
-
-  const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
-    const colorClasses = {
-      blue: "from-blue-500/20 to-blue-600/20 border-blue-500/30",
-      green: "from-emerald-500/20 to-green-600/20 border-emerald-500/30",
-      amber: "from-amber-500/20 to-orange-600/20 border-amber-500/30",
-      red: "from-red-500/20 to-rose-600/20 border-red-500/30",
-      purple: "from-purple-500/20 to-pink-600/20 border-purple-500/30",
-      cyan: "from-cyan-500/20 to-blue-600/20 border-cyan-500/30",
+    const handleSearchInput = (value) => {
+        setQuery(value);
+        if (throttledSearchRef.current) {
+            clearTimeout(throttledSearchRef.current);
+        }
+        throttledSearchRef.current = setTimeout(() => performSearch(value), 250);
     };
-    const textColors = {
-      blue: "text-blue-400",
-      green: "text-emerald-400",
-      amber: "text-amber-400",
-      red: "text-red-400",
-      purple: "text-purple-400",
-      cyan: "text-cyan-400",
+
+    const handleSelectUser = (userId) => {
+        setSelectedUserId(userId);
+        setAdjustment({
+            mainDelta: '',
+            playDelta: '',
+            reason: ''
+        });
+        setFeedback(null);
     };
+
+    const updateAdjustmentField = (field, value) => {
+        setAdjustment(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const getNumber = (value) => {
+        if (value === '' || value === null || value === undefined) {
+            return 0;
+        }
+        const num = Number(value);
+        return Number.isNaN(num) ? NaN : num;
+    };
+
+    const handleAdjustmentSubmit = async (event) => {
+        event.preventDefault();
+        if (!selectedUser) return;
+
+        const mainDelta = getNumber(adjustment.mainDelta);
+        const playDelta = getNumber(adjustment.playDelta);
+
+        if (Number.isNaN(mainDelta) || Number.isNaN(playDelta)) {
+            setFeedback({ type: 'error', message: 'Amounts must be valid numbers.' });
+            return;
+        }
+
+        if (mainDelta === 0 && playDelta === 0) {
+            setFeedback({ type: 'error', message: 'Add or subtract at least one amount before saving.' });
+            return;
+        }
+
+        setIsAdjusting(true);
+        setFeedback(null);
+
+        try {
+            const response = await apiFetch(`/admin/users/${selectedUser.id}/wallet-adjust`, {
+                    method: 'POST',
+                    body: {
+                        mainDelta,
+                        playDelta,
+                        reason: adjustment.reason || ''
+                    }
+            });
+
+            const updatedWallet = response?.wallet;
+            if (updatedWallet) {
+                setResults(prev =>
+                    prev.map(user =>
+                        user.id === selectedUser.id
+                            ? { ...user, wallet: updatedWallet }
+                            : user
+                    )
+                );
+            }
+
+            setAdjustment(prev => ({
+                ...prev,
+                mainDelta: '',
+                playDelta: ''
+            }));
+
+            setFeedback({ type: 'success', message: 'Wallet updated successfully.' });
+        } catch (error) {
+            console.error('Admin wallet adjustment failed:', error);
+            setFeedback({ type: 'error', message: error?.message === 'api_error_400' ? 'Update rejected. Check the entered values.' : 'Failed to update wallet. Please try again.' });
+        } finally {
+            setIsAdjusting(false);
+        }
+    };
+
+    const hasPendingChanges = () => {
+        const mainDelta = getNumber(adjustment.mainDelta);
+        const playDelta = getNumber(adjustment.playDelta);
+        return (
+            !Number.isNaN(mainDelta) && mainDelta !== 0 ||
+            !Number.isNaN(playDelta) && playDelta !== 0
+        );
+    };
+
+    const canReset =
+        adjustment.mainDelta !== '' ||
+        adjustment.playDelta !== '' ||
+        (adjustment.reason || '').trim() !== '';
 
     return (
-      <div
-        className={`bg-gradient-to-br ${colorClasses[color]} backdrop-blur rounded-xl border p-3`}
-      >
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-white/40 text-[10px] uppercase tracking-wider">
-            {label}
-          </div>
-          <div className={textColors[color]}>{icon}</div>
-        </div>
-        <div
-          className={`text-white text-xl font-bold ${value === "..." ? "text-white/50" : ""}`}
-        >
-          {value}
-        </div>
-        {subtext && (
-          <div className="text-white/30 text-[9px] mt-1">{subtext}</div>
-        )}
-      </div>
-    );
-  };
-
-  const PeriodButton = ({ period, label, icon }) => (
-    <button
-      onClick={() => setActivePeriod(period)}
-      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all ${
-        activePeriod === period
-          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-          : "text-white/40 hover:text-white/60 hover:bg-white/5"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-      <div className="max-w-md mx-auto px-4 pb-24 pt-4">
-        {/* Period Selector Tabs - Top */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur rounded-xl p-1 mb-4"
-        >
-          <div className="flex gap-1">
-            <PeriodButton
-              period="daily"
-              label="Daily"
-              icon={<FaCalendarAlt size={12} />}
-            />
-            <PeriodButton
-              period="weekly"
-              label="Weekly"
-              icon={<FaCalendarWeek size={12} />}
-            />
-            <PeriodButton
-              period="monthly"
-              label="Monthly"
-              icon={<FaCalendar size={12} />}
-            />
-            <PeriodButton
-              period="yearly"
-              label="Yearly"
-              icon={<FaCalendar size={12} />}
-            />
-          </div>
-        </motion.div>
-
-        {/* Overview Cards - Filtered by Period */}
-        <motion.div
-          key={activePeriod}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-              <FaChartLine className="text-amber-400" size={12} />
-            </div>
-            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              {overviewData.title} Overview
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard
-              icon={<GiProfit size={14} />}
-              label="System Revenue"
-              value={`ETB ${isLoading ? "..." : overviewData.systemRevenue.toLocaleString()}`}
-              color="amber"
-            />
-            <StatCard
-              icon={<FaUsers size={14} />}
-              label="Total Players"
-              value={
-                isLoading ? "..." : overviewData.totalPlayers.toLocaleString()
-              }
-              color="green"
-            />
-            <StatCard
-              icon={<FaGamepad size={14} />}
-              label="Total Games"
-              value={
-                isLoading ? "..." : overviewData.totalGames.toLocaleString()
-              }
-              color="blue"
-            />
-            <StatCard
-              icon={<GiCash size={14} />}
-              label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : overviewData.totalDeposits.toLocaleString()}`}
-              color="green"
-              subtext={
-                !isLoading
-                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
-                  : null
-              }
-            />
-            <StatCard
-              icon={<FaMoneyBillWave size={14} />}
-              label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : overviewData.totalWithdrawals.toLocaleString()}`}
-              color="red"
-            />
-            <StatCard
-              icon={<FaRobot size={14} />}
-              label="Bot Wins"
-              value={
-                isLoading ? "..." : (overviewData.botWins || 0).toLocaleString()
-              }
-              color="purple"
-            />
-          </div>
-        </motion.div>
-
-        {/* Wallet Totals - All Time (Static) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <FaWallet className="text-purple-400" size={12} />
-            </div>
-            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              Wallet Totals (All Time)
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard
-              icon={<GiMoneyStack size={14} />}
-              label="Main Wallet"
-              value={`ETB ${isLoading ? "..." : totalMainWallet.toFixed(2)}`}
-              color="blue"
-            />
-            <StatCard
-              icon={<FaCoins size={14} />}
-              label="Play Wallet"
-              value={`ETB ${isLoading ? "..." : totalPlayWallet.toFixed(2)}`}
-              color="cyan"
-            />
-          </div>
-        </motion.div>
-
-        {/* Detailed Statistics Table */}
-        <motion.div
-          key={`table-${activePeriod}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden mb-4"
-        >
-          <div className="px-3 py-2 border-b border-white/10">
-            <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-              {tableTitle}
-            </h3>
-          </div>
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            {!isLoading && tableData.length > 0 ? (
-              <table className="w-full text-[10px]">
-                <thead className="border-b border-white/10 sticky top-0 bg-purple-900/90">
-                  <tr>
-                    <th className="text-left py-2 px-2 text-white/30 font-medium">
-                      {activePeriod === "daily"
-                        ? "Date"
-                        : activePeriod === "weekly"
-                          ? "Week"
-                          : activePeriod === "monthly"
-                            ? "Month"
-                            : "Year"}
-                    </th>
-                    <th className="text-center py-2 px-2 text-white/30 font-medium">
-                      Games
-                    </th>
-                    <th className="text-center py-2 px-2 text-white/30 font-medium">
-                      Players
-                    </th>
-                    <th className="text-center py-2 px-2 text-white/30 font-medium">
-                      Stake
-                    </th>
-                    <th className="text-right py-2 px-2 text-white/30 font-medium">
-                      Revenue
-                    </th>
-                    <th className="text-right py-2 px-2 text-white/30 font-medium">
-                      Deposits
-                    </th>
-                    <th className="text-right py-2 px-2 text-white/30 font-medium">
-                      Withdrawals
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((stat, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-white/5 hover:bg-white/5"
-                    >
-                      <td className="py-2 px-2 text-white/70 text-[9px]">
-                        {activePeriod === "daily"
-                          ? new Date(stat.day).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : activePeriod === "weekly"
-                            ? `${stat.startDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""} - ${stat.endDate?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) || ""}`
-                            : activePeriod === "monthly"
-                              ? stat.monthName || ""
-                              : stat.year || ""}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white">
-                        {stat.totalGames || 0}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white">
-                        {stat.totalPlayers || 0}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white/60 text-[9px]">
-                        {stat.stakesDisplay || "N/A"}
-                      </td>
-                      <td className="text-right py-2 px-2 text-amber-400">
-                        ETB {(stat.systemRevenue || 0).toFixed(2)}
-                      </td>
-                      <td className="text-right py-2 px-2 text-emerald-400">
-                        ETB {(stat.totalDeposits || 0).toFixed(2)}
-                      </td>
-                      <td className="text-right py-2 px-2 text-red-400">
-                        ETB {(stat.totalWithdrawals || 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-white/30 text-xs">
-                  {isLoading ? "Loading..." : "No data available"}
+        <div className="admin-card admin-user-balance-access">
+            <div className="admin-user-search-bar">
+                <input
+                    id="admin-user-search-input"
+                    type="text"
+                    className="admin-user-search-input"
+                    placeholder="Search name, username, or Telegram ID..."
+                    value={query}
+                    onChange={(event) => handleSearchInput(event.target.value)}
+                />
+                <div className="admin-user-search-indicator">
+                    {isSearching ? (
+                        <div className="admin-spinner admin-spinner-inline"></div>
+                    ) : (
+                        <span>🔎</span>
+                    )}
                 </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
+            </div>
 
-        {/* Game History */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden"
-        >
-          <div className="px-3 py-2 border-b border-white/10">
-            <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-              Game History (Last 7 Days)
-            </h3>
-          </div>
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            {!isLoading && groupedGameHistory.length > 0 ? (
-              groupedGameHistory.map((group, idx) => (
-                <div key={group.dateKey}>
-                  <div className="px-2 py-2 bg-white/5 sticky top-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/40 text-[9px]">
-                        {group.dateLabel}
-                      </span>
-                      <span className="text-amber-400 text-[9px] font-medium">
-                        Net: ETB {group.netRevenueSum.toFixed(2)}
-                      </span>
+            {searchError && (
+                <div className="admin-feedback admin-feedback-error">{searchError}</div>
+            )}
+
+            {selectedUser && (
+                <div className="admin-user-editor">
+                    <div className="admin-user-editor-header">
+                        <div className="admin-user-editor-identity">
+                            <span className="admin-user-avatar">{selectedUser.firstName?.[0]?.toUpperCase() || '👤'}</span>
+                            <div className="admin-user-editor-meta">
+                                <span className="admin-user-editor-name">
+                                    {selectedUser.firstName} {selectedUser.lastName}
+                                </span>
+                                <div className="admin-user-editor-tags">
+                                    {selectedUser.username ? <span>@{selectedUser.username}</span> : null}
+                                    <span>ID: {selectedUser.telegramId}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="admin-user-editor-wallet">
+                            <span>Main: {Number(selectedUser.wallet?.main || 0).toLocaleString()}</span>
+                            <span>Play: {Number(selectedUser.wallet?.play || 0).toLocaleString()}</span>
+                        </div>
                     </div>
-                  </div>
-                  <table className="w-full text-[9px]">
-                    <thead className="border-b border-white/5">
-                      <tr>
-                        <th className="text-left py-1 px-2 text-white/30 font-medium">
-                          Game ID
-                        </th>
-                        <th className="text-center py-1 px-2 text-white/30 font-medium">
-                          Players
-                        </th>
-                        <th className="text-center py-1 px-2 text-white/30 font-medium">
-                          Stake
-                        </th>
-                        <th className="text-right py-1 px-2 text-white/30 font-medium">
-                          Prize
-                        </th>
-                        <th className="text-right py-1 px-2 text-white/30 font-medium">
-                          System Cut
-                        </th>
-                        <th className="text-center py-1 px-2 text-white/30 font-medium">
-                          Winner
-                        </th>
-                        <th className="text-right py-1 px-2 text-white/30 font-medium">
-                          Net
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.games.map((game, gameIdx) => (
-                        <tr
-                          key={game.gameId || gameIdx}
-                          className="border-b border-white/5 hover:bg-white/5"
-                        >
-                          <td className="py-1 px-2 text-white/60 font-mono text-[8px]">
-                            {game.gameId?.slice(-6) || "—"}
-                          </td>
-                          <td className="text-center py-1 px-2 text-white">
-                            {game.totalPlayers ?? 0}
-                          </td>
-                          <td className="text-center py-1 px-2 text-white">
-                            ETB {game.stake ?? 0}
-                          </td>
-                          <td className="text-right py-1 px-2 text-emerald-400">
-                            ETB {(game.prizePool ?? 0).toFixed(2)}
-                          </td>
-                          <td className="text-right py-1 px-2 text-amber-400">
-                            ETB {(game.systemRevenue ?? 0).toFixed(2)}
-                          </td>
-                          <td className="text-center py-1 px-2">
-                            <span
-                              className={`px-1.5 py-0.5 rounded-full text-[8px] font-medium ${
-                                game.whoWon === "Real"
-                                  ? "bg-emerald-500/20 text-emerald-400"
-                                  : game.whoWon === "Bot"
-                                    ? "bg-purple-500/20 text-purple-400"
-                                    : "bg-yellow-500/20 text-yellow-400"
-                              }`}
+
+                    <form className="admin-user-editor-form" onSubmit={handleAdjustmentSubmit}>
+                        <div className="admin-user-editor-grid">
+                            <div className="admin-adjustment-slot">
+                                <label htmlFor="admin-adjust-main">Main Wallet</label>
+                                <div className="admin-adjustment-controls">
+                                    <input
+                                        id="admin-adjust-main"
+                                        type="number"
+                                        step="0.01"
+                                        value={adjustment.mainDelta}
+                                        onChange={(event) => updateAdjustmentField('mainDelta', event.target.value)}
+                                        placeholder="+/- amount"
+                                    />
+                                </div>
+                            </div>
+                            <div className="admin-adjustment-slot">
+                                <label htmlFor="admin-adjust-play">Play Wallet</label>
+                                <div className="admin-adjustment-controls">
+                                    <input
+                                        id="admin-adjust-play"
+                                        type="number"
+                                        step="0.01"
+                                        value={adjustment.playDelta}
+                                        onChange={(event) => updateAdjustmentField('playDelta', event.target.value)}
+                                        placeholder="+/- amount"
+                                    />
+                                </div>
+                            </div>
+                            <div className="admin-adjustment-slot">
+                                {/* Coins adjustment removed */}
+                            </div>
+                        </div>
+
+                        <textarea
+                            className="admin-user-editor-reason"
+                            rows={2}
+                            placeholder="Reason (optional)"
+                            value={adjustment.reason}
+                            onChange={(event) => updateAdjustmentField('reason', event.target.value)}
+                        />
+
+                        <div className="admin-user-editor-actions">
+                            <button
+                                type="button"
+                                className="admin-button admin-adjust-reset"
+                                onClick={() => {
+                                    setAdjustment({
+                                        mainDelta: '',
+                                        playDelta: '',
+                                        reason: ''
+                                    });
+                                    setFeedback(null);
+                                }}
+                                disabled={isAdjusting || !canReset}
                             >
-                              {game.whoWon || "—"}
-                            </span>
-                          </td>
-                          <td className="text-right py-1 px-2 text-cyan-400">
-                            ETB {(game.netRevenue ?? 0).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                <span className="admin-button-content">
+                                    <span>♻️</span>
+                                    Reset
+                                </span>
+                            </button>
+                            <button
+                                type="submit"
+                                className="admin-button admin-adjust-save"
+                                disabled={isAdjusting || !hasPendingChanges()}
+                            >
+                                {isAdjusting ? (
+                                    <span className="admin-button-content">
+                                        <div className="admin-spinner"></div>
+                                        Saving...
+                                    </span>
+                                ) : (
+                                    <span className="admin-button-content">
+                                        <span>💾</span>
+                                        Save
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                    {feedback && (
+                        <div className={`admin-feedback ${feedback.type === 'error' ? 'admin-feedback-error' : 'admin-feedback-success'}`}>
+                            {feedback.message}
+                        </div>
+                    )}
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-white/30 text-xs">
-                  {isLoading ? "Loading..." : "No game history available"}
-                </div>
-              </div>
             )}
-          </div>
-        </motion.div>
-      </div>
-    </div>
-  );
+
+            <div className="admin-user-results-table">
+                <div className="admin-user-results-header">
+                    <span>Name</span>
+                    <span>Main</span>
+                    <span>Play</span>
+                    <span></span>
+                </div>
+
+                {results.length === 0 && query.trim() !== '' && !isSearching ? (
+                    <div className="admin-empty-state admin-user-empty-state">
+                        <div className="admin-empty-icon">👥</div>
+                        <div className="admin-empty-title">No results</div>
+                        <div className="admin-empty-subtitle">Try a different name or username.</div>
+                    </div>
+                ) : (
+                    <div className="admin-user-results-body">
+                        {results.map(user => {
+                            const main = Number(user.wallet?.main || 0).toLocaleString();
+                            const play = Number(user.wallet?.play || 0).toLocaleString();
+
+                            return (
+                                <div
+                                    key={user.id}
+                                    className={`admin-user-result-row ${selectedUserId === user.id ? 'admin-user-result-row-active' : ''}`}
+                                >
+                                    <div className="admin-user-result-cell admin-user-result-name-cell">
+                                        <span className="admin-user-result-name">{user.firstName} {user.lastName}</span>
+                                        {user.username ? <span className="admin-user-result-username">@{user.username}</span> : null}
+                                    </div>
+                                    <div className="admin-user-result-cell">{main}</div>
+                                    <div className="admin-user-result-cell">{play}</div>
+                                    <div className="admin-user-result-cell admin-user-result-action">
+                                        <button
+                                            type="button"
+                                            className="admin-button admin-user-edit-button"
+                                            onClick={() => handleSelectUser(user.id)}
+                                        >
+                                            {selectedUserId === user.id ? 'Editing' : 'Edit'}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }
+
