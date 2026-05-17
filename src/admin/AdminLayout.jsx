@@ -211,21 +211,21 @@ export default function AdminLayout({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+            {/* <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
               <MdAdminPanelSettings className="text-yellow-400" size={14} />
-            </div>
+            </div> */}
             <span className="text-white/70 text-xs font-medium">
-              ADMIN DASHBOARD
+              ADMIN PANEL
             </span>
           </div>
           <button
             onClick={handleGoToGame}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-[11px] font-medium shadow-md hover:scale-105 transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r bg-white/20 text-white text-xs font-medium shadow-md hover:scale-105 transition-all active:scale-95"
           >
-            <FaGamepad size={12} />
+            <FaGamepad size={14} />
             Play Game
           </button>
         </div>
