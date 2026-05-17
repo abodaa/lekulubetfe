@@ -1,264 +1,409 @@
-import React, { useState } from 'react';
-import BottomNav from './BottomNav';
-import { motion } from 'framer-motion';
-import { FaLanguage, FaArrowLeft } from 'react-icons/fa';
+import React, { useState } from "react";
+import BottomNav from "./BottomNav";
+import { motion } from "framer-motion";
+import {
+  FaLanguage,
+  FaArrowLeft,
+  FaGamepad,
+  FaTrophy,
+  FaGavel,
+  FaRegGem,
+  FaDiceD6,
+  FaClock,
+  FaEye,
+  FaMousePointer,
+  FaRegCheckCircle,
+  FaRegTimesCircle,
+  FaRegLightbulb,
+  FaUsers,
+  FaCrown,
+  FaRegStar,
+  FaRegHeart,
+} from "react-icons/fa";
+import {
+  GiCardDraw,
+  GiPlayButton,
+  GiConfirmed,
+  GiCancel,
+} from "react-icons/gi";
+import {
+  MdEmojiEvents,
+  MdOutlineRule,
+  MdOutlineTipsAndUpdates,
+} from "react-icons/md";
 
 // ========== CONTENT STORAGE ==========
 const content = {
-  en: {
-    header: {
-      title: "Game Rules"
-    },
-    tabs: {
-      cards: "Cards",
-      play: "Play",
-      prizes: "Prizes",
-      fair: "Fair"
-    },
-    cards: {
-      title: "Registration Guide",
-      steps: [
-        { step: 1, title: "Choose Your Card", text: "Pick any available card from 1-200 during registration.", color: "green" },
-        { step: 2, title: "Card Status Indicator", text: "Unavailable cards are marked in red. Select only green cards.", color: "red" },
-        { step: 3, title: "Card Preview", text: "Preview the numbers on your card before confirming.", color: "blue" }
-      ],
-      tips: {
-        title: "Card Selection Tips",
-        items: [
-          "Choose cards that are not marked in red",
-          "Preview your card before confirming",
-          "Select quickly before registration time ends"
-        ]
-      },
-      timer: {
-        title: "Registration Timer",
-        text: "Registration lasts a short time. Be ready to choose and confirm your card before the timer runs out."
-      }
-    },
-    play: {
-      title: "Play",
-      steps: [
-        { step: 1, title: "Game Entry", text: "When we enter the game, we get a playing card based on the card number we selected.", color: "green" },
-        { step: 2, title: "Game Timer", text: "The game starts counting down the remaining seconds at the top right.", color: "orange" },
-        { step: 3, title: "Number Calling", text: "When the game starts, it begins calling out different numbers from 1 to 75.", color: "green" },
-        { step: 4, title: "Marking Numbers", text: "If the called number is inside our playing card, we can select it by clicking on the called number.", color: "blue" },
-        { step: 5, title: "Unmarking Numbers", text: "If we want to erase the number we selected, we can erase it by clicking on the number itself again.", color: "yellow" }
-      ],
-      mechanics: {
-        title: "Game Mechanics",
-        items: [
-          { title: "Number Range", text: "Numbers called are from 1 to 75" },
-          { title: "Marking", text: "Click to mark/unmark numbers" },
-          { title: "Card Layout", text: "5x5 grid with center FREE space" },
-          { title: "Timer", text: "Countdown shows game start time" }
-        ]
-      }
-    },
-    prizes: {
-      title: "Prizes",
-      mainRule: {
-        title: "Main Winning Rule",
-        text: "When numbers are called, by selecting from our playing card either horizontally, vertically, diagonally, or all four corners, we can immediately win by pressing the BINGO button at the bottom."
-      },
-      categories: [
-        { icon: "→", title: "Horizontal", text: "Completing any horizontal row (5 numbers in a line)" },
-        { icon: "↓", title: "Vertical", text: "Completing any vertical column (5 numbers in a line)" },
-        { icon: "↘", title: "Diagonal", text: "Completing any diagonal line (5 numbers in a line)" },
-        { icon: "▶", title: "Four Corners", text: "Marking the four corner numbers of the card" },
-        { icon: "▶", title: "One Line", text: "Marking one line of numbers on the card" }
-      ],
-      multipleWinners: {
-        title: "Multiple Winners",
-        text: "If two or more players win equally, the prize will be shared among them."
-      }
-    },
-    fair: {
-      title: "Fair Play",
-      penalty: {
-        title: "False BINGO Penalty",
-        violation: "Rule Violation",
-        text: "Claiming BINGO without a valid winning pattern is considered a violation and may result in penalties.",
-        consequences: {
-          title: "Consequences:",
-          items: [
-            "🚫 Immediate removal from current game",
-            "💲 Loss of entry fee/stake",
-            "⏱ Temporary ban from joining new games"
-          ]
-        }
-      },
-      validConditions: {
-        title: "✔ Valid BINGO Conditions",
-        items: [
-          "Complete horizontal line (5 numbers)",
-          "Complete vertical line (5 numbers)",
-          "Complete diagonal line (5 numbers)",
-          "All four corners marked"
-        ]
-      },
-      invalidAttempts: {
-        title: "🚫 Invalid BINGO Attempts",
-        items: [
-          "Incomplete lines or patterns",
-          "Random marked numbers",
-          "Premature BINGO calls",
-          "False pattern claims"
-        ]
-      },
-      proTips: {
-        title: "✨ Pro Tips to Avoid Penalties",
-        items: [
-          "Double-check your pattern before clicking BINGO",
-          "Make sure you have exactly 5 numbers in a line",
-          "Verify all four corners are marked for corner wins",
-          "Take your time — there's no rush to call BINGO",
-          "If unsure, wait for more numbers to be called"
-        ]
-      }
-    }
-  },
   am: {
     header: {
-      title: "የጨዋታ ህጎች"
+      title: "የጨዋታ ህጎች",
     },
     tabs: {
       cards: "ካርዶች",
       play: "ጨዋታ",
       prizes: "ሽልማቶች",
-      fair: "ፍትሃዊ"
+      fair: "ፍትሃዊ",
     },
     cards: {
-      title: "የምዝገባ መመሪያ",
+      title: "የካርድ ምርጫ መመሪያ",
       steps: [
-        { step: 1, title: "ካርድ ይምረጡ", text: "በምዝገባ ወቅት ከ1-200 ያሉትን ማንኛውንም ካርድ ይምረጡ።", color: "green" },
-        { step: 2, title: "የካርድ ሁኔታ አመላካች", text: "የማይገኙ ካርዶች በቀይ ይታያሉ። አረንጓዴ ካርዶችን ብቻ ይምረጡ።", color: "red" },
-        { step: 3, title: "የካርድ ቅድመ-እይታ", text: "ከማረጋገጥዎ በፊት በካርድዎ ላይ ያሉትን ቁጥሮች ይመልከቱ።", color: "blue" }
+        {
+          step: 1,
+          title: "ካርድ ይምረጡ",
+          text: "በምዝገባ ወቅት ከ1-200 ያሉትን ማንኛውንም ካርድ ይምረጡ።",
+          icon: <GiCardDraw size={16} />,
+          color: "emerald",
+        },
+        {
+          step: 2,
+          title: "የካርድ ሁኔታ",
+          text: "የማይገኙ ካርዶች በቀይ ይታያሉ። አረንጓዴ ካርዶችን ብቻ ይምረጡ።",
+          icon: <FaEye size={16} />,
+          color: "red",
+        },
+        {
+          step: 3,
+          title: "ቅድመ-እይታ",
+          text: "ከማረጋገጥዎ በፊት በካርድዎ ላይ ያሉትን ቁጥሮች ይመልከቱ።",
+          icon: <FaRegStar size={16} />,
+          color: "blue",
+        },
       ],
       tips: {
-        title: "የካርድ ምርጫ ምክሮች",
+        title: "ምክሮች",
+        icon: <MdOutlineTipsAndUpdates size={14} />,
         items: [
           "በቀይ ያልተለዩ ካርዶችን ይምረጡ",
           "ከማረጋገጥዎ በፊት ካርድዎን ይመልከቱ",
-          "የምዝገባ ጊዜ ከማብቃቱ በፊት በፍጥነት ይምረጡ"
-        ]
+          "የምዝገባ ጊዜ ከማብቃቱ በፊት በፍጥነት ይምረጡ",
+        ],
       },
       timer: {
         title: "የምዝገባ ሰዓት ቆጣሪ",
-        text: "ምዝገባ ለአጭር ጊዜ ይቆያል። ሰዓት ቆጣሪው ከማብቃቱ በፊት ካርድዎን ለመምረጥ ዝግጁ ይሁኑ።"
-      }
+        text: "ምዝገባ ለአጭር ጊዜ ይቆያል። ሰዓት ቆጣሪው ከማብቃቱ በፊት ካርድዎን ለመምረጥ ዝግጁ ይሁኑ።",
+      },
     },
     play: {
       title: "ጨዋታ",
       steps: [
-        { step: 1, title: "ወደ ጨዋታ መግባት", text: "ወደ ጨዋታው ስንገባ በመረጥነው የካርድ ቁጥር መሰረት የመጫወቻ ካርድ እናገኛለን።", color: "green" },
-        { step: 2, title: "የጨዋታ ሰዓት ቆጣሪ", text: "ጨዋታው ቀሪ ሰከንዶችን በላይኛው ቀኝ በኩል መቁጠር ይጀምራል።", color: "orange" },
-        { step: 3, title: "ቁጥሮች መጥራት", text: "ጨዋታው ሲጀምር ከ1 እስከ 75 ያሉ የተለያዩ ቁጥሮችን መጥራት ይጀምራል።", color: "green" },
-        { step: 4, title: "ቁጥሮች ምልክት ማድረግ", text: "የተጠራው ቁጥር በመጫወቻ ካርዳችን ውስጥ ካለ በቁጥሩ ላይ ጠቅ በማድረግ መምረጥ እንችላለን።", color: "blue" },
-        { step: 5, title: "ቁጥሮች ማስወገድ", text: "የመረጥነውን ቁጥር መሰረዝ ከፈለግን እንደገና በቁጥሩ ላይ ጠቅ በማድረግ መሰረዝ እንችላለን።", color: "yellow" }
+        {
+          step: 1,
+          title: "ወደ ጨዋታ መግባት",
+          text: "ወደ ጨዋታው ስንገባ በመረጥነው የካርድ ቁጥር መሰረት የመጫወቻ ካርድ እናገኛለን።",
+          icon: <GiPlayButton size={14} />,
+          color: "emerald",
+        },
+        {
+          step: 2,
+          title: "የጨዋታ ሰዓት ቆጣሪ",
+          text: "ጨዋታው ቀሪ ሰከንዶችን በላይኛው ቀኝ በኩል መቁጠር ይጀምራል።",
+          icon: <FaClock size={14} />,
+          color: "orange",
+        },
+        {
+          step: 3,
+          title: "ቁጥሮች መጥራት",
+          text: "ጨዋታው ሲጀምር ከ1 እስከ 75 ያሉ የተለያዩ ቁጥሮችን መጥራት ይጀምራል።",
+          icon: <FaDiceD6 size={14} />,
+          color: "emerald",
+        },
+        {
+          step: 4,
+          title: "ቁጥሮች ምልክት ማድረግ",
+          text: "የተጠራው ቁጥር በመጫወቻ ካርዳችን ውስጥ ካለ በቁጥሩ ላይ ጠቅ በማድረግ መምረጥ እንችላለን።",
+          icon: <FaMousePointer size={14} />,
+          color: "blue",
+        },
+        {
+          step: 5,
+          title: "ቁጥሮች ማስወገድ",
+          text: "የመረጥነውን ቁጥር መሰረዝ ከፈለግን እንደገና በቁጥሩ ላይ ጠቅ በማድረግ መሰረዝ እንችላለን።",
+          icon: <GiCancel size={14} />,
+          color: "yellow",
+        },
       ],
       mechanics: {
         title: "የጨዋታ ስልቶች",
+        icon: <FaGamepad size={14} />,
         items: [
-          { title: "የቁጥር ክልል", text: "የሚጠሩት ቁጥሮች ከ1 እስከ 75 ናቸው" },
-          { title: "ምልክት ማድረግ", text: "ቁጥሮችን ለማመልከት/ለማስወገድ ጠቅ ያድርጉ" },
-          { title: "የካርድ አቀማመጥ", text: "5x5 ፍርግርግ ከመሃል ነጻ ቦታ ጋር" },
-          { title: "ሰዓት ቆጣሪ", text: "የጨዋታ መጀመሪያ ሰዓትን ያሳያል" }
-        ]
-      }
+          { title: "የቁጥር ክልል", text: "ከ1 እስከ 75" },
+          { title: "ምልክት ማድረግ", text: "ጠቅ ያድርጉ" },
+          { title: "ካርድ አቀማመጥ", text: "5x5 ፍርግርግ" },
+          { title: "ሰዓት ቆጣሪ", text: "ቆጠራ ያሳያል" },
+        ],
+      },
     },
     prizes: {
       title: "ሽልማቶች",
       mainRule: {
-        title: "ዋና የማሸነፊያ ህግ",
-        text: "ቁጥሮች ሲጠሩ ከመጫወቻ ካርዳችን ላይ በአግድም፣ በቋሚ፣ በሰያፍ ወይም በአራቱም ማዕዘኖች በመምረጥ ከታች ያለውን የ BINGO ቁልፍ በመጫን ወዲያውኑ ማሸነፍ እንችላለን።"
+        title: "የማሸነፊያ ዘዴ",
+        icon: <FaCrown size={16} />,
+        text: "ቁጥሮች ሲጠሩ ከመጫወቻ ካርዳችን ላይ በአግድም፣ በቋሚ፣ በሰያፍ ወይም በአራቱም ማዕዘኖች በመምረጥ ከታች ያለውን የ BINGO ቁልፍ በመጫን ወዲያውኑ ማሸነፍ እንችላለን።",
       },
       categories: [
-        { icon: "→", title: "አግድም", text: "ማንኛውንም አግድም ረድፍ ማጠናቀቅ (5 ቁጥሮች በአንድ መስመር)" },
-        { icon: "↓", title: "ቋሚ", text: "ማንኛውንም ቋሚ አምድ ማጠናቀቅ (5 ቁጥሮች በአንድ መስመር)" },
-        { icon: "↘", title: "ሰያፍ", text: "ማንኛውንም ሰያፍ መስመር ማጠናቀቅ (5 ቁጥሮች በአንድ መስመር)" },
-        { icon: "▶", title: "አራት ማዕዘኖች", text: "የካርዱን አራት ማዕዘን ቁጥሮች ማመልከት" },
-        { icon: "▶", title: "አንድ መስመር", text: "በካርዱ ላይ አንድ መስመር ቁጥሮች ማመልከት" }
+        { icon: "➡️", title: "አግድም", text: "ማንኛውንም አግድም ረድፍ ማጠናቀቅ" },
+        { icon: "⬇️", title: "ቋሚ", text: "ማንኛውንም ቋሚ አምድ ማጠናቀቅ" },
+        { icon: "↘️", title: "ሰያፍ", text: "ማንኛውንም ሰያፍ መስመር ማጠናቀቅ" },
+        { icon: "🔲", title: "አራት ማዕዘኖች", text: "የካርዱን አራት ማዕዘን ቁጥሮች ማመልከት" },
+        { icon: "📏", title: "አንድ መስመር", text: "በካርዱ ላይ አንድ መስመር ቁጥሮች ማመልከት" },
       ],
       multipleWinners: {
         title: "በርካታ አሸናፊዎች",
-        text: "ሁለት ወይም ከዚያ በላይ ተጫዋቾች እኩል ካሸነፉ ሽልማቱ በመካከላቸው ይከፈላል።"
-      }
+        icon: <FaUsers size={14} />,
+        text: "ሁለት ወይም ከዚያ በላይ ተጫዋቾች እኩል ካሸነፉ ሽልማቱ በመካከላቸው ይከፈላል።",
+      },
     },
     fair: {
       title: "ፍትሃዊ ጨዋታ",
       penalty: {
         title: "የሐሰት BINGO ቅጣት",
+        icon: <FaGavel size={16} />,
         violation: "የህግ መጣስ",
         text: "ያለ ትክክለኛ የማሸነፊያ ንድፍ BINGO ማወጅ ጥሰት ነው እና ቅጣት ሊያስከትል ይችላል።",
         consequences: {
           title: "ውጤቶች፦",
-          items: [
-            "🚫 ከአሁኑ ጨዋታ ወዲያውኑ መወገድ",
-            "💲 የመግቢያ ክፍያ ማጣት",
-            "⏱ አዲስ ጨዋታዎችን ለመቀላቀል ጊዜያዊ እገዳ"
-          ]
-        }
+          items: ["🚫 ከአሁኑ ጨዋታ መወገድ", "💲 የመግቢያ ክፍያ ማጣት", "⏱ ጊዜያዊ እገዳ"],
+        },
       },
       validConditions: {
-        title: "✔ ትክክለኛ BINGO ሁኔታዎች",
+        title: "ትክክለኛ BINGO",
+        icon: <FaRegCheckCircle size={14} />,
         items: [
-          "የተሟላ አግድም መስመር (5 ቁጥሮች)",
-          "የተሟላ ቋሚ መስመር (5 ቁጥሮች)",
-          "የተሟላ ሰያፍ መስመር (5 ቁጥሮች)",
-          "አራቱም ማዕዘኖች ምልክት ተደርጎባቸዋል"
-        ]
+          "የተሟላ አግድም መስመር",
+          "የተሟላ ቋሚ መስመር",
+          "የተሟላ ሰያፍ መስመር",
+          "አራቱም ማዕዘኖች ምልክት ተደርጎባቸዋል",
+        ],
       },
       invalidAttempts: {
-        title: "🚫 የማይሰሩ BINGO ሙከራዎች",
+        title: "የማይሰሩ ሙከራዎች",
+        icon: <FaRegTimesCircle size={14} />,
         items: [
-          "ያልተሟሉ መስመሮች ወይም ንድፎች",
-          "የዘፈቀደ ምልክት የተደረገባቸው ቁጥሮች",
+          "ያልተሟሉ መስመሮች",
+          "የዘፈቀደ ምልክቶች",
           "ያለጊዜው BINGO መጥራት",
-          "የሐሰት ንድፍ የይገባኛል ጥያቄዎች"
-        ]
+          "የሐሰት ንድፍ የይገባኛል ጥያቄዎች",
+        ],
       },
       proTips: {
-        title: "✨ ቅጣቶችን ለማስወገድ ጠቃሚ ምክሮች",
+        title: "ምክሮች",
+        icon: <FaRegLightbulb size={14} />,
         items: [
-          "BINGO ከመጫንዎ በፊት ንድፍዎን ሁለቴ ያረጋግጡ",
-          "በአንድ መስመር ላይ በትክክል 5 ቁጥሮች መኖራቸውን ያረጋግጡ",
-          "ለማዕዘን አሸናፊነት አራቱም ማዕዘኖች ምልክት መደረጉን ያረጋግጡ",
-          "ጊዜ ይውሰዱ — BINGO ለመጥራት ምንም ችኮላ የለም",
-          "እርግጠኛ ካልሆኑ ተጨማሪ ቁጥሮች እስኪጠሩ ይጠብቁ"
-        ]
-      }
-    }
-  }
+          "BINGO ከመጫንዎ በፊት ንድፍዎን ያረጋግጡ",
+          "በአንድ መስመር ላይ 5 ቁጥሮች መኖራቸውን ያረጋግጡ",
+          "አራቱም ማዕዘኖች ምልክት መደረጉን ያረጋግጡ",
+          "ጊዜ ይውሰዱ — ምንም ችኮላ የለም",
+          "እርግጠኛ ካልሆኑ ይጠብቁ",
+        ],
+      },
+    },
+  },
+  en: {
+    header: {
+      title: "Game Rules",
+    },
+    tabs: {
+      cards: "Cards",
+      play: "Play",
+      prizes: "Prizes",
+      fair: "Fair",
+    },
+    cards: {
+      title: "Card Selection Guide",
+      steps: [
+        {
+          step: 1,
+          title: "Choose Your Card",
+          text: "Pick any available card from 1-200 during registration.",
+          icon: <GiCardDraw size={16} />,
+          color: "emerald",
+        },
+        {
+          step: 2,
+          title: "Card Status",
+          text: "Unavailable cards are marked in red. Select only green cards.",
+          icon: <FaEye size={16} />,
+          color: "red",
+        },
+        {
+          step: 3,
+          title: "Card Preview",
+          text: "Preview the numbers on your card before confirming.",
+          icon: <FaRegStar size={16} />,
+          color: "blue",
+        },
+      ],
+      tips: {
+        title: "Tips",
+        icon: <MdOutlineTipsAndUpdates size={14} />,
+        items: [
+          "Choose cards that are not marked in red",
+          "Preview your card before confirming",
+          "Select quickly before registration time ends",
+        ],
+      },
+      timer: {
+        title: "Registration Timer",
+        text: "Registration lasts a short time. Be ready to choose your card before the timer runs out.",
+      },
+    },
+    play: {
+      title: "Gameplay",
+      steps: [
+        {
+          step: 1,
+          title: "Game Entry",
+          text: "When you enter the game, you receive a playing card based on your selection.",
+          icon: <GiPlayButton size={14} />,
+          color: "emerald",
+        },
+        {
+          step: 2,
+          title: "Game Timer",
+          text: "The game counts down the remaining seconds at the top right.",
+          icon: <FaClock size={14} />,
+          color: "orange",
+        },
+        {
+          step: 3,
+          title: "Number Calling",
+          text: "Numbers from 1 to 75 are called randomly.",
+          icon: <FaDiceD6 size={14} />,
+          color: "emerald",
+        },
+        {
+          step: 4,
+          title: "Marking Numbers",
+          text: "Click on called numbers to mark them on your card.",
+          icon: <FaMousePointer size={14} />,
+          color: "blue",
+        },
+        {
+          step: 5,
+          title: "Unmarking Numbers",
+          text: "Click again to unmark a number if needed.",
+          icon: <GiCancel size={14} />,
+          color: "yellow",
+        },
+      ],
+      mechanics: {
+        title: "Game Mechanics",
+        icon: <FaGamepad size={14} />,
+        items: [
+          { title: "Number Range", text: "1 to 75" },
+          { title: "Marking", text: "Click to mark" },
+          { title: "Card Layout", text: "5x5 Grid" },
+          { title: "Timer", text: "Shows countdown" },
+        ],
+      },
+    },
+    prizes: {
+      title: "Prizes",
+      mainRule: {
+        title: "Winning Pattern",
+        icon: <FaCrown size={16} />,
+        text: "Complete a horizontal row, vertical column, diagonal line, or all four corners, then press the BINGO button to win instantly.",
+      },
+      categories: [
+        {
+          icon: "➡️",
+          title: "Horizontal",
+          text: "Complete any horizontal row",
+        },
+        { icon: "⬇️", title: "Vertical", text: "Complete any vertical column" },
+        { icon: "↘️", title: "Diagonal", text: "Complete any diagonal line" },
+        {
+          icon: "🔲",
+          title: "Four Corners",
+          text: "Mark all four corner numbers",
+        },
+        { icon: "📏", title: "One Line", text: "Mark any one line of numbers" },
+      ],
+      multipleWinners: {
+        title: "Multiple Winners",
+        icon: <FaUsers size={14} />,
+        text: "If multiple players win, the prize is shared equally among them.",
+      },
+    },
+    fair: {
+      title: "Fair Play",
+      penalty: {
+        title: "False BINGO Penalty",
+        icon: <FaGavel size={16} />,
+        violation: "Rule Violation",
+        text: "Claiming BINGO without a valid winning pattern is a violation and may result in penalties.",
+        consequences: {
+          title: "Consequences:",
+          items: [
+            "🚫 Removed from current game",
+            "💲 Loss of entry fee",
+            "⏱ Temporary ban from joining",
+          ],
+        },
+      },
+      validConditions: {
+        title: "Valid BINGO",
+        icon: <FaRegCheckCircle size={14} />,
+        items: [
+          "Complete horizontal row",
+          "Complete vertical column",
+          "Complete diagonal line",
+          "All four corners marked",
+        ],
+      },
+      invalidAttempts: {
+        title: "Invalid Attempts",
+        icon: <FaRegTimesCircle size={14} />,
+        items: [
+          "Incomplete lines",
+          "Random markings",
+          "Premature BINGO calls",
+          "False pattern claims",
+        ],
+      },
+      proTips: {
+        title: "Pro Tips",
+        icon: <FaRegLightbulb size={14} />,
+        items: [
+          "Double-check before clicking BINGO",
+          "Ensure exactly 5 numbers in a line",
+          "Verify all four corners for corner wins",
+          "Take your time — no rush",
+          "Wait for more numbers if unsure",
+        ],
+      },
+    },
+  },
 };
 
 // ========== STEP COLOR STYLES ==========
 const stepColors = {
-  green: "bg-emerald-500",
-  red: "bg-red-500",
-  blue: "bg-blue-500",
-  orange: "bg-orange-500",
-  yellow: "bg-yellow-500"
+  emerald: "from-emerald-500 to-green-600",
+  red: "from-red-500 to-rose-600",
+  blue: "from-blue-500 to-indigo-600",
+  orange: "from-orange-500 to-amber-600",
+  yellow: "from-yellow-500 to-amber-500",
 };
 
 export default function Rules({ onNavigate }) {
-  const [activeTab, setActiveTab] = useState('cards');
-  const [language, setLanguage] = useState('en'); // 'en' or 'am'
+  const [activeTab, setActiveTab] = useState("cards");
+  const [language, setLanguage] = useState("am"); // Amharic as default
 
   const t = content[language];
   const currentTabContent = t[activeTab];
 
   const renderTabContent = () => {
-    if (activeTab === 'cards') {
+    if (activeTab === "cards") {
       return (
         <>
-          <motion.h3 
+          <motion.h3
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-white text-xl font-bold text-center mb-4"
+            className="text-white text-lg font-bold text-center mb-4"
           >
             {t.cards.title}
           </motion.h3>
-          
+
           {t.cards.steps.map((step, idx) => (
             <motion.section
               key={idx}
@@ -267,12 +412,21 @@ export default function Rules({ onNavigate }) {
               transition={{ delay: idx * 0.1 }}
               className="bg-white/5 backdrop-blur rounded-xl p-3 mb-2 flex items-start gap-3"
             >
-              <div className={`w-7 h-7 rounded-full ${stepColors[step.color]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                {step.step}
+              <div
+                className={`w-8 h-8 rounded-full bg-gradient-to-br ${stepColors[step.color]} flex items-center justify-center text-white flex-shrink-0 shadow-lg`}
+              >
+                {step.icon}
               </div>
-              <div>
-                <div className="text-white text-sm font-semibold mb-0.5">{step.title}</div>
-                <p className="text-white/50 text-xs">{step.text}</p>
+              <div className="flex-1">
+                <div className="text-white text-sm font-semibold mb-0.5">
+                  {step.title}
+                </div>
+                <p className="text-white/40 text-xs leading-relaxed">
+                  {step.text}
+                </p>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/40 text-xs font-bold">
+                {step.step}
               </div>
             </motion.section>
           ))}
@@ -281,13 +435,23 @@ export default function Rules({ onNavigate }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-yellow-500/10 backdrop-blur rounded-xl p-3 border border-yellow-500/20 mt-3"
+            className="bg-gradient-to-r from-yellow-500/10 to-amber-500/10 backdrop-blur rounded-xl p-3 border border-yellow-500/20 mt-3"
           >
-            <div className="text-yellow-400 text-xs font-bold mb-2">{t.cards.tips.title}</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                {t.cards.tips.icon}
+              </div>
+              <div className="text-yellow-400 text-xs font-bold">
+                {t.cards.tips.title}
+              </div>
+            </div>
             <ul className="space-y-1">
               {t.cards.tips.items.map((item, idx) => (
-                <li key={idx} className="text-white/60 text-xs flex items-center gap-2">
-                  <span className="text-yellow-400">•</span> {item}
+                <li
+                  key={idx}
+                  className="text-white/50 text-xs flex items-center gap-2"
+                >
+                  <span className="text-yellow-400">✦</span> {item}
                 </li>
               ))}
             </ul>
@@ -299,21 +463,28 @@ export default function Rules({ onNavigate }) {
             transition={{ delay: 0.4 }}
             className="bg-white/5 backdrop-blur rounded-xl p-3 border border-white/10 mt-3"
           >
-            <div className="text-white/70 text-xs font-bold mb-1">{t.cards.timer.title}</div>
-            <p className="text-white/40 text-[11px]">{t.cards.timer.text}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <FaClock className="text-white/40" size={12} />
+              <div className="text-white/50 text-[10px] font-semibold uppercase tracking-wider">
+                {t.cards.timer.title}
+              </div>
+            </div>
+            <p className="text-white/30 text-[11px] leading-relaxed">
+              {t.cards.timer.text}
+            </p>
           </motion.section>
         </>
       );
     }
 
-    if (activeTab === 'play') {
+    if (activeTab === "play") {
       return (
         <>
           <div className="text-center mb-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-lg mb-2">
-              <span className="text-3xl">▶</span>
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg mb-2">
+              <FaGamepad className="text-white text-2xl" />
             </div>
-            <h3 className="text-white text-xl font-bold">{t.play.title}</h3>
+            <h3 className="text-white text-lg font-bold">{t.play.title}</h3>
           </div>
 
           {t.play.steps.map((step, idx) => (
@@ -324,12 +495,21 @@ export default function Rules({ onNavigate }) {
               transition={{ delay: idx * 0.1 }}
               className="bg-white/5 backdrop-blur rounded-xl p-3 mb-2 flex items-start gap-3"
             >
-              <div className={`w-7 h-7 rounded-full ${stepColors[step.color]} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
-                {step.step}
+              <div
+                className={`w-8 h-8 rounded-full bg-gradient-to-br ${stepColors[step.color]} flex items-center justify-center text-white flex-shrink-0 shadow-lg`}
+              >
+                {step.icon}
               </div>
-              <div>
-                <div className="text-white text-sm font-semibold mb-0.5">{step.title}</div>
-                <p className="text-white/50 text-xs">{step.text}</p>
+              <div className="flex-1">
+                <div className="text-white text-sm font-semibold mb-0.5">
+                  {step.title}
+                </div>
+                <p className="text-white/40 text-xs leading-relaxed">
+                  {step.text}
+                </p>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white/40 text-xs font-bold">
+                {step.step}
               </div>
             </motion.section>
           ))}
@@ -338,17 +518,26 @@ export default function Rules({ onNavigate }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="bg-cyan-500/10 backdrop-blur rounded-xl p-3 border border-cyan-500/20 mt-3"
+            className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 backdrop-blur rounded-xl p-3 border border-cyan-500/20 mt-3"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-cyan-400 text-sm">⊞</span>
-              <div className="text-cyan-400 text-xs font-bold">{t.play.mechanics.title}</div>
+              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                {t.play.mechanics.icon}
+              </div>
+              <div className="text-cyan-400 text-xs font-bold">
+                {t.play.mechanics.title}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {t.play.mechanics.items.map((item, idx) => (
-                <div key={idx} className="text-center">
-                  <div className="text-white text-xs font-semibold">{item.title}</div>
-                  <p className="text-white/40 text-[9px]">{item.text}</p>
+                <div
+                  key={idx}
+                  className="text-center bg-white/5 rounded-lg p-2"
+                >
+                  <div className="text-white text-xs font-semibold">
+                    {item.title}
+                  </div>
+                  <p className="text-white/30 text-[9px]">{item.text}</p>
                 </div>
               ))}
             </div>
@@ -357,138 +546,193 @@ export default function Rules({ onNavigate }) {
       );
     }
 
-    if (activeTab === 'prizes') {
+    if (activeTab === "prizes") {
       return (
         <>
           <div className="text-center mb-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg mb-2">
-              <span className="text-3xl">🏆</span>
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg mb-2">
+              <FaTrophy className="text-white text-2xl" />
             </div>
-            <h3 className="text-white text-xl font-bold">{t.prizes.title}</h3>
+            <h3 className="text-white text-lg font-bold">{t.prizes.title}</h3>
           </div>
 
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-amber-500/10 backdrop-blur rounded-xl p-3 border border-amber-500/20 mb-3"
+            className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 backdrop-blur rounded-xl p-3 border border-amber-500/20 mb-3"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-yellow-400 text-sm">⭐</span>
-              <div className="text-yellow-400 text-xs font-bold">{t.prizes.mainRule.title}</div>
+              <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                {t.prizes.mainRule.icon}
+              </div>
+              <div className="text-amber-400 text-xs font-bold">
+                {t.prizes.mainRule.title}
+              </div>
             </div>
-            <p className="text-white/60 text-xs leading-relaxed">
-              {t.prizes.mainRule.text} <span className="text-yellow-400 font-bold">BINGO</span>
+            <p className="text-white/50 text-xs leading-relaxed">
+              {t.prizes.mainRule.text}{" "}
+              <span className="text-yellow-400 font-bold">BINGO</span>
             </p>
           </motion.section>
 
-          {t.prizes.categories.map((cat, idx) => (
-            <motion.section
-              key={idx}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="bg-white/5 backdrop-blur rounded-xl p-3 border border-white/10 mb-2"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <span className="text-white text-sm">{cat.icon}</span>
+          <div className="grid grid-cols-1 gap-2 mb-3">
+            {t.prizes.categories.map((cat, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-white/5 backdrop-blur rounded-xl p-2 flex items-center gap-3"
+              >
+                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-white text-sm">
+                  {cat.icon}
                 </div>
-                <div className="text-white text-sm font-semibold">{cat.title}</div>
-              </div>
-              <p className="text-white/40 text-[11px] ml-8">{cat.text}</p>
-            </motion.section>
-          ))}
+                <div className="flex-1">
+                  <div className="text-white text-xs font-semibold">
+                    {cat.title}
+                  </div>
+                  <p className="text-white/30 text-[10px]">{cat.text}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="bg-teal-500/10 backdrop-blur rounded-xl p-3 border border-teal-500/20 mt-2"
+            className="bg-gradient-to-r from-teal-500/10 to-emerald-500/10 backdrop-blur rounded-xl p-3 border border-teal-500/20"
           >
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-teal-400 text-sm">👥</span>
-              <div className="text-teal-400 text-xs font-bold">{t.prizes.multipleWinners.title}</div>
+              <div className="w-6 h-6 rounded-full bg-teal-500/20 flex items-center justify-center">
+                {t.prizes.multipleWinners.icon}
+              </div>
+              <div className="text-teal-400 text-xs font-bold">
+                {t.prizes.multipleWinners.title}
+              </div>
             </div>
-            <p className="text-white/40 text-[11px] ml-8">{t.prizes.multipleWinners.text}</p>
+            <p className="text-white/40 text-[11px] ml-8">
+              {t.prizes.multipleWinners.text}
+            </p>
           </motion.section>
         </>
       );
     }
 
-    if (activeTab === 'fair') {
+    if (activeTab === "fair") {
       return (
         <>
           <div className="text-center mb-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center shadow-lg mb-2">
-              <span className="text-3xl">🚫</span>
+            <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg mb-2">
+              <FaGavel className="text-white text-2xl" />
             </div>
-            <h3 className="text-white text-xl font-bold">{t.fair.title}</h3>
+            <h3 className="text-white text-lg font-bold">{t.fair.title}</h3>
           </div>
 
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-red-500/10 backdrop-blur rounded-xl p-3 border border-red-500/20 mb-3"
+            className="bg-gradient-to-r from-red-500/10 to-rose-500/10 backdrop-blur rounded-xl p-3 border border-red-500/20 mb-3"
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-red-400 text-sm">⚠</span>
-              <div className="text-red-400 text-xs font-bold">{t.fair.penalty.title}</div>
+              <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center">
+                {t.fair.penalty.icon}
+              </div>
+              <div className="text-red-400 text-xs font-bold">
+                {t.fair.penalty.title}
+              </div>
             </div>
-            <div className="text-white/60 text-xs font-semibold mb-1">{t.fair.penalty.violation}</div>
-            <p className="text-white/40 text-[11px] mb-2">{t.fair.penalty.text}</p>
+            <div className="text-white/60 text-[10px] font-semibold mb-1">
+              {t.fair.penalty.violation}
+            </div>
+            <p className="text-white/40 text-[11px] mb-2 leading-relaxed">
+              {t.fair.penalty.text}
+            </p>
             <div className="bg-red-500/5 rounded-lg p-2">
-              <div className="text-red-400 text-[10px] font-semibold mb-1">{t.fair.penalty.consequences.title}</div>
+              <div className="text-red-400 text-[9px] font-semibold mb-1">
+                {t.fair.penalty.consequences.title}
+              </div>
               <ul className="space-y-0.5">
                 {t.fair.penalty.consequences.items.map((item, idx) => (
-                  <li key={idx} className="text-white/40 text-[9px]">{item}</li>
+                  <li key={idx} className="text-white/40 text-[9px]">
+                    {item}
+                  </li>
                 ))}
               </ul>
             </div>
           </motion.section>
 
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="bg-green-500/10 backdrop-blur rounded-xl p-3 border border-green-500/20 mb-2"
-          >
-            <div className="text-green-400 text-xs font-bold mb-2">{t.fair.validConditions.title}</div>
-            <ul className="space-y-1">
-              {t.fair.validConditions.items.map((item, idx) => (
-                <li key={idx} className="text-white/40 text-[10px] flex items-center gap-2">
-                  <span className="text-green-400">✓</span> {item}
-                </li>
-              ))}
-            </ul>
-          </motion.section>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <motion.section
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur rounded-xl p-2 border border-green-500/20"
+            >
+              <div className="flex items-center gap-1 mb-1">
+                {t.fair.validConditions.icon}
+                <div className="text-green-400 text-[9px] font-bold">
+                  {t.fair.validConditions.title}
+                </div>
+              </div>
+              <ul className="space-y-0.5">
+                {t.fair.validConditions.items.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="text-white/30 text-[8px] flex items-center gap-1"
+                  >
+                    <span className="text-green-400">✓</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.section>
 
-          <motion.section
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="bg-red-500/10 backdrop-blur rounded-xl p-3 border border-red-500/20 mb-2"
-          >
-            <div className="text-red-400 text-xs font-bold mb-2">{t.fair.invalidAttempts.title}</div>
-            <ul className="space-y-1">
-              {t.fair.invalidAttempts.items.map((item, idx) => (
-                <li key={idx} className="text-white/40 text-[10px] flex items-center gap-2">
-                  <span className="text-red-400">✗</span> {item}
-                </li>
-              ))}
-            </ul>
-          </motion.section>
+            <motion.section
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="bg-gradient-to-r from-red-500/10 to-rose-500/10 backdrop-blur rounded-xl p-2 border border-red-500/20"
+            >
+              <div className="flex items-center gap-1 mb-1">
+                {t.fair.invalidAttempts.icon}
+                <div className="text-red-400 text-[9px] font-bold">
+                  {t.fair.invalidAttempts.title}
+                </div>
+              </div>
+              <ul className="space-y-0.5">
+                {t.fair.invalidAttempts.items.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="text-white/30 text-[8px] flex items-center gap-1"
+                  >
+                    <span className="text-red-400">✗</span> {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.section>
+          </div>
 
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="bg-blue-500/10 backdrop-blur rounded-xl p-3 border border-blue-500/20"
+            className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur rounded-xl p-3 border border-blue-500/20"
           >
-            <div className="text-blue-400 text-xs font-bold mb-2">{t.fair.proTips.title}</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
+                {t.fair.proTips.icon}
+              </div>
+              <div className="text-blue-400 text-xs font-bold">
+                {t.fair.proTips.title}
+              </div>
+            </div>
             <ul className="space-y-1">
               {t.fair.proTips.items.map((item, idx) => (
-                <li key={idx} className="text-white/40 text-[10px] flex items-start gap-2">
-                  <span className="text-blue-400">✨</span> {item}
+                <li
+                  key={idx}
+                  className="text-white/40 text-[10px] flex items-start gap-2"
+                >
+                  <span className="text-blue-400 text-xs">✦</span> {item}
                 </li>
               ))}
             </ul>
@@ -506,60 +750,57 @@ export default function Rules({ onNavigate }) {
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
-            onClick={() => onNavigate?.('game')}
-            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+            onClick={() => onNavigate?.("game")}
+            className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all"
           >
             <FaArrowLeft size={14} />
           </button>
-          
-          <h2 className="text-white font-bold text-sm">{t.header.title}</h2>
-          
+
+          <h2 className="text-white font-bold text-sm tracking-wide">
+            {t.header.title}
+          </h2>
+
           <button
-            onClick={() => setLanguage(language === 'en' ? 'am' : 'en')}
-            className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 text-[10px] font-medium hover:bg-white/20 transition-all"
+            onClick={() => setLanguage(language === "am" ? "en" : "am")}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 text-[10px] font-medium hover:text-white hover:bg-white/20 transition-all"
           >
             <FaLanguage size={10} />
-            {language === 'en' ? 'አማርኛ' : 'English'}
+            {language === "am" ? "English" : "አማርኛ"}
           </button>
         </div>
       </div>
 
       <main className="px-4 pb-24 pt-16">
-        {/* Tab Bar */}
-        <div className="bg-white/5 backdrop-blur rounded-xl p-1 mb-4">
+        {/* Tab Bar - Modern Pill Design */}
+        <div className="bg-white/5 backdrop-blur rounded-full p-1 mb-6 shadow-lg">
           <div className="flex gap-1">
-            {Object.keys(t.tabs).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
-                  activeTab === tab
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/40 hover:text-white/60'
-                }`}
-              >
-                {t.tabs[tab]}
-              </button>
-            ))}
+            {Object.keys(t.tabs).map((tab) => {
+              const tabIcons = {
+                cards: <FaRegGem size={12} />,
+                play: <FaGamepad size={12} />,
+                prizes: <MdEmojiEvents size={12} />,
+                fair: <MdOutlineRule size={12} />,
+              };
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-[11px] font-medium transition-all ${
+                    activeTab === tab
+                      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                >
+                  {tabIcons[tab]}
+                  {t.tabs[tab]}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="h-1 bg-white/10 rounded-full mb-6 overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-yellow-400 to-pink-500 rounded-full transition-all duration-300"
-            style={{ 
-              width: activeTab === 'cards' ? '25%' : 
-                     activeTab === 'play' ? '50%' : 
-                     activeTab === 'prizes' ? '75%' : '100%' 
-            }}
-          />
-        </div>
-
         {/* Tab Content */}
-        <div className="space-y-2">
-          {renderTabContent()}
-        </div>
+        <div className="space-y-2">{renderTabContent()}</div>
       </main>
 
       <BottomNav current="game" onNavigate={onNavigate} />
