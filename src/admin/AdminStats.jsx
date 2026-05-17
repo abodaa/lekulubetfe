@@ -16,7 +16,7 @@ import {
   FaDollarSign,
   FaPercentage,
   FaCalendarWeek,
-  FaCalendarMonth,
+  FaCalendar,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending, MdTrendingUp, MdTrendingDown } from "react-icons/md";
@@ -507,7 +507,7 @@ export default function AdminStats() {
             <PeriodButton
               period="monthly"
               label="Monthly"
-              icon={<FaCalendarMonth size={10} />}
+              icon={<FaCalendar size={10} />}
             />
           </div>
         </motion.div>
