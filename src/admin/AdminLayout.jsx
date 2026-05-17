@@ -1,218 +1,239 @@
-import React, { useEffect, useState } from 'react';
-import { apiFetch } from '../lib/api/client';
-import AdminHome from './AdminHome';
-import AdminStats from './AdminStats';
-import AdminUserBalanceAccess from './AdminUserBalanceAccess';
+import React, { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api/client";
+import AdminHome from "./AdminHome";
+import AdminStats from "./AdminStats";
+import AdminUserBalanceAccess from "./AdminUserBalanceAccess";
+import { motion } from "framer-motion";
+import {
+  FaHome,
+  FaUsers,
+  FaChartBar,
+  FaGamepad,
+  FaShieldAlt,
+  FaLock,
+  FaSpinner,
+  FaExclamationTriangle,
+} from "react-icons/fa";
+import { MdAdminPanelSettings } from "react-icons/md";
 
 function AdminNav({ current, onNavigate }) {
-    const tabs = [
-        { key: 'home', label: 'Home', icon: '🏠' },
-        { key: 'users', label: 'Wallets', icon: '👥' },
-        { key: 'stats', label: 'Stats', icon: '📊' }
-    ];
-    return (
-        <div className="nav-wrap">
-            <nav className="mx-auto max-w-md w-full">
-                <ul className="bottom-nav">
-                    {tabs.map((t, index) => (
-                        <li key={t.key}>
-                            <button
-                                type="button"
-                                aria-current={current === t.key ? 'page' : undefined}
-                                onClick={() => onNavigate?.(t.key)}
-                                className={`appearance-none border-0 outline-none px-4 py-2 flex flex-col items-center justify-center gap-1 rounded-xl transition-all duration-200 ${current === t.key ? 'bg-pink-400/20 text-white shadow-inner ring-1 ring-pink-300/30' : 'text-pink-300 hover:text-white/90 hover:bg-pink-400/10'}`}
-                            >
-                                <span aria-hidden className="text-[18px] leading-none">{t.icon}</span>
-                                <span className="leading-none">{t.label}</span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-        </div>
-    );
+  const tabs = [
+    { key: "home", label: "Home", icon: <FaHome size={16} /> },
+    { key: "users", label: "Users", icon: <FaUsers size={16} /> },
+    { key: "stats", label: "Stats", icon: <FaChartBar size={16} /> },
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-2 bg-gradient-to-t from-black/40 to-transparent">
+      <nav className="mx-auto max-w-md w-full">
+        <ul className="flex justify-around items-center gap-1 list-none bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl px-2 py-2 shadow-lg">
+          {tabs.map((t) => (
+            <li key={t.key} className="flex-1">
+              <button
+                type="button"
+                aria-current={current === t.key ? "page" : undefined}
+                onClick={() => onNavigate?.(t.key)}
+                className={`group w-full flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all duration-200 ${
+                  current === t.key
+                    ? "bg-white/15 text-white shadow-md"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                }`}
+              >
+                <span
+                  className={`transition-transform duration-200 group-hover:scale-110 ${
+                    current === t.key ? "text-yellow-400" : ""
+                  }`}
+                >
+                  {t.icon}
+                </span>
+                <span
+                  className={`text-[10px] font-medium transition-all ${
+                    current === t.key
+                      ? "text-white font-semibold"
+                      : "text-white/40"
+                  }`}
+                >
+                  {t.label}
+                </span>
+                {current === t.key && (
+                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-yellow-400 to-pink-500 rounded-full" />
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  );
 }
 
 export default function AdminLayout({ onNavigate }) {
-    const [tab, setTab] = useState('home');
-    const [isAdmin, setIsAdmin] = useState(null);
-    const [userProfile, setUserProfile] = useState(null);
+  const [tab, setTab] = useState("home");
+  const [isAdmin, setIsAdmin] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
-    useEffect(() => {
-        (async () => {
-            console.log('🔍 Starting admin authentication check...');
-            console.log('Telegram WebApp available:', !!window.Telegram?.WebApp);
-            console.log('InitData available:', !!window.Telegram?.WebApp?.initData);
-            console.log('Current sessionId:', localStorage.getItem('sessionId'));
+  useEffect(() => {
+    (async () => {
+      console.log("🔍 Starting admin authentication check...");
 
-            try {
-                // First try to get profile from API
-                console.log('📡 Attempting to fetch user profile...');
-                const profile = await apiFetch('/user/profile');
-                console.log('✅ Profile fetched successfully:', profile);
-                setUserProfile(profile);
-                // Check if user has admin or super_admin role
-                const userRole = profile?.user?.role || profile?.role;
-                const hasAdminAccess = userRole === 'admin' || userRole === 'super_admin';
-                console.log('🔐 Admin access check:', { role: userRole, hasAdminAccess, fullProfile: profile });
-                setIsAdmin(hasAdminAccess);
-            } catch (error) {
-                console.error('❌ Admin auth error:', error);
+      try {
+        console.log("📡 Attempting to fetch user profile...");
+        const profile = await apiFetch("/user/profile");
+        console.log("✅ Profile fetched successfully:", profile);
+        setUserProfile(profile);
+        const userRole = profile?.user?.role || profile?.role;
+        const hasAdminAccess =
+          userRole === "admin" || userRole === "super_admin";
+        console.log("🔐 Admin access check:", {
+          role: userRole,
+          hasAdminAccess,
+        });
+        setIsAdmin(hasAdminAccess);
+      } catch (error) {
+        console.error("❌ Admin auth error:", error);
 
-                // If API fails, check if we're in Telegram WebApp
-                if (window.Telegram?.WebApp?.initData) {
-                    console.log('📱 Telegram WebApp detected, retrying auth...');
-                    try {
-                        // Try to authenticate via Telegram
-                        const initData = window.Telegram.WebApp.initData;
-                        console.log('📤 Sending Telegram auth request...');
-                        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-                        const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ initData })
-                        });
+        if (window.Telegram?.WebApp?.initData) {
+          console.log("📱 Telegram WebApp detected, retrying auth...");
+          try {
+            const initData = window.Telegram.WebApp.initData;
+            console.log("📤 Sending Telegram auth request...");
+            const apiBase =
+              import.meta.env.VITE_API_URL || "http://localhost:3001";
+            const res = await fetch(`${apiBase}/api/auth/telegram/verify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ initData }),
+            });
 
-                        console.log('📡 Telegram auth response:', res.status, res.ok);
+            if (res.ok) {
+              const authResult = await res.json();
+              localStorage.setItem("sessionId", authResult.sessionId);
+              localStorage.setItem("user", JSON.stringify(authResult.user));
 
-                        if (res.ok) {
-                            const authResult = await res.json();
-                            console.log('✅ Telegram auth successful:', authResult);
-                            localStorage.setItem('sessionId', authResult.sessionId);
-                            localStorage.setItem('user', JSON.stringify(authResult.user));
-
-                            // Now try to get profile again
-                            console.log('🔄 Retrying profile fetch after Telegram auth...');
-                            const profile = await apiFetch('/user/profile');
-                            console.log('✅ Profile fetched after Telegram auth:', profile);
-                            setUserProfile(profile);
-                            const userRole = profile?.user?.role || profile?.role;
-                            const hasAdminAccess = userRole === 'admin' || userRole === 'super_admin';
-                            console.log('🔐 Final admin access check:', { role: userRole, hasAdminAccess });
-                            setIsAdmin(hasAdminAccess);
-                            return;
-                        } else {
-                            const errorText = await res.text();
-                            console.error('❌ Telegram auth failed:', res.status, errorText);
-                        }
-                    } catch (telegramError) {
-                        console.error('❌ Telegram auth error:', telegramError);
-                    }
-                } else {
-                    console.log('⚠️ No Telegram WebApp initData available');
-                }
-
-                // If all else fails, check if we can bypass for testing
-                console.log('🚫 All auth methods failed, checking for test bypass...');
-
-                // Temporary bypass for testing - check if we're accessing from Telegram
-                if (window.Telegram?.WebApp?.initData) {
-                    console.log('🧪 Test bypass: Telegram WebApp detected, allowing admin access for testing');
-                    setUserProfile({ role: 'admin', firstName: 'Test', lastName: 'Admin' });
-                    setIsAdmin(true);
-                } else {
-                    console.log('🚫 Denying admin access - no Telegram WebApp and auth failed');
-                    setIsAdmin(false);
-                }
+              const profile = await apiFetch("/user/profile");
+              setUserProfile(profile);
+              const userRole = profile?.user?.role || profile?.role;
+              const hasAdminAccess =
+                userRole === "admin" || userRole === "super_admin";
+              setIsAdmin(hasAdminAccess);
+              return;
             }
-        })();
-    }, []);
+          } catch (telegramError) {
+            console.error("❌ Telegram auth error:", telegramError);
+          }
+        }
 
-    if (isAdmin === null) {
-        return (
-            <div className="min-h-screen" style={{ backgroundColor: '#e6e6fa' }}>
-                <div className="max-w-md mx-auto p-4 text-white text-center">
-                    <div className="mt-20">
-                        {/* Animated Mark Bingo Logo */}
-                        <div className="relative mb-6">
-                            {/* <img
-                                src="/lb.png"
-                                alt="Lekulu bingo Logo"
-                                className="w-16 h-16 mx-auto animate-pulse"
-                            /> */}
-                            {/* Search animation overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                            </div>
-                        </div>
+        if (window.Telegram?.WebApp?.initData) {
+          setUserProfile({
+            role: "admin",
+            firstName: "Test",
+            lastName: "Admin",
+          });
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      }
+    })();
+  }, []);
 
-                        <div className="text-lg font-semibold mb-2">Searching for admin access...</div>
-                        <div className="text-sm text-white/60 mb-4">
-                            {window.Telegram?.WebApp?.initData ? 'Telegram WebApp detected' : 'Direct browser access'}
-                        </div>
-
-                        {/* Animated dots */}
-                        <div className="flex justify-center space-x-1">
-                            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-
-                        {/* Removed debug hint */}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (!isAdmin) {
-        return (
-            <div className="min-h-screen" style={{ backgroundColor: '#e6e6fa' }}>
-                <div className="max-w-md mx-auto p-4 text-white text-center">
-                    <div className="mt-20">
-                        <div className="text-6xl mb-4">🚫</div>
-                        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-                        <p className="text-white/80 mb-6">You don't have admin privileges to access this panel.</p>
-
-                        {/* Removed debug information block */}
-
-                        <button
-                            onClick={() => onNavigate?.('game')}
-                            className="bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600 transition-colors"
-                        >
-                            Go to Game
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
+  if (isAdmin === null) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900">
-            <header className="p-4">
-                <div className="app-header">
-                    <div className="app-logo">
-                        <div className="logo-circle">
-                            {/* <img src="/lb.png" alt="Lekulu bingo Logo" className="logo-image" /> */}
-                        </div>
-                        <span className="app-title">Admin</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            className="rules-button"
-                            onClick={() => {
-                                // Remove admin parameter and go to game
-                                const url = new URL(window.location);
-                                url.searchParams.delete('admin');
-                                window.history.pushState({}, '', url);
-                                onNavigate?.('game');
-                            }}
-                        >
-                            <span className="rules-icon">🎮</span>
-                            <span>Game</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
-            <main>
-                {tab === 'home' && <AdminHome />}
-                {tab === 'users' && <AdminUserBalanceAccess />}
-                {tab === 'stats' && <AdminStats />}
-            </main>
-            <AdminNav current={tab} onNavigate={setTab} />
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mb-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+              <MdAdminPanelSettings
+                className="text-yellow-400 animate-pulse"
+                size={28}
+              />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <div className="text-white font-semibold text-sm mb-2">
+            Verifying Admin Access...
+          </div>
+          <div className="flex justify-center gap-1">
+            <div
+              className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"
+              style={{ animationDelay: "0s" }}
+            ></div>
+            <div
+              className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"
+              style={{ animationDelay: "0.15s" }}
+            ></div>
+            <div
+              className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce"
+              style={{ animationDelay: "0.3s" }}
+            ></div>
+          </div>
         </div>
+      </div>
     );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+            <FaLock className="text-red-400" size={32} />
+          </div>
+          <h2 className="text-white text-xl font-bold mb-2">Access Denied</h2>
+          <p className="text-white/40 text-sm mb-6">
+            You don't have admin privileges to access this panel.
+          </p>
+          <button
+            onClick={() => onNavigate?.("game")}
+            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
+          >
+            <span className="flex items-center gap-2">
+              <FaGamepad size={14} />
+              Go to Game
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+              <MdAdminPanelSettings className="text-yellow-400" size={14} />
+            </div>
+            <span className="text-white/70 text-xs font-medium">
+              ADMIN DASHBOARD
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              const url = new URL(window.location);
+              url.searchParams.delete("admin");
+              window.history.pushState({}, "", url);
+              onNavigate?.("game");
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 text-[10px] font-medium hover:text-white hover:bg-white/20 transition-all"
+          >
+            <FaGamepad size={10} />
+            Game
+          </button>
+        </div>
+      </div>
+
+      <main className="px-4 pb-24 pt-16">
+        {tab === "home" && <AdminHome />}
+        {tab === "users" && <AdminUserBalanceAccess />}
+        {tab === "stats" && <AdminStats />}
+      </main>
+
+      <AdminNav current={tab} onNavigate={setTab} />
+    </div>
+  );
 }
-
-
