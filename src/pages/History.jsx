@@ -13,13 +13,13 @@ import {
 import { GiConfirmed } from 'react-icons/gi';
 
 export default function History({ onNavigate }) {
-    const { sessionId } = useAuth();
+    const { sessionId, user } = useAuth();
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [stats, setStats] = useState({
-        totalGames: 0,
-        gamesWon: 0,
+    const [userStats, setUserStats] = useState({
+        totalGamesPlayed: 0,
+        totalGamesWon: 0,
         winRate: 0
     });
 
@@ -37,24 +37,40 @@ export default function History({ onNavigate }) {
                 setLoading(true);
                 setError(null);
 
+                // Fetch profile stats (same as Scores page)
+                const profileData = await apiFetch('/user/profile', { sessionId, signal: controller.signal }).catch(() => null);
+                
+                // Fetch games list
                 const gamesData = await apiFetch('/user/games', { sessionId, signal: controller.signal }).catch(() => ({ games: [] }));
                 
                 const gamesList = gamesData?.games || [];
                 setGames(gamesList);
                 
-                // Calculate stats from games data
-                const total = gamesList.length;
-                const won = gamesList.filter(g => g?.userResult?.won === true).length;
-                const winRateValue = total > 0 ? Math.round((won / total) * 100) : 0;
-                
-                setStats({
-                    totalGames: total,
-                    gamesWon: won,
-                    winRate: winRateValue
-                });
-                
-                console.log('Game stats calculated:', { total, won, winRateValue });
-                console.log('Games data sample:', gamesList[0]);
+                // Get stats from profile API (same source as Scores page)
+                if (profileData?.user) {
+                    const totalGamesPlayed = profileData.user.totalGamesPlayed || 0;
+                    const totalGamesWon = profileData.user.totalGamesWon || 0;
+                    const winRate = totalGamesPlayed > 0 ? Math.round((totalGamesWon / totalGamesPlayed) * 100) : 0;
+                    
+                    setUserStats({
+                        totalGamesPlayed,
+                        totalGamesWon,
+                        winRate
+                    });
+                    
+                    console.log('Profile stats loaded:', { totalGamesPlayed, totalGamesWon, winRate });
+                } else {
+                    // Fallback: calculate from games list
+                    const total = gamesList.length;
+                    const won = gamesList.filter(g => g?.userResult?.won === true).length;
+                    const winRateValue = total > 0 ? Math.round((won / total) * 100) : 0;
+                    
+                    setUserStats({
+                        totalGamesPlayed: total,
+                        totalGamesWon: won,
+                        winRate: winRateValue
+                    });
+                }
                 
             } catch (error) {
                 console.error('Failed to fetch game history:', error);
@@ -97,7 +113,7 @@ export default function History({ onNavigate }) {
             </div>
 
             <main className="px-4 pb-24 pt-16">
-                {/* Stats Cards */}
+                {/* Stats Cards - Same as Scores page */}
                 {!loading && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -106,17 +122,17 @@ export default function History({ onNavigate }) {
                     >
                         <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
                             <FaGamepad className="text-white/40 mx-auto mb-1" size={14} />
-                            <div className="text-white font-bold text-lg">{stats.totalGames}</div>
+                            <div className="text-white font-bold text-lg">{userStats.totalGamesPlayed}</div>
                             <div className="text-white/30 text-[9px] uppercase tracking-wider">Games</div>
                         </div>
                         <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
                             <FaTrophy className="text-yellow-400 mx-auto mb-1" size={14} />
-                            <div className="text-yellow-400 font-bold text-lg">{stats.gamesWon}</div>
+                            <div className="text-yellow-400 font-bold text-lg">{userStats.totalGamesWon}</div>
                             <div className="text-white/30 text-[9px] uppercase tracking-wider">Wins</div>
                         </div>
                         <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
                             <GiConfirmed className="text-green-400 mx-auto mb-1" size={14} />
-                            <div className="text-green-400 font-bold text-lg">{stats.winRate}%</div>
+                            <div className="text-green-400 font-bold text-lg">{userStats.winRate}%</div>
                             <div className="text-white/30 text-[9px] uppercase tracking-wider">Win Rate</div>
                         </div>
                     </motion.div>
