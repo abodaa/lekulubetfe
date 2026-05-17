@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { apiFetch } from "../lib/api/client";
@@ -11,7 +11,7 @@ import {
   FaCalendarAlt,
   FaArrowDown,
   FaArrowUp,
-  FaClock,
+  FaWallet,
 } from "react-icons/fa";
 import { GiPlayButton, GiConfirmed } from "react-icons/gi";
 
@@ -21,11 +21,10 @@ export default function History({ onNavigate }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("games");
 
   useEffect(() => {
     if (!sessionId) {
-      console.log("No sessionId available for history fetch");
       setLoading(false);
       return;
     }
@@ -35,7 +34,6 @@ export default function History({ onNavigate }) {
 
     const fetchData = async () => {
       try {
-        console.log("Fetching history data with sessionId:", sessionId);
         setLoading(true);
         setError(null);
 
@@ -43,23 +41,18 @@ export default function History({ onNavigate }) {
           apiFetch("/user/transactions", {
             sessionId,
             signal: controller.signal,
-          }),
-          apiFetch("/user/games", { sessionId, signal: controller.signal }),
+          }).catch(() => ({ transactions: [] })),
+          apiFetch("/user/games", {
+            sessionId,
+            signal: controller.signal,
+          }).catch(() => ({ games: [] })),
         ]);
-
-        console.log("Transactions data received:", transactionsData);
-        console.log("Games data received:", gamesData);
 
         setTransactions(transactionsData?.transactions || []);
         setGames(gamesData?.games || []);
       } catch (error) {
-        if (error?.name === "AbortError") {
-          console.error("History fetch timed out");
-          setError("Request timed out. Please try again.");
-        } else {
-          console.error("Failed to fetch history data:", error);
-          setError("Unable to load your history right now.");
-        }
+        console.error("Failed to fetch history data:", error);
+        setError("Unable to load your history right now.");
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
@@ -74,18 +67,19 @@ export default function History({ onNavigate }) {
     };
   }, [sessionId]);
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "deposits") return transaction.type === "deposit";
-    if (activeTab === "games")
-      return ["game_bet", "game_win"].includes(transaction.type);
-    return true;
-  });
-
   const totalGames = games.length;
   const gamesWon = games.filter((g) => g.userResult?.won).length;
   const winRate =
     totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
+
+  const tabs = [
+    { key: "games", label: "Games", icon: <GiPlayButton size={12} /> },
+    {
+      key: "transactions",
+      label: "Transactions",
+      icon: <FaWallet size={12} />,
+    },
+  ];
 
   const getTransactionIcon = (type, amount) => {
     if (type === "deposit")
@@ -97,11 +91,9 @@ export default function History({ onNavigate }) {
     return <FaCoins className="text-white/30" size={12} />;
   };
 
-  const tabs = [
-    { key: "all", label: "All", icon: <FaHistory size={12} /> },
-    { key: "deposits", label: "Deposits", icon: <FaArrowDown size={12} /> },
-    { key: "games", label: "Games", icon: <GiPlayButton size={12} /> },
-  ];
+  const getTransactionColor = (amount) => {
+    return amount > 0 ? "text-green-400" : "text-red-400";
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -112,9 +104,7 @@ export default function History({ onNavigate }) {
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
               <FaHistory className="text-yellow-400" size={14} />
             </div>
-            <span className="text-white/70 text-xs font-medium">
-              GAME HISTORY
-            </span>
+            <span className="text-white/70 text-xs font-medium">HISTORY</span>
           </div>
         </div>
       </div>
@@ -128,18 +118,14 @@ export default function History({ onNavigate }) {
             className="grid grid-cols-3 gap-3 mb-6"
           >
             <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
-              <div className="flex items-center justify-center mb-1">
-                <FaGamepad className="text-white/40" size={14} />
-              </div>
+              <FaGamepad className="text-white/40 mx-auto mb-1" size={14} />
               <div className="text-white font-bold text-lg">{totalGames}</div>
               <div className="text-white/30 text-[9px] uppercase tracking-wider">
                 Games
               </div>
             </div>
             <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
-              <div className="flex items-center justify-center mb-1">
-                <FaTrophy className="text-yellow-400" size={14} />
-              </div>
+              <FaTrophy className="text-yellow-400 mx-auto mb-1" size={14} />
               <div className="text-yellow-400 font-bold text-lg">
                 {gamesWon}
               </div>
@@ -148,9 +134,7 @@ export default function History({ onNavigate }) {
               </div>
             </div>
             <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
-              <div className="flex items-center justify-center mb-1">
-                <GiConfirmed className="text-green-400" size={14} />
-              </div>
+              <GiConfirmed className="text-green-400 mx-auto mb-1" size={14} />
               <div className="text-green-400 font-bold text-lg">{winRate}%</div>
               <div className="text-white/30 text-[9px] uppercase tracking-wider">
                 Win Rate
@@ -201,98 +185,173 @@ export default function History({ onNavigate }) {
           </motion.div>
         )}
 
-        {/* Game History List */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider mb-2 px-1">
-            Recent Games
-          </h3>
+        {/* Games Tab */}
+        {activeTab === "games" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider mb-2 px-1">
+              Recent Games
+            </h3>
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            </div>
-          ) : games.length === 0 ? (
-            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-8 text-center">
-              <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
-                <FaGamepad className="text-white/20" size={24} />
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               </div>
-              <p className="text-white/30 text-xs">No games played yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {games.slice(0, 20).map((game, idx) => (
-                <motion.div
-                  key={game.id || idx}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+            ) : games.length === 0 ? (
+              <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-8 text-center">
+                <FaGamepad className="text-white/20 mx-auto mb-2" size={24} />
+                <p className="text-white/30 text-xs">No games played yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {games.slice(0, 20).map((game, idx) => (
+                  <div
+                    key={game.id || idx}
+                    className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                            game.userResult?.won
+                              ? "bg-green-500/20"
+                              : "bg-red-500/20"
+                          }`}
+                        >
+                          {game.userResult?.won ? (
+                            <FaTrophy className="text-yellow-400" size={12} />
+                          ) : (
+                            <FaArrowUp className="text-red-400" size={12} />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-white text-xs font-medium">
+                            Game {game.gameId}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <FaCalendarAlt className="text-white/20" size={8} />
+                            <p className="text-white/30 text-[9px]">
+                              {game.finishedAt
+                                ? new Date(game.finishedAt).toLocaleDateString()
+                                : "Pending"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                       <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                        className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${
                           game.userResult?.won
-                            ? "bg-green-500/20"
-                            : "bg-red-500/20"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-red-500/20 text-red-400"
                         }`}
                       >
-                        {game.userResult?.won ? (
-                          <FaTrophy className="text-yellow-400" size={12} />
-                        ) : (
-                          <FaArrowUp className="text-red-400" size={12} />
-                        )}
+                        {game.userResult?.won ? "WON" : "LOST"}
                       </div>
-                      <div>
-                        <p className="text-white text-xs font-medium">
-                          Game {game.gameId}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <FaCalendarAlt className="text-white/20" size={8} />
-                          <p className="text-white/30 text-[9px]">
-                            {game.finishedAt
-                              ? new Date(game.finishedAt).toLocaleDateString()
-                              : ""}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <span className="text-white/30">Stake:</span>
+                          <span className="text-white ml-1">
+                            {game.stake} ETB
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-white/30">Prize:</span>
+                          <span className="text-green-400 ml-1">
+                            {game.userResult?.prize || 0} ETB
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-white/30 text-[9px]">
+                        {game.status}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Transactions Tab */}
+        {activeTab === "transactions" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider mb-2 px-1">
+              Recent Transactions
+            </h3>
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-8 text-center">
+                <FaWallet className="text-white/20 mx-auto mb-2" size={24} />
+                <p className="text-white/30 text-xs">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {transactions.slice(0, 20).map((transaction, idx) => {
+                  const isPositive = transaction.amount > 0;
+                  return (
+                    <div
+                      key={transaction.id || idx}
+                      className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                              isPositive ? "bg-green-500/20" : "bg-red-500/20"
+                            }`}
+                          >
+                            {getTransactionIcon(
+                              transaction.type,
+                              transaction.amount,
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-white text-xs font-medium capitalize">
+                              {transaction.type?.replace("_", " ") ||
+                                "Transaction"}
+                            </p>
+                            <p className="text-white/30 text-[9px]">
+                              {new Date(
+                                transaction.createdAt,
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p
+                            className={`text-xs font-bold ${getTransactionColor(transaction.amount)}`}
+                          >
+                            {isPositive
+                              ? `+${transaction.amount}`
+                              : `${transaction.amount}`}{" "}
+                            ETB
+                          </p>
+                          <p className="text-white/30 text-[9px] capitalize">
+                            {transaction.status ||
+                              (isPositive ? "Completed" : "Pending")}
                           </p>
                         </div>
                       </div>
                     </div>
-                    <div
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-medium ${
-                        game.userResult?.won
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-red-500/20 text-red-400"
-                      }`}
-                    >
-                      {game.userResult?.won ? "WON" : "LOST"}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-[10px]">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <span className="text-white/30">Stake:</span>
-                        <span className="text-white ml-1">
-                          {game.stake} ETB
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-white/30">Prize:</span>
-                        <span className="text-green-400 ml-1">
-                          {game.userResult?.prize || 0} ETB
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-white/30">{game.status}</div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
       </main>
 
       <BottomNav current="history" onNavigate={onNavigate} />
