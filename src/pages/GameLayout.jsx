@@ -172,10 +172,45 @@ export default function GameLayout({ stake, onNavigate }) {
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const confettiRef = useRef(null);
 
+  // Swipe gesture refs
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const sliderRef = useRef(null);
+
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
+
+  // Swipe handlers
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (yourCards.length <= 1) return;
+
+    const swipeThreshold = 50;
+    const diff = touchStartX.current - touchEndX.current;
+
+    if (Math.abs(diff) < swipeThreshold) return;
+
+    if (diff > 0) {
+      // Swipe left - next card
+      setCurrentCardIndex((prev) => Math.min(yourCards.length - 1, prev + 1));
+    } else {
+      // Swipe right - previous card
+      setCurrentCardIndex((prev) => Math.max(0, prev - 1));
+    }
+
+    // Reset touch positions
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -432,36 +467,6 @@ export default function GameLayout({ stake, onNavigate }) {
       setMissedPatterns(newMissedPatterns);
     }
   }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
-
-  // Clear missed pattern when a new winning pattern appears (so user can claim)
-  // useEffect(() => {
-  //   if (gameState.phase !== "running") return;
-  //   if (isAutoMarkOn) return;
-  //   if (yourCards.length === 0) return;
-
-  //   for (const { cardNumber, card } of yourCards) {
-  //     if (claimedCartellasRef.current.has(cardNumber)) continue;
-
-  //     const hasWin = checkBingoPattern(card, calledNumbers);
-
-  //     if (hasWin) {
-  //       if (
-  //         missedPatterns[cardNumber] ||
-  //         missedPatternsPersistentRef.current[cardNumber]
-  //       ) {
-  //         console.log(
-  //           `Clearing missed pattern for Cartella #${cardNumber} - new winning pattern available`,
-  //         );
-  //         setMissedPatterns((prev) => {
-  //           const newPatterns = { ...prev };
-  //           delete newPatterns[cardNumber];
-  //           return newPatterns;
-  //         });
-  //         delete missedPatternsPersistentRef.current[cardNumber];
-  //       }
-  //     }
-  //   }
-  // }, [calledNumbers, gameState.phase, isAutoMarkOn, yourCards]);
 
   // Recovery: If a cartella has a winning pattern but is incorrectly marked as claimed, reset it
   useEffect(() => {
@@ -966,8 +971,14 @@ export default function GameLayout({ stake, onNavigate }) {
           <div className="flex-1 overflow-y-auto">
             {yourCards.length > 0 ? (
               <div className="relative">
-                {/* Slider Container */}
-                <div className="overflow-hidden">
+                {/* Slider Container with Swipe Support */}
+                <div
+                  className="overflow-hidden"
+                  ref={sliderRef}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
                   <div
                     className="flex transition-transform duration-300 ease-out"
                     style={{
@@ -988,9 +999,6 @@ export default function GameLayout({ stake, onNavigate }) {
                       const isClaiming = claimingStates[cardNumber];
                       const alreadyClaimed =
                         claimedCartellasRef.current.has(cardNumber);
-                      // const hasMissedPattern =
-                      //   !!missedPatterns[cardNumber] ||
-                      //   !!missedPatternsPersistentRef.current[cardNumber];
                       const hasMissedPattern =
                         !!missedWinningPatterns[cardNumber];
                       return (
@@ -1096,13 +1104,6 @@ export default function GameLayout({ stake, onNavigate }) {
                                       handleNumberToggle(cardNumber, number)
                                   : undefined
                               }
-                              // missedWinningCalledNumbers={
-                              //   missedPatterns[cardNumber] ||
-                              //   missedPatternsPersistentRef.current[
-                              //     cardNumber
-                              //   ] ||
-                              //   null
-                              // }
                               missedWinningCalledNumbers={
                                 missedWinningPatterns[cardNumber] || null
                               }
