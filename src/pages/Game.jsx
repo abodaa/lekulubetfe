@@ -213,9 +213,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             >
               <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
                 <div className="px-3 py-2 flex items-center gap-2 border-b border-white/5">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-                    {adminPost.kind === "image" ? "LIVE NOW" : "FEATURED"}
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-white/40 text-sm font-medium uppercase tracking-wider">
+                    Announcement
                   </span>
                 </div>
 
@@ -249,7 +249,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
 
                 {adminPost.caption && (
                   <div className="p-2">
-                    <p className="text-white/50 text-[10px] leading-relaxed">
+                    <p className="text-white/50 text-xs leading-relaxed">
                       {adminPost.caption}
                     </p>
                   </div>
