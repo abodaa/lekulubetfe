@@ -245,9 +245,9 @@ export default function GameLayout({ stake, onNavigate }) {
   }, []);
 
   useEffect(() => {
-    if (isSoundOn && typeof currentNumber === "number")
+    if (isSoundOn && typeof currentNumber === "number" && !isWatchMode)
       playNumberSound(currentNumber).catch(() => {});
-  }, [currentNumber, isSoundOn]);
+  }, [currentNumber, isSoundOn, isWatchMode]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
@@ -520,13 +520,18 @@ export default function GameLayout({ stake, onNavigate }) {
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
       const winners = gameState.winners || [];
-      if (winners.length > 0) {
-        const userWon = winners.some((w) => w.userId === sessionId);
-        if (userWon) {
-          showSuccess("🎉 You won!");
+      const isWatchMode = yourCards.length === 0;
+
+      // Only navigate to winner page if user has cartellas (not watch mode)
+      if (!isWatchMode) {
+        if (winners.length > 0) {
+          const userWon = winners.some((w) => w.userId === sessionId);
+          if (userWon) {
+            showSuccess("🎉 You won!");
+          }
         }
+        onNavigate?.("winner");
       }
-      onNavigate?.("winner");
     }
   }, [
     gameState.phase,
@@ -535,6 +540,7 @@ export default function GameLayout({ stake, onNavigate }) {
     onNavigate,
     isRefreshing,
     showSuccess,
+    yourCards.length,
   ]);
 
   useEffect(() => {
