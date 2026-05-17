@@ -19,15 +19,7 @@ import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
 
 export default function AdminStats() {
-  const [overviewData, setOverviewData] = useState({
-    systemRevenue: 0,
-    totalPlayers: 0,
-    totalGames: 0,
-    totalDeposits: 0,
-    totalWithdrawals: 0,
-    botWins: 0,
-  });
-  const [tableData, setTableData] = useState([]);
+  const [dailyStats, setDailyStats] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [totalMainWallet, setTotalMainWallet] = useState(0);
   const [totalPlayWallet, setTotalPlayWallet] = useState(0);
@@ -35,31 +27,32 @@ export default function AdminStats() {
     pendingCount: 0,
     pendingTotal: 0,
   });
+  const [todayData, setTodayData] = useState({
+    systemRevenue: 0,
+    totalPlayers: 0,
+    totalGames: 0,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    botWins: 0,
+  });
   const [activePeriod, setActivePeriod] = useState("daily");
   const [isLoading, setIsLoading] = useState(true);
-  const [periodTitle, setPeriodTitle] = useState("Last 7 Days");
 
   useEffect(() => {
     fetchAllData();
   }, []);
 
-  useEffect(() => {
-    if (!isLoading) {
-      filterDataByPeriod();
-    }
-  }, [activePeriod, isLoading]);
-
   const fetchAllData = async () => {
     setIsLoading(true);
 
     try {
-      // Fetch daily stats for table
+      // Fetch daily stats
       const dailyRes = await apiFetch("/admin/stats/daily?days=90").catch(
         () => ({ days: [] }),
       );
       const allStats = dailyRes?.days || [];
       allStats.sort((a, b) => new Date(a.day) - new Date(b.day));
-      setTableData(allStats);
+      setDailyStats(allStats);
 
       // Fetch game history
       const gameHistoryRes = await apiFetch(
@@ -79,7 +72,17 @@ export default function AdminStats() {
       setTotalMainWallet(totalMainRes?.totalMain || 0);
       setTotalPlayWallet(totalPlayRes?.totalPlay || 0);
 
-      // Fetch pending deposits info from today's data
+      // Fetch today's overview
+      const todayRes = await apiFetch("/admin/stats/today").catch(() => ({
+        totalPlayers: 0,
+        systemCut: 0,
+        botWinningsFromRealGames: 0,
+      }));
+      const overviewRes = await apiFetch("/admin/stats/overview").catch(() => ({
+        today: { totalGames: 0 },
+      }));
+
+      // Fetch pending deposits
       const now = new Date();
       const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
       const addisAbabaTime = new Date(utcTime + 3 * 3600000);
@@ -97,6 +100,16 @@ export default function AdminStats() {
         pendingCount: depositTotals?.pendingCount || 0,
         pendingTotal: depositTotals?.pendingTotal || 0,
       });
+
+      // Set today's data for daily view
+      setTodayData({
+        systemRevenue: todayRes?.systemCut || 0,
+        totalPlayers: todayRes?.totalPlayers || 0,
+        totalGames: overviewRes?.today?.totalGames || 0,
+        totalDeposits: depositTotals?.completedTotal || 0,
+        totalWithdrawals: 0,
+        botWins: todayRes?.botWinningsFromRealGames || 0,
+      });
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
@@ -104,93 +117,113 @@ export default function AdminStats() {
     }
   };
 
-  const filterDataByPeriod = async () => {
-    setIsLoading(true);
+  // Calculate data for selected period from dailyStats
+  const getFilteredData = () => {
+    if (!dailyStats.length) return todayData;
 
-    try {
-      const now = new Date();
-      const startDate = new Date();
-      let title = "";
+    const now = new Date();
 
-      // Calculate date range based on selected period
-      if (activePeriod === "daily") {
-        startDate.setDate(now.getDate() - 7);
-        title = "Last 7 Days";
-      } else if (activePeriod === "weekly") {
-        // Start of current week (Monday)
-        const day = now.getDay();
-        const diff = day === 0 ? 6 : day - 1;
-        startDate.setDate(now.getDate() - diff);
-        startDate.setHours(0, 0, 0, 0);
-        title = "This Week";
-      } else if (activePeriod === "monthly") {
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
-        title = "This Month";
-      } else {
-        startDate.setMonth(0, 1);
-        startDate.setHours(0, 0, 0, 0);
-        title = "This Year";
-      }
-
-      setPeriodTitle(title);
-
-      // Format dates for API
-      const from = startDate.toISOString();
-      const to = now.toISOString();
-
-      // Fetch filtered data from backend using same logic as bot
-      const [gamesRes, depositsRes, withdrawalsRes] = await Promise.all([
-        apiFetch(
-          `/admin/stats/games?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-        ).catch(() => ({ games: [] })),
-        apiFetch(
-          `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-        ).catch(() => ({ completedTotal: 0 })),
-        apiFetch(
-          `/admin/balances/withdrawals?status=completed&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-        ).catch(() => ({ withdrawals: [] })),
-      ]);
-
-      // Calculate totals from games
-      const games = gamesRes?.games || [];
-      const totalGames = games.length;
-      const totalRevenue = games.reduce(
-        (sum, g) => sum + (g.systemCut || 0),
-        0,
-      );
-
-      // Get unique players
-      const uniquePlayers = new Set();
-      games.forEach((game) => {
-        if (game.players) {
-          game.players.forEach((player) => {
-            if (player.userId?._id)
-              uniquePlayers.add(player.userId._id.toString());
-          });
-        }
-      });
-
-      // Calculate bot wins
-      const botWins = games.filter((game) => game.whoWon === "Bot").length;
-
-      setOverviewData({
-        systemRevenue: totalRevenue,
-        totalPlayers: uniquePlayers.size,
-        totalGames: totalGames,
-        totalDeposits: depositsRes?.completedTotal || 0,
-        totalWithdrawals:
-          withdrawalsRes?.withdrawals?.reduce(
-            (sum, w) => sum + (w.amount || 0),
-            0,
-          ) || 0,
-        botWins: botWins,
-      });
-    } catch (error) {
-      console.error("Error filtering data:", error);
-    } finally {
-      setIsLoading(false);
+    if (activePeriod === "daily") {
+      // Last 7 days
+      const last7Days = dailyStats.slice(-7);
+      return {
+        systemRevenue: last7Days.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalPlayers: last7Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalDeposits: last7Days.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: last7Days.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+      };
+    } else if (activePeriod === "weekly") {
+      // Current week (last 7 days matches weekly in this context)
+      const last7Days = dailyStats.slice(-7);
+      return {
+        systemRevenue: last7Days.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalPlayers: last7Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalDeposits: last7Days.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: last7Days.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+      };
+    } else if (activePeriod === "monthly") {
+      // Last 30 days
+      const last30Days = dailyStats.slice(-30);
+      return {
+        systemRevenue: last30Days.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalPlayers: last30Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: last30Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalDeposits: last30Days.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: last30Days.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: last30Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+      };
+    } else {
+      // All time (all available data)
+      return {
+        systemRevenue: dailyStats.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalPlayers: dailyStats.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: dailyStats.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalDeposits: dailyStats.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: dailyStats.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: dailyStats.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
+      };
     }
+  };
+
+  const overviewData = getFilteredData();
+
+  const getPeriodTitle = () => {
+    if (activePeriod === "daily") return "Last 7 Days";
+    if (activePeriod === "weekly") return "This Week";
+    if (activePeriod === "monthly") return "This Month";
+    return "All Time";
   };
 
   // Process weekly stats for table display
@@ -403,13 +436,13 @@ export default function AdminStats() {
   // Get table data based on selected period
   const getCurrentTableData = () => {
     if (activePeriod === "daily") {
-      return [...tableData].reverse();
+      return [...dailyStats].reverse();
     } else if (activePeriod === "weekly") {
-      return processWeeklyStats(tableData);
+      return processWeeklyStats(dailyStats);
     } else if (activePeriod === "monthly") {
-      return processMonthlyStats(tableData);
+      return processMonthlyStats(dailyStats);
     } else {
-      return processYearlyStats(tableData);
+      return processYearlyStats(dailyStats);
     }
   };
 
@@ -523,7 +556,7 @@ export default function AdminStats() {
               <FaChartLine className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              {periodTitle} Overview
+              {getPeriodTitle()} Overview
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
