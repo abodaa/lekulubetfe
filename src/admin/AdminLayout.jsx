@@ -214,16 +214,14 @@ export default function AdminLayout({ onNavigate }) {
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
-            {/* <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
               <MdAdminPanelSettings className="text-yellow-400" size={14} />
-            </div> */}
-            <span className="text-white/70 text-xs font-medium">
-              ADMIN PANEL
-            </span>
+            </div>
+            <span className="text-white/70 text-xs font-medium">ADMIN</span>
           </div>
           <button
             onClick={handleGoToGame}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r bg-white/20 text-white text-xs font-medium shadow-md hover:scale-105 transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 text-white text-xs font-medium hover:scale-105 transition-all active:scale-95"
           >
             <FaGamepad size={14} />
             Play Game
