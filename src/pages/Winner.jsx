@@ -59,14 +59,20 @@ export default function Winner({ onNavigate, onResetToGame }) {
   // const { sessionId } = useAuth();
   const { yourCards } = gameState;
 
-  // If user has no cards (watch mode), redirect to cartela selection
+  // If user has no cards (watch mode) AND game is finished, redirect to cartela selection
   const hasCards = yourCards?.length > 0;
 
   useEffect(() => {
-    if (!hasCards && gameState.phase === "announce") {
+    // Only redirect if user has NO cards AND game is finished
+    if (
+      !hasCards &&
+      gameState.phase === "announce" &&
+      gameState.winners?.length > 0
+    ) {
+      console.log("Watch mode user - redirecting to cartela selection");
       onNavigate?.("cartela-selection");
     }
-  }, [hasCards, gameState.phase, onNavigate]);
+  }, [hasCards, gameState.phase, gameState.winners, onNavigate]);
 
   useEffect(() => {
     const updateCountdown = () => {

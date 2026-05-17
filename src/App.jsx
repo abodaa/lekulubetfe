@@ -34,51 +34,6 @@ function AppContent() {
     localStorage.removeItem("selectedStake");
   }, []);
 
-  // Error monitoring and debugging
-  useEffect(() => {
-    const logState = () => {
-      console.log("🔍 App State Debug:", {
-        currentPage,
-        selectedStake,
-        selectedCartelas,
-        currentGameId,
-        connected,
-        gameState: {
-          phase: gameState.phase,
-          gameId: gameState.gameId,
-          playersCount: gameState.playersCount,
-          yourCards: Array.isArray(gameState.yourCards)
-            ? gameState.yourCards.length
-            : 0,
-        },
-        timestamp: new Date().toISOString(),
-      });
-    };
-
-    const interval = setInterval(logState, 5000);
-    logState();
-    return () => clearInterval(interval);
-  }, [
-    currentPage,
-    selectedStake,
-    selectedCartelas,
-    currentGameId,
-    connected,
-    gameState,
-  ]);
-
-  // Specific check for authentication and initial load
-  useEffect(() => {
-    console.log("🚀 App initialized with:", {
-      currentPage,
-      selectedStake,
-      connected,
-      hasGameState: !!gameState,
-      gamePhase: gameState?.phase,
-      timestamp: new Date().toISOString(),
-    });
-  }, []);
-
   // Set a timeout for WebSocket connection
   useEffect(() => {
     if (selectedStake && !connected) {
@@ -91,7 +46,7 @@ function AppContent() {
     }
   }, [selectedStake, connected]);
 
-  // Check if user has any cartellas
+  // Helper functions
   const hasUserCards = () => {
     return (
       (Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0) ||
@@ -99,7 +54,6 @@ function AppContent() {
     );
   };
 
-  // Check if game has enough players
   const hasEnoughPlayers = () => {
     return (
       typeof gameState.playersCount === "number" && gameState.playersCount >= 2
@@ -108,26 +62,24 @@ function AppContent() {
 
   // Smart navigation function
   const determineGamePage = () => {
-    console.log("Determining game page:", {
-      phase: gameState.phase,
-      gameId: gameState.gameId,
-      hasCards: hasUserCards(),
-      hasPlayers: hasEnoughPlayers(),
-      selectedStake,
-    });
+    console.log("=== determineGamePage ===");
+    console.log("phase:", gameState.phase);
+    console.log("hasUserCards:", hasUserCards());
+    console.log("hasEnoughPlayers:", hasEnoughPlayers());
+    console.log("selectedStake:", selectedStake);
 
     // No stake selected - go to game selection
     if (!selectedStake) {
       return "game";
     }
 
-    // Game finished (announce phase)
+    // Game finished (announce phase) - THIS IS THE KEY PART
     if (gameState.phase === "announce" && gameState.gameId) {
       if (hasUserCards()) {
-        console.log("→ Player with cards - going to winner page");
+        console.log("→ PLAYER WITH CARDS - GOING TO WINNER PAGE");
         return "winner";
       } else {
-        console.log("→ Watch mode - going to cartela selection");
+        console.log("→ WATCH MODE - GOING TO CARTELA SELECTION");
         return "cartela-selection";
       }
     }
@@ -160,30 +112,6 @@ function AppContent() {
     return "game";
   };
 
-  // Listen for custom gameStarted event
-  useEffect(() => {
-    const handleGameStarted = (event) => {
-      console.log("🎯 gameStarted custom event received:", event.detail);
-      if (!selectedStake) return;
-
-      const playersCount = event.detail?.playersCount || gameState.playersCount;
-      const hasPlayers = typeof playersCount === "number" && playersCount >= 2;
-
-      if (
-        event.detail.phase === "running" &&
-        event.detail.gameId &&
-        hasPlayers &&
-        currentPage !== "game-layout"
-      ) {
-        console.log("🚀 FORCE NAVIGATING to game-layout");
-        setCurrentPage("game-layout");
-      }
-    };
-
-    window.addEventListener("gameStarted", handleGameStarted);
-    return () => window.removeEventListener("gameStarted", handleGameStarted);
-  }, [selectedStake, currentPage, gameState.playersCount]);
-
   // Auto-navigate based on game state changes
   useEffect(() => {
     if (!selectedStake) {
@@ -202,6 +130,7 @@ function AppContent() {
     gameState.gameId,
     gameState.playersCount,
     gameState.yourCards,
+    gameState.winners,
     selectedStake,
     currentPage,
   ]);
