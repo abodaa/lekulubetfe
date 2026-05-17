@@ -247,7 +247,7 @@ export default function GameLayout({ stake, onNavigate }) {
   useEffect(() => {
     if (isSoundOn && typeof currentNumber === "number" && !isWatchMode)
       playNumberSound(currentNumber).catch(() => {});
-  }, [currentNumber, isSoundOn, isWatchMode]);
+  }, [currentNumber, isSoundOn]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
