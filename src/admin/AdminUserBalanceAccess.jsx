@@ -12,7 +12,7 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
-//   FaCalendarMonth,
+  //   FaCalendarMonth,
   FaCalendar,
   FaArrowUp,
   FaArrowDown,
@@ -21,27 +21,14 @@ import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
 
 export default function AdminStats() {
-  const [today, setToday] = useState({
-    totalPlayers: 0,
-    systemCut: 0,
-    botWinningsFromRealGames: 0,
-  });
-  const [dailyStats, setDailyStats] = useState([]);
-  const [weeklyStats, setWeeklyStats] = useState([]);
-  const [monthlyStats, setMonthlyStats] = useState([]);
-  const [yearlyStats, setYearlyStats] = useState([]);
+  const [allStatsData, setAllStatsData] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
-  const [todayFinance, setTodayFinance] = useState({
-    totalGames: 0,
-    totalDeposit: 0,
-    totalWithdraw: 0,
-  });
+  const [totalMainWallet, setTotalMainWallet] = useState(0);
+  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
   const [todayDepositMeta, setTodayDepositMeta] = useState({
     pendingCount: 0,
     pendingTotal: 0,
   });
-  const [totalMainWallet, setTotalMainWallet] = useState(0);
-  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
   const [activePeriod, setActivePeriod] = useState("daily");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,88 +52,37 @@ export default function AdminStats() {
       const to = endUTC.toISOString();
 
       const [
-        todayRes,
         dailyRes,
         gameHistoryRes,
-        overviewRes,
         depositTotalsRes,
-        withdrawalsCompletedRes,
         totalMainRes,
         totalPlayRes,
       ] = await Promise.allSettled([
-        apiFetch("/admin/stats/today", { timeoutMs: 15000 }),
-        apiFetch("/admin/stats/daily?days=90", { timeoutMs: 30000 }),
+        apiFetch("/admin/stats/daily?days=365", { timeoutMs: 30000 }),
         apiFetch("/admin/stats/game-history?days=7", { timeoutMs: 20000 }),
-        apiFetch("/admin/stats/overview", { timeoutMs: 20000 }),
         apiFetch(
           `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
           { timeoutMs: 20000 },
         ),
-        apiFetch("/admin/balances/withdrawals?status=completed", {
-          timeoutMs: 20000,
-        }),
         apiFetch("/admin/stats/wallets/total-main", { timeoutMs: 20000 }),
         apiFetch("/admin/stats/wallets/total-play", { timeoutMs: 20000 }),
       ]);
 
-      const nextToday =
-        todayRes.status === "fulfilled"
-          ? {
-              totalPlayers: todayRes.value?.totalPlayers || 0,
-              systemCut: todayRes.value?.systemCut || 0,
-              botWinningsFromRealGames:
-                todayRes.value?.botWinningsFromRealGames || 0,
-            }
-          : { totalPlayers: 0, systemCut: 0, botWinningsFromRealGames: 0 };
-
       let allStats = [];
       if (dailyRes.status === "fulfilled") {
         allStats = dailyRes.value?.days || [];
+        setAllStatsData(allStats);
       }
-
-      // Daily stats (all available)
-      const daily = allStats;
-
-      // Weekly stats aggregation
-      const weekly = processWeeklyStats(allStats);
-
-      // Monthly stats aggregation
-      const monthly = processMonthlyStats(allStats);
-
-      // Yearly stats aggregation
-      const yearly = processYearlyStats(allStats);
 
       let nextGameHistory = [];
       if (gameHistoryRes.status === "fulfilled") {
         nextGameHistory = gameHistoryRes.value?.games || [];
       }
 
-      const overview =
-        overviewRes.status === "fulfilled" ? overviewRes.value : null;
       const depositTotals =
         depositTotalsRes.status === "fulfilled"
           ? depositTotalsRes.value || {}
           : {};
-      const withdrawalsCompleted =
-        withdrawalsCompletedRes.status === "fulfilled"
-          ? withdrawalsCompletedRes.value?.withdrawals || []
-          : [];
-
-      const totalGames = overview?.today?.totalGames || 0;
-      const totalDeposit = Number(depositTotals.completedTotal) || 0;
-
-      const totalWithdraw = withdrawalsCompleted
-        .filter((w) => {
-          const processedDate = w.processedBy?.processedAt || w.processedAt;
-          return (
-            processedDate &&
-            new Date(processedDate) >= startUTC &&
-            new Date(processedDate) <= endUTC
-          );
-        })
-        .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
-
-      const nextTodayFinance = { totalGames, totalDeposit, totalWithdraw };
       const nextTodayDepositMeta = {
         pendingCount: Number(depositTotals.pendingCount) || 0,
         pendingTotal: Number(depositTotals.pendingTotal) || 0,
@@ -160,13 +96,7 @@ export default function AdminStats() {
           ? totalPlayRes.value?.totalPlay || 0
           : 0;
 
-      setToday(nextToday);
-      setDailyStats(daily);
-      setWeeklyStats(weekly);
-      setMonthlyStats(monthly);
-      setYearlyStats(yearly);
       setGameHistory(nextGameHistory);
-      setTodayFinance(nextTodayFinance);
       setTodayDepositMeta(nextTodayDepositMeta);
       setTotalMainWallet(nextTotalMain);
       setTotalPlayWallet(nextTotalPlay);
@@ -174,6 +104,7 @@ export default function AdminStats() {
     })();
   }, []);
 
+  // Process weekly stats
   const processWeeklyStats = (stats) => {
     const weeks = {};
 
@@ -217,6 +148,7 @@ export default function AdminStats() {
       .reverse();
   };
 
+  // Process monthly stats
   const processMonthlyStats = (stats) => {
     const months = {};
 
@@ -263,6 +195,7 @@ export default function AdminStats() {
       .reverse();
   };
 
+  // Process yearly stats
   const processYearlyStats = (stats) => {
     const years = {};
 
@@ -364,21 +297,22 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
-  // Get current period data for cards
-  const getCurrentPeriodData = () => {
+  // Get data for overview cards based on selected period
+  const getOverviewData = () => {
     if (activePeriod === "daily") {
-      // Sum last 7 days for daily cards
-      const last7Days = dailyStats.slice(0, 7);
+      // Last 7 days
+      const last7Days = allStatsData.slice(0, 7);
       return {
-        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalPlayers: last7Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
+        title: "Last 7 Days",
         systemRevenue: last7Days.reduce(
           (sum, d) => sum + (d.systemRevenue || 0),
           0,
         ),
+        totalPlayers: last7Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
         totalDeposits: last7Days.reduce(
           (sum, d) => sum + (d.totalDeposits || 0),
           0,
@@ -387,54 +321,68 @@ export default function AdminStats() {
           (sum, d) => sum + (d.totalWithdrawals || 0),
           0,
         ),
-        botWins: today.botWinningsFromRealGames || 0,
+        botWins: allStatsData
+          .slice(0, 7)
+          .reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
       };
     } else if (activePeriod === "weekly") {
-      // Sum current week (first item in weeklyStats is most recent)
+      // Current week (most recent week)
+      const weeklyStats = processWeeklyStats(allStatsData);
       const currentWeek = weeklyStats[0] || {};
       return {
-        totalGames: currentWeek.totalGames || 0,
-        totalPlayers: currentWeek.totalPlayers || 0,
+        title: "This Week",
         systemRevenue: currentWeek.systemRevenue || 0,
+        totalPlayers: currentWeek.totalPlayers || 0,
+        totalGames: currentWeek.totalGames || 0,
         totalDeposits: currentWeek.totalDeposits || 0,
         totalWithdrawals: currentWeek.totalWithdrawals || 0,
-        botWins: today.botWinningsFromRealGames || 0,
+        botWins: 0,
       };
     } else if (activePeriod === "monthly") {
-      // Sum current month (first item in monthlyStats is most recent)
+      // Current month (most recent month)
+      const monthlyStats = processMonthlyStats(allStatsData);
       const currentMonth = monthlyStats[0] || {};
       return {
-        totalGames: currentMonth.totalGames || 0,
-        totalPlayers: currentMonth.totalPlayers || 0,
+        title: "This Month",
         systemRevenue: currentMonth.systemRevenue || 0,
+        totalPlayers: currentMonth.totalPlayers || 0,
+        totalGames: currentMonth.totalGames || 0,
         totalDeposits: currentMonth.totalDeposits || 0,
         totalWithdrawals: currentMonth.totalWithdrawals || 0,
-        botWins: today.botWinningsFromRealGames || 0,
+        botWins: 0,
       };
     } else {
-      // Sum current year (first item in yearlyStats is most recent)
+      // Current year (most recent year)
+      const yearlyStats = processYearlyStats(allStatsData);
       const currentYear = yearlyStats[0] || {};
       return {
-        totalGames: currentYear.totalGames || 0,
-        totalPlayers: currentYear.totalPlayers || 0,
+        title: "This Year",
         systemRevenue: currentYear.systemRevenue || 0,
+        totalPlayers: currentYear.totalPlayers || 0,
+        totalGames: currentYear.totalGames || 0,
         totalDeposits: currentYear.totalDeposits || 0,
         totalWithdrawals: currentYear.totalWithdrawals || 0,
-        botWins: today.botWinningsFromRealGames || 0,
+        botWins: 0,
       };
     }
   };
 
-  const currentData = getCurrentPeriodData();
-  const currentStats =
-    activePeriod === "daily"
-      ? dailyStats
-      : activePeriod === "weekly"
-        ? weeklyStats
-        : activePeriod === "monthly"
-          ? monthlyStats
-          : yearlyStats;
-  const currentTitle =
+  // Get detailed table data based on selected period
+  const getTableData = () => {
+    if (activePeriod === "daily") {
+      return allStatsData;
+    } else if (activePeriod === "weekly") {
+      return processWeeklyStats(allStatsData);
+    } else if (activePeriod === "monthly") {
+      return processMonthlyStats(allStatsData);
+    } else {
+      return processYearlyStats(allStatsData);
+    }
+  };
+
+  const overviewData = getOverviewData();
+  const tableData = getTableData();
+  const tableTitle =
     activePeriod === "daily"
       ? "Daily Statistics"
       : activePeriod === "weekly"
@@ -530,7 +478,7 @@ export default function AdminStats() {
           </div>
         </motion.div>
 
-        {/* Period Overview Cards - Changes with filter */}
+        {/* Overview Cards - Filtered by Period */}
         <motion.div
           key={activePeriod}
           initial={{ opacity: 0, y: 20 }}
@@ -543,28 +491,21 @@ export default function AdminStats() {
               <FaChartLine className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              {activePeriod === "daily"
-                ? "Last 7 Days"
-                : activePeriod === "weekly"
-                  ? "This Week"
-                  : activePeriod === "monthly"
-                    ? "This Month"
-                    : "This Year"}{" "}
-              Overview
+              {overviewData.title} Overview
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <StatCard
               icon={<GiProfit size={14} />}
               label="System Revenue"
-              value={`ETB ${isLoading ? "..." : currentData.systemRevenue.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : overviewData.systemRevenue.toLocaleString()}`}
               color="amber"
             />
             <StatCard
               icon={<FaUsers size={14} />}
               label="Total Players"
               value={
-                isLoading ? "..." : currentData.totalPlayers.toLocaleString()
+                isLoading ? "..." : overviewData.totalPlayers.toLocaleString()
               }
               color="green"
             />
@@ -572,34 +513,39 @@ export default function AdminStats() {
               icon={<FaGamepad size={14} />}
               label="Total Games"
               value={
-                isLoading ? "..." : currentData.totalGames.toLocaleString()
+                isLoading ? "..." : overviewData.totalGames.toLocaleString()
               }
               color="blue"
             />
             <StatCard
               icon={<GiCash size={14} />}
               label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : currentData.totalDeposits.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : overviewData.totalDeposits.toLocaleString()}`}
               color="green"
+              subtext={
+                !isLoading
+                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
+                  : null
+              }
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : currentData.totalWithdrawals.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : overviewData.totalWithdrawals.toLocaleString()}`}
               color="red"
             />
             <StatCard
               icon={<FaRobot size={14} />}
               label="Bot Wins"
               value={
-                isLoading ? "..." : (currentData.botWins || 0).toLocaleString()
+                isLoading ? "..." : (overviewData.botWins || 0).toLocaleString()
               }
               color="purple"
             />
           </div>
         </motion.div>
 
-        {/* Wallet Totals - Static (not filtered) */}
+        {/* Wallet Totals - All Time (Static) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -630,7 +576,7 @@ export default function AdminStats() {
           </div>
         </motion.div>
 
-        {/* Statistics Table by Period */}
+        {/* Detailed Statistics Table */}
         <motion.div
           key={`table-${activePeriod}`}
           initial={{ opacity: 0, y: 20 }}
@@ -640,11 +586,11 @@ export default function AdminStats() {
         >
           <div className="px-3 py-2 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-              {currentTitle}
+              {tableTitle}
             </h3>
           </div>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            {!isLoading && currentStats.length > 0 ? (
+            {!isLoading && tableData.length > 0 ? (
               <table className="w-full text-[10px]">
                 <thead className="border-b border-white/10 sticky top-0 bg-purple-900/90">
                   <tr>
@@ -678,7 +624,7 @@ export default function AdminStats() {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentStats.map((stat, index) => (
+                  {tableData.map((stat, index) => (
                     <tr
                       key={index}
                       className="border-b border-white/5 hover:bg-white/5"
