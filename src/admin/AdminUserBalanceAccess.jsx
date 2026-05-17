@@ -12,6 +12,7 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
+//   FaCalendarMonth,
   FaCalendar,
   FaArrowUp,
   FaArrowDown,
@@ -363,6 +364,68 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
+  // Get current period data for cards
+  const getCurrentPeriodData = () => {
+    if (activePeriod === "daily") {
+      // Sum last 7 days for daily cards
+      const last7Days = dailyStats.slice(0, 7);
+      return {
+        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
+        totalPlayers: last7Days.reduce(
+          (sum, d) => sum + (d.totalPlayers || 0),
+          0,
+        ),
+        systemRevenue: last7Days.reduce(
+          (sum, d) => sum + (d.systemRevenue || 0),
+          0,
+        ),
+        totalDeposits: last7Days.reduce(
+          (sum, d) => sum + (d.totalDeposits || 0),
+          0,
+        ),
+        totalWithdrawals: last7Days.reduce(
+          (sum, d) => sum + (d.totalWithdrawals || 0),
+          0,
+        ),
+        botWins: today.botWinningsFromRealGames || 0,
+      };
+    } else if (activePeriod === "weekly") {
+      // Sum current week (first item in weeklyStats is most recent)
+      const currentWeek = weeklyStats[0] || {};
+      return {
+        totalGames: currentWeek.totalGames || 0,
+        totalPlayers: currentWeek.totalPlayers || 0,
+        systemRevenue: currentWeek.systemRevenue || 0,
+        totalDeposits: currentWeek.totalDeposits || 0,
+        totalWithdrawals: currentWeek.totalWithdrawals || 0,
+        botWins: today.botWinningsFromRealGames || 0,
+      };
+    } else if (activePeriod === "monthly") {
+      // Sum current month (first item in monthlyStats is most recent)
+      const currentMonth = monthlyStats[0] || {};
+      return {
+        totalGames: currentMonth.totalGames || 0,
+        totalPlayers: currentMonth.totalPlayers || 0,
+        systemRevenue: currentMonth.systemRevenue || 0,
+        totalDeposits: currentMonth.totalDeposits || 0,
+        totalWithdrawals: currentMonth.totalWithdrawals || 0,
+        botWins: today.botWinningsFromRealGames || 0,
+      };
+    } else {
+      // Sum current year (first item in yearlyStats is most recent)
+      const currentYear = yearlyStats[0] || {};
+      return {
+        totalGames: currentYear.totalGames || 0,
+        totalPlayers: currentYear.totalPlayers || 0,
+        systemRevenue: currentYear.systemRevenue || 0,
+        totalDeposits: currentYear.totalDeposits || 0,
+        totalWithdrawals: currentYear.totalWithdrawals || 0,
+        botWins: today.botWinningsFromRealGames || 0,
+      };
+    }
+  };
+
+  const currentData = getCurrentPeriodData();
   const currentStats =
     activePeriod === "daily"
       ? dailyStats
@@ -467,8 +530,9 @@ export default function AdminStats() {
           </div>
         </motion.div>
 
-        {/* Today's Overview Cards */}
+        {/* Period Overview Cards - Changes with filter */}
         <motion.div
+          key={activePeriod}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
@@ -479,61 +543,63 @@ export default function AdminStats() {
               <FaChartLine className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              Today's Overview
+              {activePeriod === "daily"
+                ? "Last 7 Days"
+                : activePeriod === "weekly"
+                  ? "This Week"
+                  : activePeriod === "monthly"
+                    ? "This Month"
+                    : "This Year"}{" "}
+              Overview
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <StatCard
               icon={<GiProfit size={14} />}
               label="System Revenue"
-              value={`ETB ${isLoading ? "..." : today.systemCut.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : currentData.systemRevenue.toLocaleString()}`}
               color="amber"
             />
             <StatCard
               icon={<FaUsers size={14} />}
               label="Total Players"
-              value={isLoading ? "..." : today.totalPlayers.toLocaleString()}
+              value={
+                isLoading ? "..." : currentData.totalPlayers.toLocaleString()
+              }
               color="green"
             />
             <StatCard
               icon={<FaGamepad size={14} />}
               label="Total Games"
               value={
-                isLoading ? "..." : todayFinance.totalGames.toLocaleString()
+                isLoading ? "..." : currentData.totalGames.toLocaleString()
               }
               color="blue"
             />
             <StatCard
               icon={<GiCash size={14} />}
               label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : todayFinance.totalDeposit.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : currentData.totalDeposits.toLocaleString()}`}
               color="green"
-              subtext={
-                !isLoading
-                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
-                  : null
-              }
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : todayFinance.totalWithdraw.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : currentData.totalWithdrawals.toLocaleString()}`}
               color="red"
             />
             <StatCard
               icon={<FaRobot size={14} />}
               label="Bot Wins"
               value={
-                isLoading
-                  ? "..."
-                  : (today.botWinningsFromRealGames || 0).toLocaleString()
+                isLoading ? "..." : (currentData.botWins || 0).toLocaleString()
               }
               color="purple"
             />
           </div>
         </motion.div>
 
-        {/* Wallet Totals */}
+        {/* Wallet Totals - Static (not filtered) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -545,7 +611,7 @@ export default function AdminStats() {
               <FaWallet className="text-purple-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              Wallet Totals
+              Wallet Totals (All Time)
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -566,6 +632,7 @@ export default function AdminStats() {
 
         {/* Statistics Table by Period */}
         <motion.div
+          key={`table-${activePeriod}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
