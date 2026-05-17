@@ -12,7 +12,7 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
-//   FaCalendarMonth,
+  //   FaCalendarMonth,
   FaCalendar,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
@@ -501,7 +501,7 @@ export default function AdminStats() {
       onClick={() => setActivePeriod(period)}
       className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-medium transition-all ${
         activePeriod === period
-          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+          ? "bg-white/30 text-white shadow-lg"
           : "text-white/40 hover:text-white/60 hover:bg-white/5"
       }`}
     >
@@ -755,12 +755,12 @@ export default function AdminStats() {
             {!isLoading && groupedGameHistory.length > 0 ? (
               groupedGameHistory.map((group, idx) => (
                 <div key={group.dateKey}>
-                  <div className="px-2 py-2 bg-white/5 sticky top-0">
+                  <div className="px-2 py-2 bg-white sticky top-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/40 text-[9px]">
+                      <span className="text-blue-950 text-xs">
                         {group.dateLabel}
                       </span>
-                      <span className="text-amber-400 text-[9px] font-medium">
+                      <span className="text-black text-xs font-medium">
                         Net: ETB {group.netRevenueSum.toFixed(2)}
                       </span>
                     </div>
