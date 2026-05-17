@@ -12,7 +12,7 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
-  FaCalendarMonth,
+//   FaCalendarMonth,
   FaCalendar,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
@@ -500,7 +500,7 @@ export default function AdminStats() {
             <PeriodButton
               period="monthly"
               label="Monthly"
-              icon={<FaCalendarMonth size={12} />}
+              icon={<FaCalendar size={12} />}
             />
             <PeriodButton
               period="yearly"
