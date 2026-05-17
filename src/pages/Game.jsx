@@ -60,7 +60,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               alt="Lekulu Bingo Logo"
               className="w-10 h-10 object-contain rounded-full flex items-center justify-center border border-white/20"
             />
-            <button
+            {/* <button
               onClick={() => onNavigate?.("rules")}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
             >
@@ -69,7 +69,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <GrInfo />
                 </span>
               </span>
-            </button>
+            </button> */}
           </div>
         </div>
 
