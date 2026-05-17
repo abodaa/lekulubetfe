@@ -31,6 +31,7 @@ import {
   MdOutlineRule,
   MdOutlineTipsAndUpdates,
 } from "react-icons/md";
+import { BiGlobe } from "react-icons/bi";
 
 // ========== CONTENT STORAGE ==========
 const content = {
@@ -465,11 +466,11 @@ export default function Rules({ onNavigate }) {
           >
             <div className="flex items-center gap-2 mb-1">
               <FaClock className="text-white/40" size={12} />
-              <div className="text-white/50 text-[10px] font-semibold uppercase tracking-wider">
+              <div className="text-white/50 text-xs font-semibold uppercase tracking-wider">
                 {t.cards.timer.title}
               </div>
             </div>
-            <p className="text-white/30 text-[11px] leading-relaxed">
+            <p className="text-white/50 text-xs leading-relaxed">
               {t.cards.timer.text}
             </p>
           </motion.section>
@@ -537,7 +538,7 @@ export default function Rules({ onNavigate }) {
                   <div className="text-white text-xs font-semibold">
                     {item.title}
                   </div>
-                  <p className="text-white/30 text-[9px]">{item.text}</p>
+                  <p className="text-white/50 text-xs">{item.text}</p>
                 </div>
               ))}
             </div>
@@ -591,7 +592,7 @@ export default function Rules({ onNavigate }) {
                   <div className="text-white text-xs font-semibold">
                     {cat.title}
                   </div>
-                  <p className="text-white/30 text-[10px]">{cat.text}</p>
+                  <p className="text-white/50 text-xs">{cat.text}</p>
                 </div>
               </motion.div>
             ))}
@@ -611,7 +612,7 @@ export default function Rules({ onNavigate }) {
                 {t.prizes.multipleWinners.title}
               </div>
             </div>
-            <p className="text-white/40 text-[11px] ml-8">
+            <p className="text-white/40 text-xs ml-8">
               {t.prizes.multipleWinners.text}
             </p>
           </motion.section>
@@ -642,19 +643,19 @@ export default function Rules({ onNavigate }) {
                 {t.fair.penalty.title}
               </div>
             </div>
-            <div className="text-white/60 text-[10px] font-semibold mb-1">
+            <div className="text-white/60 text-xs font-semibold mb-1">
               {t.fair.penalty.violation}
             </div>
-            <p className="text-white/40 text-[11px] mb-2 leading-relaxed">
+            <p className="text-white/40 text-xs mb-2 leading-relaxed">
               {t.fair.penalty.text}
             </p>
             <div className="bg-red-500/5 rounded-lg p-2">
-              <div className="text-red-400 text-[9px] font-semibold mb-1">
+              <div className="text-red-400 text-xs font-semibold mb-1">
                 {t.fair.penalty.consequences.title}
               </div>
               <ul className="space-y-0.5">
                 {t.fair.penalty.consequences.items.map((item, idx) => (
-                  <li key={idx} className="text-white/40 text-[9px]">
+                  <li key={idx} className="text-white/40 text-xs">
                     {item}
                   </li>
                 ))}
@@ -671,7 +672,7 @@ export default function Rules({ onNavigate }) {
             >
               <div className="flex items-center gap-1 mb-1">
                 {t.fair.validConditions.icon}
-                <div className="text-green-400 text-[9px] font-bold">
+                <div className="text-green-400 text-xs font-bold">
                   {t.fair.validConditions.title}
                 </div>
               </div>
@@ -679,7 +680,7 @@ export default function Rules({ onNavigate }) {
                 {t.fair.validConditions.items.map((item, idx) => (
                   <li
                     key={idx}
-                    className="text-white/30 text-[8px] flex items-center gap-1"
+                    className="text-white/50 text-xs flex items-center gap-1"
                   >
                     <span className="text-green-400">✓</span> {item}
                   </li>
@@ -695,7 +696,7 @@ export default function Rules({ onNavigate }) {
             >
               <div className="flex items-center gap-1 mb-1">
                 {t.fair.invalidAttempts.icon}
-                <div className="text-red-400 text-[9px] font-bold">
+                <div className="text-red-400 text-xs font-bold">
                   {t.fair.invalidAttempts.title}
                 </div>
               </div>
@@ -703,7 +704,7 @@ export default function Rules({ onNavigate }) {
                 {t.fair.invalidAttempts.items.map((item, idx) => (
                   <li
                     key={idx}
-                    className="text-white/30 text-[8px] flex items-center gap-1"
+                    className="text-white/50 text-xs flex items-center gap-1"
                   >
                     <span className="text-red-400">✗</span> {item}
                   </li>
@@ -730,7 +731,7 @@ export default function Rules({ onNavigate }) {
               {t.fair.proTips.items.map((item, idx) => (
                 <li
                   key={idx}
-                  className="text-white/40 text-[10px] flex items-start gap-2"
+                  className="text-white/40 text-xs flex items-start gap-2"
                 >
                   <span className="text-blue-400 text-xs">✦</span> {item}
                 </li>
@@ -747,7 +748,7 @@ export default function Rules({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <button
             onClick={() => onNavigate?.("game")}
@@ -762,9 +763,9 @@ export default function Rules({ onNavigate }) {
 
           <button
             onClick={() => setLanguage(language === "am" ? "en" : "am")}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 text-[10px] font-medium hover:text-white hover:bg-white/20 transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/50 text-white/70 text-sm font-medium hover:text-white hover:bg-white/20 transition-all"
           >
-            <FaLanguage size={10} />
+            <BiGlobe size={12} />
             {language === "am" ? "English" : "አማርኛ"}
           </button>
         </div>
@@ -785,10 +786,10 @@ export default function Rules({ onNavigate }) {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-[11px] font-medium transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-medium transition-all ${
                     activeTab === tab
                       ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
-                      : "text-white/40 hover:text-white/60"
+                      : "text-white/50 hover:text-white/60"
                   }`}
                 >
                   {tabIcons[tab]}
