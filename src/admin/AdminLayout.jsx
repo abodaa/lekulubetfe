@@ -13,6 +13,7 @@ import {
   FaLock,
   FaSpinner,
   FaExclamationTriangle,
+  FaArrowLeft,
 } from "react-icons/fa";
 import { MdAdminPanelSettings } from "react-icons/md";
 
@@ -71,6 +72,14 @@ export default function AdminLayout({ onNavigate }) {
   const [tab, setTab] = useState("home");
   const [isAdmin, setIsAdmin] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+
+  const handleGoToGame = () => {
+    // Remove admin parameter and navigate to game selection
+    const url = new URL(window.location);
+    url.searchParams.delete("admin");
+    window.history.pushState({}, "", url);
+    onNavigate?.("game");
+  };
 
   useEffect(() => {
     (async () => {
@@ -186,7 +195,7 @@ export default function AdminLayout({ onNavigate }) {
             You don't have admin privileges to access this panel.
           </p>
           <button
-            onClick={() => onNavigate?.("game")}
+            onClick={handleGoToGame}
             className="px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
           >
             <span className="flex items-center gap-2">
@@ -213,16 +222,11 @@ export default function AdminLayout({ onNavigate }) {
             </span>
           </div>
           <button
-            onClick={() => {
-              const url = new URL(window.location);
-              url.searchParams.delete("admin");
-              window.history.pushState({}, "", url);
-              onNavigate?.("game");
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white/70 text-[10px] font-medium hover:text-white hover:bg-white/20 transition-all"
+            onClick={handleGoToGame}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-[11px] font-medium shadow-md hover:scale-105 transition-all active:scale-95"
           >
-            <FaGamepad size={10} />
-            Game
+            <FaGamepad size={12} />
+            Play Game
           </button>
         </div>
       </div>
