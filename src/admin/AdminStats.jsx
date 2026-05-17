@@ -15,6 +15,8 @@ import {
   FaArrowDown,
   FaDollarSign,
   FaPercentage,
+  FaCalendarWeek,
+  FaCalendarMonth,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending, MdTrendingUp, MdTrendingDown } from "react-icons/md";
@@ -26,6 +28,8 @@ export default function AdminStats() {
     botWinningsFromRealGames: 0,
   });
   const [dailyStats, setDailyStats] = useState([]);
+  const [weeklyStats, setWeeklyStats] = useState([]);
+  const [monthlyStats, setMonthlyStats] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [todayFinance, setTodayFinance] = useState({
     totalGames: 0,
@@ -38,6 +42,7 @@ export default function AdminStats() {
   });
   const [totalMainWallet, setTotalMainWallet] = useState(0);
   const [totalPlayWallet, setTotalPlayWallet] = useState(0);
+  const [activePeriod, setActivePeriod] = useState("daily");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -70,8 +75,8 @@ export default function AdminStats() {
         totalPlayRes,
       ] = await Promise.allSettled([
         apiFetch("/admin/stats/today", { timeoutMs: 15000 }),
-        apiFetch("/admin/stats/daily?days=14", { timeoutMs: 30000 }),
-        apiFetch("/admin/stats/game-history?days=2", { timeoutMs: 20000 }),
+        apiFetch("/admin/stats/daily?days=30", { timeoutMs: 30000 }),
+        apiFetch("/admin/stats/game-history?days=7", { timeoutMs: 20000 }),
         apiFetch("/admin/stats/overview", { timeoutMs: 20000 }),
         apiFetch(
           `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
@@ -94,10 +99,19 @@ export default function AdminStats() {
             }
           : { totalPlayers: 0, systemCut: 0, botWinningsFromRealGames: 0 };
 
-      let nextDailyStats = [];
+      let allStats = [];
       if (dailyRes.status === "fulfilled") {
-        nextDailyStats = dailyRes.value?.days || [];
+        allStats = dailyRes.value?.days || [];
       }
+
+      // Process daily stats (last 7 days)
+      const daily = allStats.slice(0, 7);
+
+      // Process weekly stats (group by week)
+      const weekly = processWeeklyStats(allStats);
+
+      // Process monthly stats (group by month)
+      const monthly = processMonthlyStats(allStats);
 
       let nextGameHistory = [];
       if (gameHistoryRes.status === "fulfilled") {
@@ -144,7 +158,9 @@ export default function AdminStats() {
           : 0;
 
       setToday(nextToday);
-      setDailyStats(nextDailyStats);
+      setDailyStats(daily);
+      setWeeklyStats(weekly);
+      setMonthlyStats(monthly);
       setGameHistory(nextGameHistory);
       setTodayFinance(nextTodayFinance);
       setTodayDepositMeta(nextTodayDepositMeta);
@@ -154,7 +170,122 @@ export default function AdminStats() {
     })();
   }, []);
 
-  const weeklyStats = dailyStats.slice(0, 7);
+  const processWeeklyStats = (stats) => {
+    const weeks = {};
+
+    stats.forEach((stat) => {
+      const date = new Date(stat.day);
+      const year = date.getFullYear();
+      const weekNumber = getWeekNumber(date);
+      const weekKey = `${year}-W${weekNumber}`;
+
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = {
+          weekKey,
+          startDate: getStartOfWeek(date),
+          endDate: getEndOfWeek(date),
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakeSet: new Set(),
+          stats: [],
+        };
+      }
+
+      weeks[weekKey].totalGames += stat.totalGames || 0;
+      weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
+      weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
+      weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
+      weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes)
+        stat.stakes.forEach((s) => weeks[weekKey].stakeSet.add(s));
+      weeks[weekKey].stats.push(stat);
+    });
+
+    return Object.values(weeks)
+      .map((week) => ({
+        ...week,
+        stakesDisplay:
+          Array.from(week.stakeSet)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .reverse();
+  };
+
+  const processMonthlyStats = (stats) => {
+    const months = {};
+
+    stats.forEach((stat) => {
+      const date = new Date(stat.day);
+      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      const monthName = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          monthKey,
+          monthName,
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakeSet: new Set(),
+          stats: [],
+        };
+      }
+
+      months[monthKey].totalGames += stat.totalGames || 0;
+      months[monthKey].totalPlayers += stat.totalPlayers || 0;
+      months[monthKey].systemRevenue += stat.systemRevenue || 0;
+      months[monthKey].totalDeposits += stat.totalDeposits || 0;
+      months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes)
+        stat.stakes.forEach((s) => months[monthKey].stakeSet.add(s));
+      months[monthKey].stats.push(stat);
+    });
+
+    return Object.values(months)
+      .map((month) => ({
+        ...month,
+        stakesDisplay:
+          Array.from(month.stakeSet)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .reverse();
+  };
+
+  const getWeekNumber = (date) => {
+    const d = new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  };
+
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
+  const getEndOfWeek = (date) => {
+    const start = getStartOfWeek(date);
+    return new Date(start.setDate(start.getDate() + 6));
+  };
 
   const groupedGameHistory = useMemo(() => {
     if (!Array.isArray(gameHistory) || gameHistory.length === 0) {
@@ -195,6 +326,13 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
+  const currentStats =
+    activePeriod === "daily"
+      ? dailyStats
+      : activePeriod === "weekly"
+        ? weeklyStats
+        : monthlyStats;
+
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
       blue: "from-blue-500/20 to-blue-600/20 border-blue-500/30",
@@ -234,6 +372,20 @@ export default function AdminStats() {
       </div>
     );
   };
+
+  const PeriodButton = ({ period, label, icon }) => (
+    <button
+      onClick={() => setActivePeriod(period)}
+      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+        activePeriod === period
+          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg"
+          : "text-white/40 hover:text-white/60"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -334,96 +486,139 @@ export default function AdminStats() {
           </div>
         </motion.div>
 
-        {/* Daily Statistics Table */}
+        {/* Period Selector */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="bg-white/5 backdrop-blur rounded-xl p-1 mb-4"
+        >
+          <div className="flex gap-1">
+            <PeriodButton
+              period="daily"
+              label="Daily"
+              icon={<FaCalendarAlt size={10} />}
+            />
+            <PeriodButton
+              period="weekly"
+              label="Weekly"
+              icon={<FaCalendarWeek size={10} />}
+            />
+            <PeriodButton
+              period="monthly"
+              label="Monthly"
+              icon={<FaCalendarMonth size={10} />}
+            />
+          </div>
+        </motion.div>
+
+        {/* Statistics Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden mb-4"
         >
           <div className="px-3 py-2 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-              Daily Statistics
+              {activePeriod === "daily"
+                ? "Daily Statistics"
+                : activePeriod === "weekly"
+                  ? "Weekly Statistics"
+                  : "Monthly Statistics"}
             </h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[10px]">
-              <thead className="border-b border-white/10">
-                <tr>
-                  <th className="text-left py-2 px-2 text-white/30 font-medium">
-                    Day
-                  </th>
-                  <th className="text-center py-2 px-2 text-white/30 font-medium">
-                    Games
-                  </th>
-                  <th className="text-center py-2 px-2 text-white/30 font-medium">
-                    Stake
-                  </th>
-                  <th className="text-center py-2 px-2 text-white/30 font-medium">
-                    Players
-                  </th>
-                  <th className="text-right py-2 px-2 text-white/30 font-medium">
-                    Revenue
-                  </th>
-                  <th className="text-center py-2 px-2 text-white/30 font-medium">
-                    Bot Wins
-                  </th>
-                  <th className="text-right py-2 px-2 text-white/30 font-medium">
-                    Deposits
-                  </th>
-                  <th className="text-right py-2 px-2 text-white/30 font-medium">
-                    Withdrawals
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {!isLoading && weeklyStats.length > 0 ? (
-                  weeklyStats.map((stat, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-white/5 hover:bg-white/5"
-                    >
-                      <td className="py-2 px-2 text-white">
-                        {new Date(stat.day).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white">
-                        {stat.totalGames || 0}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white/60 text-[9px]">
-                        {stat.stakesDisplay}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white">
-                        {stat.totalPlayers || 0}
-                      </td>
-                      <td className="text-right py-2 px-2 text-amber-400">
-                        ETB {(stat.systemRevenue || 0).toFixed(2)}
-                      </td>
-                      <td className="text-center py-2 px-2 text-white">
-                        {stat.botGamesWon || 0}
-                      </td>
-                      <td className="text-right py-2 px-2 text-emerald-400">
-                        ETB {(stat.totalDeposits || 0).toFixed(2)}
-                      </td>
-                      <td className="text-right py-2 px-2 text-red-400">
-                        ETB {(stat.totalWithdrawals || 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="py-8 text-center text-white/30 text-xs"
-                    >
-                      {isLoading ? "Loading..." : "No data available"}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            {!isLoading && currentStats.length > 0 ? (
+              currentStats.map((stat, index) => (
+                <div key={index}>
+                  <div className="px-2 py-2 bg-white/5 sticky top-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/40 text-[9px]">
+                        {activePeriod === "daily"
+                          ? new Date(stat.day).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : activePeriod === "weekly"
+                            ? `${stat.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${stat.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                            : stat.monthName}
+                      </span>
+                      <span className="text-amber-400 text-[9px] font-medium">
+                        Revenue: ETB {(stat.systemRevenue || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <table className="w-full text-[10px]">
+                    <thead className="border-b border-white/5">
+                      <tr>
+                        <th className="text-left py-1.5 px-2 text-white/30 font-medium">
+                          Metric
+                        </th>
+                        <th className="text-right py-1.5 px-2 text-white/30 font-medium">
+                          Value
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-white/5">
+                        <td className="py-1.5 px-2 text-white/60">
+                          Games Played
+                        </td>
+                        <td className="text-right py-1.5 px-2 text-white">
+                          {stat.totalGames || 0}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <td className="py-1.5 px-2 text-white/60">
+                          Total Players
+                        </td>
+                        <td className="text-right py-1.5 px-2 text-white">
+                          {stat.totalPlayers || 0}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <td className="py-1.5 px-2 text-white/60">Stakes</td>
+                        <td className="text-right py-1.5 px-2 text-white/60 text-[9px]">
+                          {stat.stakesDisplay}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <td className="py-1.5 px-2 text-white/60">
+                          System Revenue
+                        </td>
+                        <td className="text-right py-1.5 px-2 text-amber-400">
+                          ETB {(stat.systemRevenue || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <td className="py-1.5 px-2 text-white/60">
+                          Total Deposits
+                        </td>
+                        <td className="text-right py-1.5 px-2 text-emerald-400">
+                          ETB {(stat.totalDeposits || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1.5 px-2 text-white/60">
+                          Total Withdrawals
+                        </td>
+                        <td className="text-right py-1.5 px-2 text-red-400">
+                          ETB {(stat.totalWithdrawals || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-white/30 text-xs">
+                  {isLoading ? "Loading..." : "No data available"}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -431,19 +626,19 @@ export default function AdminStats() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+          transition={{ delay: 0.2 }}
           className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden"
         >
           <div className="px-3 py-2 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-              Game History (Last 2 Days)
+              Game History (Last 7 Days)
             </h3>
           </div>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             {!isLoading && groupedGameHistory.length > 0 ? (
               groupedGameHistory.map((group, idx) => (
                 <div key={group.dateKey}>
-                  <div className="px-2 py-2 bg-white/5">
+                  <div className="px-2 py-2 bg-white/5 sticky top-0">
                     <div className="flex items-center justify-between">
                       <span className="text-white/40 text-[9px]">
                         {group.dateLabel}
@@ -525,7 +720,7 @@ export default function AdminStats() {
             ) : (
               <div className="text-center py-8">
                 <div className="text-white/30 text-xs">
-                  {isLoading ? "Loading..." : "No game history for last 2 days"}
+                  {isLoading ? "Loading..." : "No game history available"}
                 </div>
               </div>
             )}
