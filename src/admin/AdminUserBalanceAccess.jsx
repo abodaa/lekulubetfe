@@ -66,6 +66,17 @@ export default function AdminStats() {
         apiFetch("/admin/stats/wallets/total-play", { timeoutMs: 20000 }),
       ]);
 
+      // Debug logging - REMOVE AFTER TESTING
+      if (dailyRes.status === "fulfilled") {
+        console.log("Daily stats data sample:", dailyRes.value?.days?.[0]);
+        console.log(
+          "Daily stats keys:",
+          dailyRes.value?.days?.[0]
+            ? Object.keys(dailyRes.value.days[0])
+            : "No data",
+        );
+      }
+
       let allStats = [];
       if (dailyRes.status === "fulfilled" && dailyRes.value?.days) {
         allStats = dailyRes.value.days;
@@ -129,7 +140,30 @@ export default function AdminStats() {
     return new Date(start.setDate(start.getDate() + 6));
   };
 
-  // Process weekly stats
+  // Helper to check if a date is in the current week
+  const isInCurrentWeek = (date) => {
+    const now = new Date();
+    const currentWeekStart = getStartOfWeek(now);
+    const currentWeekEnd = getEndOfWeek(now);
+    return date >= currentWeekStart && date <= currentWeekEnd;
+  };
+
+  // Helper to check if a date is in the current month
+  const isInCurrentMonth = (date) => {
+    const now = new Date();
+    return (
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    );
+  };
+
+  // Helper to check if a date is in the current year
+  const isInCurrentYear = (date) => {
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear();
+  };
+
+  // Process weekly stats for table
   const processWeeklyStats = (stats) => {
     if (!stats || stats.length === 0) return [];
 
@@ -146,24 +180,24 @@ export default function AdminStats() {
           weekKey,
           startDate: getStartOfWeek(date),
           endDate: getEndOfWeek(date),
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
+          totalGames: stat.totalGames || 0,
+          totalPlayers: stat.totalPlayers || 0,
+          systemRevenue: stat.systemRevenue || 0,
+          totalDeposits: stat.totalDeposits || 0,
+          totalWithdrawals: stat.totalWithdrawals || 0,
+          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
         };
+      } else {
+        weeks[weekKey].totalGames += stat.totalGames || 0;
+        weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
+        weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
+        weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
+        weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
+        if (stat.stakes)
+          stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
       }
-
-      weeks[weekKey].totalGames += stat.totalGames || 0;
-      weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
-      weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
-      weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
-      weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes) stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
     });
 
-    // Sort weeks by weekKey descending (most recent first)
     return Object.values(weeks)
       .map((week) => ({
         ...week,
@@ -177,7 +211,7 @@ export default function AdminStats() {
       .sort((a, b) => b.weekKey.localeCompare(a.weekKey));
   };
 
-  // Process monthly stats
+  // Process monthly stats for table
   const processMonthlyStats = (stats) => {
     if (!stats || stats.length === 0) return [];
 
@@ -196,25 +230,24 @@ export default function AdminStats() {
         months[monthKey] = {
           monthKey,
           monthName,
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
+          totalGames: stat.totalGames || 0,
+          totalPlayers: stat.totalPlayers || 0,
+          systemRevenue: stat.systemRevenue || 0,
+          totalDeposits: stat.totalDeposits || 0,
+          totalWithdrawals: stat.totalWithdrawals || 0,
+          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
         };
+      } else {
+        months[monthKey].totalGames += stat.totalGames || 0;
+        months[monthKey].totalPlayers += stat.totalPlayers || 0;
+        months[monthKey].systemRevenue += stat.systemRevenue || 0;
+        months[monthKey].totalDeposits += stat.totalDeposits || 0;
+        months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
+        if (stat.stakes)
+          stat.stakes.forEach((s) => months[monthKey].stakes.add(s));
       }
-
-      months[monthKey].totalGames += stat.totalGames || 0;
-      months[monthKey].totalPlayers += stat.totalPlayers || 0;
-      months[monthKey].systemRevenue += stat.systemRevenue || 0;
-      months[monthKey].totalDeposits += stat.totalDeposits || 0;
-      months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes)
-        stat.stakes.forEach((s) => months[monthKey].stakes.add(s));
     });
 
-    // Sort months by monthKey descending (most recent first)
     return Object.values(months)
       .map((month) => ({
         ...month,
@@ -228,7 +261,7 @@ export default function AdminStats() {
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
   };
 
-  // Process yearly stats
+  // Process yearly stats for table
   const processYearlyStats = (stats) => {
     if (!stats || stats.length === 0) return [];
 
@@ -242,24 +275,24 @@ export default function AdminStats() {
       if (!years[yearKey]) {
         years[yearKey] = {
           year: yearKey,
-          totalGames: 0,
-          totalPlayers: 0,
-          systemRevenue: 0,
-          totalDeposits: 0,
-          totalWithdrawals: 0,
-          stakes: new Set(),
+          totalGames: stat.totalGames || 0,
+          totalPlayers: stat.totalPlayers || 0,
+          systemRevenue: stat.systemRevenue || 0,
+          totalDeposits: stat.totalDeposits || 0,
+          totalWithdrawals: stat.totalWithdrawals || 0,
+          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
         };
+      } else {
+        years[yearKey].totalGames += stat.totalGames || 0;
+        years[yearKey].totalPlayers += stat.totalPlayers || 0;
+        years[yearKey].systemRevenue += stat.systemRevenue || 0;
+        years[yearKey].totalDeposits += stat.totalDeposits || 0;
+        years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
+        if (stat.stakes)
+          stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
       }
-
-      years[yearKey].totalGames += stat.totalGames || 0;
-      years[yearKey].totalPlayers += stat.totalPlayers || 0;
-      years[yearKey].systemRevenue += stat.systemRevenue || 0;
-      years[yearKey].totalDeposits += stat.totalDeposits || 0;
-      years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
-      if (stat.stakes) stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
     });
 
-    // Sort years descending (most recent first)
     return Object.values(years)
       .map((year) => ({
         ...year,
@@ -312,29 +345,6 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
-  // Helper to check if a date is in the current week
-  const isInCurrentWeek = (date) => {
-    const now = new Date();
-    const currentWeekStart = getStartOfWeek(now);
-    const currentWeekEnd = getEndOfWeek(now);
-    return date >= currentWeekStart && date <= currentWeekEnd;
-  };
-
-  // Helper to check if a date is in the current month
-  const isInCurrentMonth = (date) => {
-    const now = new Date();
-    return (
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    );
-  };
-
-  // Helper to check if a date is in the current year
-  const isInCurrentYear = (date) => {
-    const now = new Date();
-    return date.getFullYear() === now.getFullYear();
-  };
-
   // Get data for overview cards based on selected period
   const getOverviewData = () => {
     if (!allStatsData || allStatsData.length === 0) {
@@ -374,7 +384,7 @@ export default function AdminStats() {
         botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
       };
     } else if (activePeriod === "weekly") {
-      // Current week - filter stats that fall within current week
+      // Current week
       const currentWeekStats = allStatsData.filter((stat) => {
         const statDate = new Date(stat.day);
         return isInCurrentWeek(statDate);
@@ -408,7 +418,7 @@ export default function AdminStats() {
         ),
       };
     } else if (activePeriod === "monthly") {
-      // Current month - filter stats that fall within current month
+      // Current month
       const currentMonthStats = allStatsData.filter((stat) => {
         const statDate = new Date(stat.day);
         return isInCurrentMonth(statDate);
@@ -442,7 +452,7 @@ export default function AdminStats() {
         ),
       };
     } else {
-      // Current year - filter stats that fall within current year
+      // Current year
       const currentYearStats = allStatsData.filter((stat) => {
         const statDate = new Date(stat.day);
         return isInCurrentYear(statDate);
@@ -483,7 +493,6 @@ export default function AdminStats() {
     if (!allStatsData || allStatsData.length === 0) return [];
 
     if (activePeriod === "daily") {
-      // Return all stats for daily, sorted descending
       return [...allStatsData].reverse();
     } else if (activePeriod === "weekly") {
       return processWeeklyStats(allStatsData);
@@ -504,6 +513,10 @@ export default function AdminStats() {
         : activePeriod === "monthly"
           ? "Monthly Statistics"
           : "Yearly Statistics";
+
+  // Debug log - REMOVE AFTER TESTING
+  console.log(`Overview data for ${activePeriod}:`, overviewData);
+  console.log(`Table data length for ${activePeriod}:`, tableData.length);
 
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
