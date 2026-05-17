@@ -12,14 +12,22 @@ import {
   FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
-  //   FaCalendarMonth,
+  FaCalendarMonth,
   FaCalendar,
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
 
 export default function AdminStats() {
-  const [allStatsData, setAllStatsData] = useState([]);
+  const [overviewData, setOverviewData] = useState({
+    systemRevenue: 0,
+    totalPlayers: 0,
+    totalGames: 0,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+    botWins: 0,
+  });
+  const [tableData, setTableData] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [totalMainWallet, setTotalMainWallet] = useState(0);
   const [totalPlayWallet, setTotalPlayWallet] = useState(0);
@@ -29,94 +37,307 @@ export default function AdminStats() {
   });
   const [activePeriod, setActivePeriod] = useState("daily");
   const [isLoading, setIsLoading] = useState(true);
+  const [periodTitle, setPeriodTitle] = useState("Last 7 Days");
 
   useEffect(() => {
-    (async () => {
-      setIsLoading(true);
+    fetchAllData();
+  }, []);
 
+  useEffect(() => {
+    if (!isLoading) {
+      filterDataByPeriod();
+    }
+  }, [activePeriod, isLoading]);
+
+  const fetchAllData = async () => {
+    setIsLoading(true);
+
+    try {
+      // Fetch daily stats for table
+      const dailyRes = await apiFetch("/admin/stats/daily?days=90").catch(
+        () => ({ days: [] }),
+      );
+      const allStats = dailyRes?.days || [];
+      allStats.sort((a, b) => new Date(a.day) - new Date(b.day));
+      setTableData(allStats);
+
+      // Fetch game history
+      const gameHistoryRes = await apiFetch(
+        "/admin/stats/game-history?days=7",
+      ).catch(() => ({ games: [] }));
+      setGameHistory(gameHistoryRes?.games || []);
+
+      // Fetch wallet totals
+      const [totalMainRes, totalPlayRes] = await Promise.all([
+        apiFetch("/admin/stats/wallets/total-main").catch(() => ({
+          totalMain: 0,
+        })),
+        apiFetch("/admin/stats/wallets/total-play").catch(() => ({
+          totalPlay: 0,
+        })),
+      ]);
+      setTotalMainWallet(totalMainRes?.totalMain || 0);
+      setTotalPlayWallet(totalPlayRes?.totalPlay || 0);
+
+      // Fetch pending deposits info from today's data
       const now = new Date();
       const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
       const addisAbabaTime = new Date(utcTime + 3 * 3600000);
-
       const start = new Date(addisAbabaTime);
       start.setHours(0, 0, 0, 0);
       const startUTC = new Date(start.getTime() - 3 * 3600000);
-
       const end = new Date(addisAbabaTime);
       end.setHours(23, 59, 59, 999);
       const endUTC = new Date(end.getTime() - 3 * 3600000);
 
-      const from = startUTC.toISOString();
-      const to = endUTC.toISOString();
+      const depositTotals = await apiFetch(
+        `/admin/stats/deposits-total?from=${startUTC.toISOString()}&to=${endUTC.toISOString()}`,
+      ).catch(() => ({}));
+      setTodayDepositMeta({
+        pendingCount: depositTotals?.pendingCount || 0,
+        pendingTotal: depositTotals?.pendingTotal || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      const [
-        dailyRes,
-        gameHistoryRes,
-        depositTotalsRes,
-        totalMainRes,
-        totalPlayRes,
-      ] = await Promise.allSettled([
-        apiFetch("/admin/stats/daily?days=365", { timeoutMs: 30000 }),
-        apiFetch("/admin/stats/game-history?days=7", { timeoutMs: 20000 }),
+  const filterDataByPeriod = async () => {
+    setIsLoading(true);
+
+    try {
+      const now = new Date();
+      const startDate = new Date();
+      let title = "";
+
+      // Calculate date range based on selected period
+      if (activePeriod === "daily") {
+        startDate.setDate(now.getDate() - 7);
+        title = "Last 7 Days";
+      } else if (activePeriod === "weekly") {
+        // Start of current week (Monday)
+        const day = now.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        startDate.setDate(now.getDate() - diff);
+        startDate.setHours(0, 0, 0, 0);
+        title = "This Week";
+      } else if (activePeriod === "monthly") {
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        title = "This Month";
+      } else {
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        title = "This Year";
+      }
+
+      setPeriodTitle(title);
+
+      // Format dates for API
+      const from = startDate.toISOString();
+      const to = now.toISOString();
+
+      // Fetch filtered data from backend using same logic as bot
+      const [gamesRes, depositsRes, withdrawalsRes] = await Promise.all([
+        apiFetch(
+          `/admin/stats/games?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        ).catch(() => ({ games: [] })),
         apiFetch(
           `/admin/stats/deposits-total?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-          { timeoutMs: 20000 },
-        ),
-        apiFetch("/admin/stats/wallets/total-main", { timeoutMs: 20000 }),
-        apiFetch("/admin/stats/wallets/total-play", { timeoutMs: 20000 }),
+        ).catch(() => ({ completedTotal: 0 })),
+        apiFetch(
+          `/admin/balances/withdrawals?status=completed&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        ).catch(() => ({ withdrawals: [] })),
       ]);
 
-      // Debug logging - REMOVE AFTER TESTING
-      if (dailyRes.status === "fulfilled") {
-        console.log("Daily stats data sample:", dailyRes.value?.days?.[0]);
-        console.log(
-          "Daily stats keys:",
-          dailyRes.value?.days?.[0]
-            ? Object.keys(dailyRes.value.days[0])
-            : "No data",
-        );
-      }
+      // Calculate totals from games
+      const games = gamesRes?.games || [];
+      const totalGames = games.length;
+      const totalRevenue = games.reduce(
+        (sum, g) => sum + (g.systemCut || 0),
+        0,
+      );
 
-      let allStats = [];
-      if (dailyRes.status === "fulfilled" && dailyRes.value?.days) {
-        allStats = dailyRes.value.days;
-        // Sort by date ascending (oldest first)
-        allStats.sort((a, b) => new Date(a.day) - new Date(b.day));
-        setAllStatsData(allStats);
-      }
+      // Get unique players
+      const uniquePlayers = new Set();
+      games.forEach((game) => {
+        if (game.players) {
+          game.players.forEach((player) => {
+            if (player.userId?._id)
+              uniquePlayers.add(player.userId._id.toString());
+          });
+        }
+      });
 
-      let nextGameHistory = [];
-      if (
-        gameHistoryRes.status === "fulfilled" &&
-        gameHistoryRes.value?.games
-      ) {
-        nextGameHistory = gameHistoryRes.value.games;
-      }
+      // Calculate bot wins
+      const botWins = games.filter((game) => game.whoWon === "Bot").length;
 
-      const depositTotals =
-        depositTotalsRes.status === "fulfilled"
-          ? depositTotalsRes.value || {}
-          : {};
-      const nextTodayDepositMeta = {
-        pendingCount: Number(depositTotals.pendingCount) || 0,
-        pendingTotal: Number(depositTotals.pendingTotal) || 0,
-      };
-      const nextTotalMain =
-        totalMainRes.status === "fulfilled"
-          ? totalMainRes.value?.totalMain || 0
-          : 0;
-      const nextTotalPlay =
-        totalPlayRes.status === "fulfilled"
-          ? totalPlayRes.value?.totalPlay || 0
-          : 0;
-
-      setGameHistory(nextGameHistory);
-      setTodayDepositMeta(nextTodayDepositMeta);
-      setTotalMainWallet(nextTotalMain);
-      setTotalPlayWallet(nextTotalPlay);
+      setOverviewData({
+        systemRevenue: totalRevenue,
+        totalPlayers: uniquePlayers.size,
+        totalGames: totalGames,
+        totalDeposits: depositsRes?.completedTotal || 0,
+        totalWithdrawals:
+          withdrawalsRes?.withdrawals?.reduce(
+            (sum, w) => sum + (w.amount || 0),
+            0,
+          ) || 0,
+        botWins: botWins,
+      });
+    } catch (error) {
+      console.error("Error filtering data:", error);
+    } finally {
       setIsLoading(false);
-    })();
-  }, []);
+    }
+  };
+
+  // Process weekly stats for table display
+  const processWeeklyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
+    const weeks = {};
+
+    stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
+      const date = new Date(stat.day);
+      const weekKey = getWeekKey(date);
+
+      if (!weeks[weekKey]) {
+        weeks[weekKey] = {
+          weekKey,
+          startDate: getStartOfWeek(date),
+          endDate: getEndOfWeek(date),
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakes: new Set(),
+        };
+      }
+
+      weeks[weekKey].totalGames += stat.totalGames || 0;
+      weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
+      weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
+      weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
+      weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes) stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
+    });
+
+    return Object.values(weeks)
+      .map((week) => ({
+        ...week,
+        stakesDisplay:
+          Array.from(week.stakes)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .sort((a, b) => b.weekKey.localeCompare(a.weekKey));
+  };
+
+  // Process monthly stats for table display
+  const processMonthlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
+    const months = {};
+
+    stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
+      const date = new Date(stat.day);
+      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      const monthName = date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+
+      if (!months[monthKey]) {
+        months[monthKey] = {
+          monthKey,
+          monthName,
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakes: new Set(),
+        };
+      }
+
+      months[monthKey].totalGames += stat.totalGames || 0;
+      months[monthKey].totalPlayers += stat.totalPlayers || 0;
+      months[monthKey].systemRevenue += stat.systemRevenue || 0;
+      months[monthKey].totalDeposits += stat.totalDeposits || 0;
+      months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes)
+        stat.stakes.forEach((s) => months[monthKey].stakes.add(s));
+    });
+
+    return Object.values(months)
+      .map((month) => ({
+        ...month,
+        stakesDisplay:
+          Array.from(month.stakes)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  };
+
+  // Process yearly stats for table display
+  const processYearlyStats = (stats) => {
+    if (!stats || stats.length === 0) return [];
+
+    const years = {};
+
+    stats.forEach((stat) => {
+      if (!stat || !stat.day) return;
+      const date = new Date(stat.day);
+      const yearKey = date.getFullYear();
+
+      if (!years[yearKey]) {
+        years[yearKey] = {
+          year: yearKey,
+          totalGames: 0,
+          totalPlayers: 0,
+          systemRevenue: 0,
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          stakes: new Set(),
+        };
+      }
+
+      years[yearKey].totalGames += stat.totalGames || 0;
+      years[yearKey].totalPlayers += stat.totalPlayers || 0;
+      years[yearKey].systemRevenue += stat.systemRevenue || 0;
+      years[yearKey].totalDeposits += stat.totalDeposits || 0;
+      years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
+      if (stat.stakes) stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
+    });
+
+    return Object.values(years)
+      .map((year) => ({
+        ...year,
+        stakesDisplay:
+          Array.from(year.stakes)
+            .filter((s) => s > 0)
+            .sort((a, b) => a - b)
+            .map((s) => `ETB ${s}`)
+            .join(", ") || "N/A",
+      }))
+      .sort((a, b) => b.year - a.year);
+  };
+
+  const getWeekKey = (date) => {
+    const d = new Date(date);
+    const weekNumber = getWeekNumber(d);
+    return `${d.getFullYear()}-W${weekNumber}`;
+  };
 
   const getWeekNumber = (date) => {
     const d = new Date(
@@ -138,172 +359,6 @@ export default function AdminStats() {
   const getEndOfWeek = (date) => {
     const start = getStartOfWeek(date);
     return new Date(start.setDate(start.getDate() + 6));
-  };
-
-  // Helper to check if a date is in the current week
-  const isInCurrentWeek = (date) => {
-    const now = new Date();
-    const currentWeekStart = getStartOfWeek(now);
-    const currentWeekEnd = getEndOfWeek(now);
-    return date >= currentWeekStart && date <= currentWeekEnd;
-  };
-
-  // Helper to check if a date is in the current month
-  const isInCurrentMonth = (date) => {
-    const now = new Date();
-    return (
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    );
-  };
-
-  // Helper to check if a date is in the current year
-  const isInCurrentYear = (date) => {
-    const now = new Date();
-    return date.getFullYear() === now.getFullYear();
-  };
-
-  // Process weekly stats for table
-  const processWeeklyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
-
-    const weeks = {};
-
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const weekNumber = getWeekNumber(date);
-      const weekKey = `${date.getFullYear()}-W${weekNumber}`;
-
-      if (!weeks[weekKey]) {
-        weeks[weekKey] = {
-          weekKey,
-          startDate: getStartOfWeek(date),
-          endDate: getEndOfWeek(date),
-          totalGames: stat.totalGames || 0,
-          totalPlayers: stat.totalPlayers || 0,
-          systemRevenue: stat.systemRevenue || 0,
-          totalDeposits: stat.totalDeposits || 0,
-          totalWithdrawals: stat.totalWithdrawals || 0,
-          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
-        };
-      } else {
-        weeks[weekKey].totalGames += stat.totalGames || 0;
-        weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
-        weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
-        weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
-        weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
-        if (stat.stakes)
-          stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
-      }
-    });
-
-    return Object.values(weeks)
-      .map((week) => ({
-        ...week,
-        stakesDisplay:
-          Array.from(week.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .sort((a, b) => b.weekKey.localeCompare(a.weekKey));
-  };
-
-  // Process monthly stats for table
-  const processMonthlyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
-
-    const months = {};
-
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      const monthName = date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      });
-
-      if (!months[monthKey]) {
-        months[monthKey] = {
-          monthKey,
-          monthName,
-          totalGames: stat.totalGames || 0,
-          totalPlayers: stat.totalPlayers || 0,
-          systemRevenue: stat.systemRevenue || 0,
-          totalDeposits: stat.totalDeposits || 0,
-          totalWithdrawals: stat.totalWithdrawals || 0,
-          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
-        };
-      } else {
-        months[monthKey].totalGames += stat.totalGames || 0;
-        months[monthKey].totalPlayers += stat.totalPlayers || 0;
-        months[monthKey].systemRevenue += stat.systemRevenue || 0;
-        months[monthKey].totalDeposits += stat.totalDeposits || 0;
-        months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
-        if (stat.stakes)
-          stat.stakes.forEach((s) => months[monthKey].stakes.add(s));
-      }
-    });
-
-    return Object.values(months)
-      .map((month) => ({
-        ...month,
-        stakesDisplay:
-          Array.from(month.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
-  };
-
-  // Process yearly stats for table
-  const processYearlyStats = (stats) => {
-    if (!stats || stats.length === 0) return [];
-
-    const years = {};
-
-    stats.forEach((stat) => {
-      if (!stat || !stat.day) return;
-      const date = new Date(stat.day);
-      const yearKey = date.getFullYear();
-
-      if (!years[yearKey]) {
-        years[yearKey] = {
-          year: yearKey,
-          totalGames: stat.totalGames || 0,
-          totalPlayers: stat.totalPlayers || 0,
-          systemRevenue: stat.systemRevenue || 0,
-          totalDeposits: stat.totalDeposits || 0,
-          totalWithdrawals: stat.totalWithdrawals || 0,
-          stakes: stat.stakes ? new Set(stat.stakes) : new Set(),
-        };
-      } else {
-        years[yearKey].totalGames += stat.totalGames || 0;
-        years[yearKey].totalPlayers += stat.totalPlayers || 0;
-        years[yearKey].systemRevenue += stat.systemRevenue || 0;
-        years[yearKey].totalDeposits += stat.totalDeposits || 0;
-        years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
-        if (stat.stakes)
-          stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
-      }
-    });
-
-    return Object.values(years)
-      .map((year) => ({
-        ...year,
-        stakesDisplay:
-          Array.from(year.stakes)
-            .filter((s) => s > 0)
-            .sort((a, b) => a - b)
-            .map((s) => `ETB ${s}`)
-            .join(", ") || "N/A",
-      }))
-      .sort((a, b) => b.year - a.year);
   };
 
   const groupedGameHistory = useMemo(() => {
@@ -345,166 +400,20 @@ export default function AdminStats() {
     );
   }, [gameHistory]);
 
-  // Get data for overview cards based on selected period
-  const getOverviewData = () => {
-    if (!allStatsData || allStatsData.length === 0) {
-      return {
-        title: "No Data",
-        systemRevenue: 0,
-        totalPlayers: 0,
-        totalGames: 0,
-        totalDeposits: 0,
-        totalWithdrawals: 0,
-        botWins: 0,
-      };
-    }
-
+  // Get table data based on selected period
+  const getCurrentTableData = () => {
     if (activePeriod === "daily") {
-      // Last 7 days
-      const last7Days = allStatsData.slice(-7);
-      return {
-        title: "Last 7 Days",
-        systemRevenue: last7Days.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: last7Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: last7Days.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: last7Days.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
+      return [...tableData].reverse();
     } else if (activePeriod === "weekly") {
-      // Current week
-      const currentWeekStats = allStatsData.filter((stat) => {
-        const statDate = new Date(stat.day);
-        return isInCurrentWeek(statDate);
-      });
-
-      return {
-        title: "This Week",
-        systemRevenue: currentWeekStats.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: currentWeekStats.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: currentWeekStats.reduce(
-          (sum, d) => sum + (d.totalGames || 0),
-          0,
-        ),
-        totalDeposits: currentWeekStats.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: currentWeekStats.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: currentWeekStats.reduce(
-          (sum, d) => sum + (d.botGamesWon || 0),
-          0,
-        ),
-      };
+      return processWeeklyStats(tableData);
     } else if (activePeriod === "monthly") {
-      // Current month
-      const currentMonthStats = allStatsData.filter((stat) => {
-        const statDate = new Date(stat.day);
-        return isInCurrentMonth(statDate);
-      });
-
-      return {
-        title: "This Month",
-        systemRevenue: currentMonthStats.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: currentMonthStats.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: currentMonthStats.reduce(
-          (sum, d) => sum + (d.totalGames || 0),
-          0,
-        ),
-        totalDeposits: currentMonthStats.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: currentMonthStats.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: currentMonthStats.reduce(
-          (sum, d) => sum + (d.botGamesWon || 0),
-          0,
-        ),
-      };
+      return processMonthlyStats(tableData);
     } else {
-      // Current year
-      const currentYearStats = allStatsData.filter((stat) => {
-        const statDate = new Date(stat.day);
-        return isInCurrentYear(statDate);
-      });
-
-      return {
-        title: "This Year",
-        systemRevenue: currentYearStats.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: currentYearStats.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: currentYearStats.reduce(
-          (sum, d) => sum + (d.totalGames || 0),
-          0,
-        ),
-        totalDeposits: currentYearStats.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: currentYearStats.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: currentYearStats.reduce(
-          (sum, d) => sum + (d.botGamesWon || 0),
-          0,
-        ),
-      };
+      return processYearlyStats(tableData);
     }
   };
 
-  // Get detailed table data based on selected period
-  const getTableData = () => {
-    if (!allStatsData || allStatsData.length === 0) return [];
-
-    if (activePeriod === "daily") {
-      return [...allStatsData].reverse();
-    } else if (activePeriod === "weekly") {
-      return processWeeklyStats(allStatsData);
-    } else if (activePeriod === "monthly") {
-      return processMonthlyStats(allStatsData);
-    } else {
-      return processYearlyStats(allStatsData);
-    }
-  };
-
-  const overviewData = getOverviewData();
-  const tableData = getTableData();
+  const currentTableData = getCurrentTableData();
   const tableTitle =
     activePeriod === "daily"
       ? "Daily Statistics"
@@ -513,10 +422,6 @@ export default function AdminStats() {
         : activePeriod === "monthly"
           ? "Monthly Statistics"
           : "Yearly Statistics";
-
-  // Debug log - REMOVE AFTER TESTING
-  console.log(`Overview data for ${activePeriod}:`, overviewData);
-  console.log(`Table data length for ${activePeriod}:`, tableData.length);
 
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
@@ -595,7 +500,7 @@ export default function AdminStats() {
             <PeriodButton
               period="monthly"
               label="Monthly"
-              icon={<FaCalendar size={12} />}
+              icon={<FaCalendarMonth size={12} />}
             />
             <PeriodButton
               period="yearly"
@@ -618,7 +523,7 @@ export default function AdminStats() {
               <FaChartLine className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-              {overviewData.title} Overview
+              {periodTitle} Overview
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -717,7 +622,7 @@ export default function AdminStats() {
             </h3>
           </div>
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            {!isLoading && tableData.length > 0 ? (
+            {!isLoading && currentTableData.length > 0 ? (
               <table className="w-full text-[10px]">
                 <thead className="border-b border-white/10 sticky top-0 bg-purple-900/90">
                   <tr>
@@ -751,7 +656,7 @@ export default function AdminStats() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tableData.map((stat, index) => (
+                  {currentTableData.map((stat, index) => (
                     <tr
                       key={index}
                       className="border-b border-white/5 hover:bg-white/5"
