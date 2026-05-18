@@ -17,7 +17,6 @@ export default function CartelaSelection({
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [wallet, setWallet] = useState({ main: 0, play: 0 });
   const [walletLoading, setWalletLoading] = useState(true);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
