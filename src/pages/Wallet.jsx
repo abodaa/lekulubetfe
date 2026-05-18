@@ -154,7 +154,7 @@ export default function Wallet({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -195,12 +195,12 @@ export default function Wallet({ onNavigate }) {
               {displayRegistered ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
                   <FaCheckCircle className="text-green-400" size={10} />
-                  <span className="text-green-400 text-[9px]">Verified</span>
+                  <span className="text-green-400 text-xs">Verified</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
-                  <FaExclamationCircle className="text-yellow-400" size={10} />
-                  <span className="text-yellow-400 text-[9px]">Register</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
+                  <FaCheckCircle className="text-green-400" size={10} />
+                  <span className="text-green-400"> text-xs"Verified</span>
                 </div>
               )}
             </div>
@@ -309,11 +309,11 @@ export default function Wallet({ onNavigate }) {
                 </div>
                 <span className="text-white/50 text-xs">Promotional</span>
               </div>
-              <div className="text-purple-400 text-2xl font-bold">
+              <div className="text-white text-2xl font-bold">
                 {wallet.bonus?.toLocaleString() || 0}{" "}
                 <span className="text-white/40 text-sm">ETB</span>
               </div>
-              <div className="text-white/30 text-[9px] mt-1">
+              <div className="text-white/30 text-xs mt-1">
                 Used when Main & Play are empty
               </div>
             </div>
