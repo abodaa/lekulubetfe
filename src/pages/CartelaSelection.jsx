@@ -569,7 +569,7 @@ export default function CartelaSelection({
                 Players
               </div>
               <div className="text-white font-bold text-sm">
-                {gameState.playersCount || 0}
+                {gameState.takenCards?.length || 0}
               </div>
             </div>
           </div>
