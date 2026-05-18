@@ -771,23 +771,23 @@ export default function GameLayout({ stake, onNavigate }) {
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-4 gap-1.5">
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">Prize : </p>
+              <p className="text-white/60 text-xs">DERASH : </p>
               <p className="text-white font-bold text-xs">
                 {currentPrizePool || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">Players : </p>
+              <p className="text-white/60 text-xs">Players : </p>
               <p className="text-white font-bold text-xs">
-                {currentPlayersCount || 0}
+                {gameState.takenCards?.length || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">Stake : </p>
+              <p className="text-white/60 text-xs">Stake : </p>
               <p className="text-white font-bold text-xs">{stake || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">Calls : </p>
+              <p className="text-white/60 text-xs">Calls : </p>
               <p className="text-white font-bold text-xs">
                 {calledNumbers.length}/75
               </p>
