@@ -278,6 +278,13 @@ export default function Profile({ onNavigate }) {
                 value={profileData.wallet.gamesWon?.toLocaleString() || 0}
                 color="yellow"
               />
+              <StatCard
+                icon={<FaGift size={16} className="text-purple-400" />}
+                label="Bonus Wallet"
+                value={`${profileData.wallet.bonus?.toLocaleString() || 0} ETB`}
+                sublabel="Promotional funds"
+                color="purple"
+              />
             </motion.div>
 
             {/* Invite Stats Section */}

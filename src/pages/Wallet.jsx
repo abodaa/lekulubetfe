@@ -320,6 +320,27 @@ export default function Wallet({ onNavigate }) {
                 {wallet.coins?.toLocaleString() || 0}
               </div>
             </div>
+
+              {/* Bonus Wallet Card */}
+<div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
+  <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+        <FaGift className="text-purple-400" size={16} />
+      </div>
+      <span className="text-white/60 text-xs uppercase tracking-wider">
+        Bonus Wallet
+      </span>
+    </div>
+    <span className="text-white/30 text-[10px]">Promotional</span>
+  </div>
+  <div className="text-purple-400 text-2xl font-bold">
+    {wallet.bonus?.toLocaleString() || 0} <span className="text-white/40 text-sm">ETB</span>
+  </div>
+  <div className="text-white/30 text-[9px] mt-1">
+    Used when Main & Play are empty
+  </div>
+</div>
           </motion.div>
         ) : (
           <motion.div
