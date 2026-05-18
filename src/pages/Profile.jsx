@@ -172,9 +172,7 @@ export default function Profile({ onNavigate }) {
       <div className="text-white/50 text-xs uppercase tracking-wider">
         {label}
       </div>
-      {sublabel && (
-        <div className="text-white/30 text-[9px] mt-1">{sublabel}</div>
-      )}
+      {sublabel && <div className="text-white/30 text-xs mt-1">{sublabel}</div>}
     </div>
   );
 
@@ -222,7 +220,7 @@ export default function Profile({ onNavigate }) {
           </div>
           <h1 className="text-white text-xl font-bold">{displayName}</h1>
           {profileData.user?.isRegistered && (
-            <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[9px] font-medium">
+            <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-medium">
               Verified User
             </span>
           )}
@@ -301,19 +299,19 @@ export default function Profile({ onNavigate }) {
               {/* Stats Row */}
               <div className="flex justify-between items-center mb-3">
                 <div className="text-center flex-1">
-                  <p className="text-white/40 text-[9px] uppercase">Invites</p>
+                  <p className="text-white/40 text-xs uppercase">Invites</p>
                   <p className="text-white text-lg font-bold">
                     {inviteStats.totalInvites || 0}
                   </p>
                 </div>
                 <div className="text-center flex-1 border-x border-white/10">
-                  <p className="text-white/40 text-[9px] uppercase">Rewards</p>
+                  <p className="text-white/40 text-xs uppercase">Rewards</p>
                   <p className="text-green-400 text-lg font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
                   </p>
                 </div>
                 <div className="text-center flex-1">
-                  <p className="text-white/40 text-[9px] uppercase">
+                  <p className="text-white/40 text-xs uppercase">
                     Invite Deposits
                   </p>
                   <p className="text-amber-400 text-lg font-bold">
@@ -329,22 +327,18 @@ export default function Profile({ onNavigate }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FaPercentage size={10} className="text-yellow-400" />
-                    <span className="text-white/50 text-[9px]">
-                      Reward Rate
-                    </span>
+                    <span className="text-white/50 text-xs">Reward Rate</span>
                   </div>
-                  <span className="text-yellow-400 text-[9px] font-medium">
+                  <span className="text-yellow-400 text-xs font-medium">
                     {inviteStats.rewardRate || "1 ETB per registration"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-2">
                     <FaMoneyBillWave size={10} className="text-emerald-400" />
-                    <span className="text-white/50 text-[9px]">
-                      Credited to
-                    </span>
+                    <span className="text-white/50 text-xs">Credited to</span>
                   </div>
-                  <span className="text-emerald-400 text-[9px] font-medium">
+                  <span className="text-emerald-400 text-xs font-medium">
                     {inviteStats.rewardWallet || "Main Wallet (Withdrawable)"}
                   </span>
                 </div>
@@ -354,10 +348,10 @@ export default function Profile({ onNavigate }) {
               {inviteStats.estimatedDepositRewards > 0 && (
                 <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-2 mb-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-white/50 text-[9px]">
+                    <span className="text-white/50 text-xs">
                       Est. Deposit Rewards
                     </span>
-                    <span className="text-green-400 text-[9px] font-bold">
+                    <span className="text-green-400 text-xs font-bold">
                       +{inviteStats.estimatedDepositRewards.toFixed(2)} ETB
                     </span>
                   </div>
@@ -369,13 +363,13 @@ export default function Profile({ onNavigate }) {
                 <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FaLink size={12} className="text-white/30" />
-                    <span className="text-white/60 text-[10px] font-mono">
+                    <span className="text-white/60 text-xs font-mono">
                       {inviteStats.inviteCode}
                     </span>
                   </div>
                   <button
                     onClick={copyInviteLink}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-[9px] hover:bg-white/20 transition-all"
+                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-xs hover:bg-white/20 transition-all"
                   >
                     Copy Link
                   </button>
@@ -402,57 +396,12 @@ export default function Profile({ onNavigate }) {
                         console.error("Failed to generate invite code:", err);
                       }
                     }}
-                    className="text-yellow-400 text-[9px] hover:text-yellow-300"
+                    className="text-yellow-400 text-xs hover:text-yellow-300"
                   >
                     Generate Invite Code →
                   </button>
                 </div>
               )}
-            </motion.div>
-
-            {/* Settings Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden"
-            >
-              <div className="px-4 py-2 border-b border-white/5">
-                <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-                  Settings
-                </h3>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                    {sound ? (
-                      <FaVolumeUp size={14} className="text-white/60" />
-                    ) : (
-                      <FaVolumeMute size={14} className="text-white/60" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      Sound Effects
-                    </p>
-                    <p className="text-white/30 text-[9px]">
-                      Enable/disable game sounds
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSound(!sound)}
-                  className={`relative w-10 h-5 rounded-full transition-all ${
-                    sound ? "bg-green-500" : "bg-white/20"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
-                      sound ? "left-5" : "left-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
             </motion.div>
           </>
         )}
