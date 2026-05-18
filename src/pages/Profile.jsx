@@ -70,7 +70,14 @@ export default function Profile({ onNavigate }) {
 
       const walletPromise = apiFetch("/wallet", { sessionId }).catch((err) => {
         console.warn("Wallet fetch error:", err);
-        return { balance: 0, main: 0, play: 0, coins: 0, gamesWon: 0, bonus: 0 };
+        return {
+          balance: 0,
+          main: 0,
+          play: 0,
+          coins: 0,
+          gamesWon: 0,
+          bonus: 0,
+        };
       });
 
       const invitePromise = apiFetch("/user/invite-stats", { sessionId }).catch(
@@ -104,7 +111,7 @@ export default function Profile({ onNavigate }) {
       const playValue = walletRes.play ?? 0;
       const coinsValue = walletRes.coins ?? 0;
       const gamesWonValue = walletRes.gamesWon ?? 0;
-      const bonusValue = walletRes.bonus ?? 0;  // ADDED
+      const bonusValue = walletRes.bonus ?? 0; // ADDED
 
       setProfileData({
         user: userInfo,
@@ -114,7 +121,7 @@ export default function Profile({ onNavigate }) {
           play: playValue,
           coins: coinsValue,
           gamesWon: gamesWonValue,
-          bonus: bonusValue,  // ADDED
+          bonus: bonusValue, // ADDED
         },
       });
 
@@ -172,7 +179,9 @@ export default function Profile({ onNavigate }) {
       <div className="text-white/50 text-[10px] uppercase tracking-wider">
         {label}
       </div>
-      {sublabel && <div className="text-white/30 text-[9px] mt-1">{sublabel}</div>}
+      {sublabel && (
+        <div className="text-white/30 text-[9px] mt-1">{sublabel}</div>
+      )}
     </div>
   );
 
@@ -186,7 +195,7 @@ export default function Profile({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -322,7 +331,8 @@ export default function Profile({ onNavigate }) {
                   </p>
                   <p className="text-amber-400 text-lg font-bold">
                     {inviteStats.totalDepositsFromInvited?.toLocaleString() ||
-                      0} ETB
+                      0}{" "}
+                    ETB
                   </p>
                 </div>
               </div>
@@ -330,20 +340,24 @@ export default function Profile({ onNavigate }) {
               {/* Reward Rate Info */}
               <div className="bg-white/5 rounded-lg p-2 mb-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  {/* <div className="flex items-center gap-2">
                     <FaPercentage size={10} className="text-yellow-400" />
-                    <span className="text-white/50 text-[9px]">Reward Rate</span>
-                  </div>
-                  <span className="text-yellow-400 text-[9px] font-medium">
+                    <span className="text-white/50 text-[9px]">
+                      Reward Rate
+                    </span>
+                  </div> */}
+                  <span className="text-yellow-400 text-xs font-medium">
                     {inviteStats.rewardRate || "1 ETB per registration"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-2">
                     <FaMoneyBillWave size={10} className="text-emerald-400" />
-                    <span className="text-white/50 text-[9px]">Credited to</span>
+                    <span className="text-white/50 text-xs">
+                      Credited to
+                    </span>
                   </div>
-                  <span className="text-emerald-400 text-[9px] font-medium">
+                  <span className="text-emerald-400 text-xs font-medium">
                     {inviteStats.rewardWallet || "Main Wallet (Withdrawable)"}
                   </span>
                 </div>
@@ -353,10 +367,10 @@ export default function Profile({ onNavigate }) {
               {inviteStats.estimatedDepositRewards > 0 && (
                 <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-2 mb-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-white/50 text-[9px]">
+                    <span className="text-white/50 text-xs">
                       Est. Deposit Rewards
                     </span>
-                    <span className="text-green-400 text-[9px] font-bold">
+                    <span className="text-green-400 text-xs font-bold">
                       +{inviteStats.estimatedDepositRewards.toFixed(2)} ETB
                     </span>
                   </div>
@@ -368,13 +382,13 @@ export default function Profile({ onNavigate }) {
                 <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FaLink size={12} className="text-white/30" />
-                    <span className="text-white/60 text-[10px] font-mono">
+                    <span className="text-white/60 text-xs font-mono">
                       {inviteStats.inviteCode}
                     </span>
                   </div>
                   <button
                     onClick={copyInviteLink}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-[9px] hover:bg-white/20 transition-all"
+                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-xs hover:bg-white/20 transition-all"
                   >
                     Copy Link
                   </button>
@@ -401,57 +415,12 @@ export default function Profile({ onNavigate }) {
                         console.error("Failed to generate invite code:", err);
                       }
                     }}
-                    className="text-yellow-400 text-[10px] hover:text-yellow-300"
+                    className="text-yellow-400 text-xs hover:text-yellow-300"
                   >
                     Generate Invite Code →
                   </button>
                 </div>
               )}
-            </motion.div>
-
-            {/* Settings Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden"
-            >
-              <div className="px-4 py-2 border-b border-white/5">
-                <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-                  Settings
-                </h3>
-              </div>
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                    {sound ? (
-                      <FaVolumeUp size={14} className="text-white/60" />
-                    ) : (
-                      <FaVolumeMute size={14} className="text-white/60" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      Sound Effects
-                    </p>
-                    <p className="text-white/30 text-[9px]">
-                      Enable/disable game sounds
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSound(!sound)}
-                  className={`relative w-10 h-5 rounded-full transition-all ${
-                    sound ? "bg-green-500" : "bg-white/20"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
-                      sound ? "left-5" : "left-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
             </motion.div>
           </>
         )}
