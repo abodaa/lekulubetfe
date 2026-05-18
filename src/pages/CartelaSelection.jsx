@@ -370,6 +370,17 @@ export default function CartelaSelection({
       const newTotalCount = selectedNumbers.length + 1;
       const totalNeeded = newTotalCount * Number(stake);
 
+      console.log("=== Balance Check Debug ===");
+      console.log("Play wallet:", wallet.play);
+      console.log("Bonus wallet:", wallet.bonus);
+      console.log("Selected cartellas count:", selectedNumbers.length);
+      console.log("Stake:", stake);
+      console.log("Total needed:", (selectedNumbers.length + 1) * stake);
+      console.log(
+        "Available (Play + Bonus):",
+        (wallet.play || 0) + (wallet.bonus || 0),
+      );
+
       if (totalBalance < totalNeeded) {
         const msg = `Insufficient balance. Need ${totalNeeded} ETB for ${newTotalCount} cartella(s). You have ${totalBalance.toLocaleString()} ETB.`;
         setAlertBanners((prev) => [...prev, msg]);
