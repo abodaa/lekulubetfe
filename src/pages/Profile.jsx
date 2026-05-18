@@ -15,6 +15,8 @@ import {
   FaVolumeUp,
   FaVolumeMute,
   FaCheckCircle,
+  FaPercentage,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
 
@@ -36,6 +38,9 @@ export default function Profile({ onNavigate }) {
     totalInvites: 0,
     totalRewards: 0,
     totalDepositsFromInvited: 0,
+    estimatedDepositRewards: 0,
+    rewardRate: "",
+    rewardWallet: "Main Wallet (Withdrawable)",
     inviteCode: null,
   });
   const [loading, setLoading] = useState(true);
@@ -99,7 +104,17 @@ export default function Profile({ onNavigate }) {
         },
       });
 
-      if (inviteRes) setInviteStats(inviteRes);
+      if (inviteRes) {
+        setInviteStats({
+          totalInvites: inviteRes.totalInvites || 0,
+          totalRewards: inviteRes.totalRewards || 0,
+          totalDepositsFromInvited: inviteRes.totalDepositsFromInvited || 0,
+          estimatedDepositRewards: inviteRes.estimatedDepositRewards || 0,
+          rewardRate: inviteRes.rewardRate || "1 ETB per registration",
+          rewardWallet: inviteRes.rewardWallet || "Main Wallet (Withdrawable)",
+          inviteCode: inviteRes.inviteCode || null,
+        });
+      }
     } catch (error) {
       console.error("Failed to fetch profile data:", error);
       setError(`Failed to load profile. Please try again.`);
@@ -128,15 +143,23 @@ export default function Profile({ onNavigate }) {
         {label}
       </div>
       {sublabel && (
-        <div className="text-white/50 text-[10px] mt-1">{sublabel}</div>
+        <div className="text-white/30 text-[9px] mt-1">{sublabel}</div>
       )}
     </div>
   );
 
+  const copyInviteLink = () => {
+    const botUsername =
+      window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "lekuluBingo";
+    const inviteLink = `https://t.me/${botUsername}?start=invite_${inviteStats.inviteCode}`;
+    navigator.clipboard.writeText(inviteLink);
+    // Optional: Show toast message
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -238,26 +261,80 @@ export default function Profile({ onNavigate }) {
             >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <FaUsers size={12} className="text-purple-400" />
+                  <FaGift size={12} className="text-purple-400" />
                 </div>
                 <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
                   Referral Program
                 </h3>
               </div>
+
+              {/* Stats Row */}
               <div className="flex justify-between items-center mb-3">
-                <div>
-                  <p className="text-white/50 text-xs">Total Invites</p>
-                  <p className="text-white text-xl font-bold">
+                <div className="text-center flex-1">
+                  <p className="text-white/40 text-[9px] uppercase">Invites</p>
+                  <p className="text-white text-lg font-bold">
                     {inviteStats.totalInvites || 0}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-white/50 text-xs">Rewards Earned</p>
-                  <p className="text-green-400 text-xl font-bold">
+                <div className="text-center flex-1 border-x border-white/10">
+                  <p className="text-white/40 text-[9px] uppercase">Rewards</p>
+                  <p className="text-green-400 text-lg font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
                   </p>
                 </div>
+                <div className="text-center flex-1">
+                  <p className="text-white/40 text-[9px] uppercase">
+                    Invite Deposits
+                  </p>
+                  <p className="text-amber-400 text-lg font-bold">
+                    {inviteStats.totalDepositsFromInvited?.toLocaleString() ||
+                      0}{" "}
+                    ETB
+                  </p>
+                </div>
               </div>
+
+              {/* Reward Rate Info */}
+              <div className="bg-white/5 rounded-lg p-2 mb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FaPercentage size={10} className="text-yellow-400" />
+                    <span className="text-white/50 text-[9px]">
+                      Reward Rate
+                    </span>
+                  </div>
+                  <span className="text-yellow-400 text-[9px] font-medium">
+                    {inviteStats.rewardRate || "1 ETB per registration"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center gap-2">
+                    <FaMoneyBillWave size={10} className="text-emerald-400" />
+                    <span className="text-white/50 text-[9px]">
+                      Credited to
+                    </span>
+                  </div>
+                  <span className="text-emerald-400 text-[9px] font-medium">
+                    {inviteStats.rewardWallet || "Main Wallet (Withdrawable)"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Estimated Rewards */}
+              {inviteStats.estimatedDepositRewards > 0 && (
+                <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-2 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/50 text-[9px]">
+                      Est. Deposit Rewards
+                    </span>
+                    <span className="text-green-400 text-[9px] font-bold">
+                      +{inviteStats.estimatedDepositRewards.toFixed(2)} ETB
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Invite Code */}
               {inviteStats.inviteCode && (
                 <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -267,19 +344,17 @@ export default function Profile({ onNavigate }) {
                     </span>
                   </div>
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(inviteStats.inviteCode);
-                    }}
+                    onClick={copyInviteLink}
                     className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-[9px] hover:bg-white/20 transition-all"
                   >
-                    Copy
+                    Copy Link
                   </button>
                 </div>
               )}
             </motion.div>
 
             {/* Settings Section */}
-            {/* <motion.div
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -321,7 +396,7 @@ export default function Profile({ onNavigate }) {
                   />
                 </button>
               </div>
-            </motion.div> */}
+            </motion.div>
           </>
         )}
       </main>
