@@ -126,27 +126,22 @@ export default function CartelaSelection({
 
   // Fetch wallet balance
   useEffect(() => {
+    // Fetch wallet function
     const fetchWallet = async () => {
       if (!sessionId) return;
       try {
         setWalletLoading(true);
         const walletResponse = await apiFetch("/wallet", { sessionId });
-        const mainValue =
-          walletResponse.main !== null && walletResponse.main !== undefined
-            ? walletResponse.main
-            : (walletResponse.balance ?? 0);
-        const playValue =
-          walletResponse.play !== null && walletResponse.play !== undefined
-            ? walletResponse.play
-            : 0;
+        console.log("Wallet response:", walletResponse); // Debug log
+
+        const mainValue = walletResponse.main ?? walletResponse.balance ?? 0;
+        const playValue = walletResponse.play ?? 0;
         const bonusValue = walletResponse.bonus ?? 0;
-        setWallet({
-          main:
-            profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
-          play: profileResponse.wallet.play ?? 0,
-          bonus: profileResponse.wallet.bonus ?? 0, // ADD THIS
-        });
+
+        setWallet({ main: mainValue, play: playValue, bonus: bonusValue });
       } catch (walletErr) {
+        console.error("Wallet fetch error:", walletErr);
+        // Fallback to profile
         try {
           const profileResponse = await apiFetch("/user/profile", {
             sessionId,
@@ -157,16 +152,13 @@ export default function CartelaSelection({
                 profileResponse.wallet.main ??
                 profileResponse.wallet.balance ??
                 0,
-              play:
-                profileResponse.wallet.play ??
-                profileResponse.wallet.balance ??
-                0,
+              play: profileResponse.wallet.play ?? 0,
+              bonus: profileResponse.wallet.bonus ?? 0,
             });
-          } else {
-            setWallet({ main: 0, play: 0 });
           }
         } catch (profileErr) {
-          setWallet({ main: 0, play: 0 });
+          console.error("Profile fetch error:", profileErr);
+          setWallet({ main: 0, play: 0, bonus: 0 });
         }
       } finally {
         setWalletLoading(false);
@@ -175,12 +167,14 @@ export default function CartelaSelection({
     fetchWallet();
   }, [sessionId]);
 
+  // WebSocket wallet update listener
   useEffect(() => {
     if (!gameState?.walletUpdate) return;
     const update = gameState.walletUpdate;
     setWallet((prev) => ({
       main: update.main ?? prev.main ?? 0,
       play: update.play ?? prev.play ?? 0,
+      bonus: update.bonus ?? prev.bonus ?? 0,
     }));
   }, [gameState.walletUpdate]);
 
@@ -201,6 +195,7 @@ export default function CartelaSelection({
           setError("Failed to load cards");
         }
       } catch (err) {
+        console.error("Error fetching cards:", err);
         setError("Failed to load cards from server");
       } finally {
         setLoading(false);
@@ -389,6 +384,7 @@ export default function CartelaSelection({
         `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/5)`,
       );
     } catch (err) {
+      console.error("Error selecting cartella:", err);
       showError("Failed to select cartella.");
     } finally {
       setTimeout(() => {
@@ -418,6 +414,8 @@ export default function CartelaSelection({
       deselectCartella(cardNum);
       showSuccess(`Cartella #${cardNum} removed`);
     } catch (err) {
+      console.error("Error removing cartella:", err);
+
       showError("Failed to remove cartella.");
     }
   };

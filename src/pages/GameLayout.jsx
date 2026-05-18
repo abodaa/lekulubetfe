@@ -609,16 +609,18 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
+  // WebSocket wallet update handler
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
         const { main, play, coins, source, bonus } = event.detail.payload;
+        console.log("Wallet update received:", { main, play, bonus }); // Debug log
         setWallet((prev) => ({
           ...prev,
           main: main ?? prev.main,
           play: play ?? prev.play,
           coins: coins ?? prev.coins,
-          bonus: bonus ?? prev.bonus, // ADD THIS
+          bonus: bonus ?? prev.bonus,
         }));
       }
     };
@@ -787,7 +789,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">DERASH : </p>
               <p className="text-white font-bold text-xs">
