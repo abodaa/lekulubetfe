@@ -366,7 +366,7 @@ export default function CartelaSelection({
       }
 
       // Check if user has enough balance for ALL cartellas (current + new)
-      const totalBalance = (wallet.play || 0) + (wallet.bonus || 0);
+      const totalBalance = (Number(wallet.play) || 0) + (Number(wallet.bonus) || 0);
       const newTotalCount = selectedNumbers.length + 1;
       const totalNeeded = newTotalCount * Number(stake);
 
@@ -431,7 +431,7 @@ export default function CartelaSelection({
     : [];
 
   const totalBalance =
-    (wallet.main || 0) + (wallet.play || 0) + (wallet.bonus || 0);
+    (Number(wallet.play) || 0) + (Number(wallet.bonus) || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
 
   // Loading state
@@ -563,7 +563,7 @@ export default function CartelaSelection({
                 Play
               </div>
               <div className="text-white font-bold text-sm">
-                {walletLoading ? "..." : (wallet.play || 0).toLocaleString()}
+                {walletLoading ? "..." : (Number(wallet.play) || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
@@ -571,7 +571,7 @@ export default function CartelaSelection({
                 Bonus
               </div>
               <div className="text-purple-400 font-bold text-sm">
-                {walletLoading ? "..." : (wallet.bonus || 0).toLocaleString()}
+                {walletLoading ? "..." : (Number(wallet.bonus) || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
