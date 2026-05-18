@@ -553,8 +553,6 @@ export default function CartelaSelection({
         {/* Stats Bar */}
         <div className="px-4 pb-3">
           <div className="grid grid-cols-4 gap-2">
-            {" "}
-            // Change from 3 to 4 columns
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Main
