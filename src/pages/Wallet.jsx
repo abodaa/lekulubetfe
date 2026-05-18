@@ -21,6 +21,7 @@ export default function Wallet({ onNavigate }) {
     play: 0,
     coins: 0,
     playDeposited: 0,
+    bonus: 0, // ADDED
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("balance");
@@ -34,12 +35,13 @@ export default function Wallet({ onNavigate }) {
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
-        const { main, play, coins, source } = event.detail.payload;
+        const { main, play, coins, source, bonus } = event.detail.payload;
         setWallet((prev) => ({
           ...prev,
           main: main ?? prev.main,
           play: play ?? prev.play,
           coins: coins ?? prev.coins,
+          bonus: bonus ?? prev.bonus,
         }));
         if (source === "win") {
           console.log("Success: Congratulations! You won the game!");
@@ -61,47 +63,38 @@ export default function Wallet({ onNavigate }) {
         setLoading(true);
         try {
           const walletData = await apiFetch("/wallet", { sessionId });
-          const mainValue =
-            walletData.main !== null && walletData.main !== undefined
-              ? walletData.main
-              : (walletData.balance ?? 0);
-          const playValue =
-            walletData.play !== null && walletData.play !== undefined
-              ? walletData.play
-              : 0;
+          // Safely get values with fallbacks
+          const mainValue = walletData.main ?? walletData.balance ?? 0;
+          const playValue = walletData.play ?? 0;
+          const bonusValue = walletData.bonus ?? 0;
+          const coinsValue = walletData.coins ?? 0;
+          const playDepositedValue = walletData.playDeposited ?? 0;
+
           setWallet({
             main: mainValue,
             play: playValue,
-            coins: walletData.coins || 0,
-            playDeposited: walletData.playDeposited || 0,
+            coins: coinsValue,
+            playDeposited: playDepositedValue,
+            bonus: bonusValue,
           });
         } catch (walletError) {
           console.error("Wallet fetch error:", walletError);
           try {
             const profile = await apiFetch("/user/profile", { sessionId });
             setProfileData(profile);
-            // Fix: Get phone from profile.user.phone
-            const phoneNumber = profile?.user?.phone || null;
-            setDisplayPhone(phoneNumber);
-            // Fix: Check registration status correctly
-            const isRegistered = profile?.user?.isRegistered === true;
-            setDisplayRegistered(isRegistered);
+            setDisplayPhone(profile?.user?.phone || null);
+            setDisplayRegistered(!!profile?.user?.isRegistered);
             if (profile?.wallet) {
               const mainValue =
-                profile.wallet.main !== null &&
-                profile.wallet.main !== undefined
-                  ? profile.wallet.main
-                  : (profile.wallet.balance ?? 0);
-              const playValue =
-                profile.wallet.play !== null &&
-                profile.wallet.play !== undefined
-                  ? profile.wallet.play
-                  : 0;
+                profile.wallet.main ?? profile.wallet.balance ?? 0;
+              const playValue = profile.wallet.play ?? 0;
+              const bonusValue = profile.wallet.bonus ?? 0;
               setWallet({
                 main: mainValue,
                 play: playValue,
                 coins: profile.wallet.coins || 0,
                 playDeposited: profile.wallet.playDeposited || 0,
+                bonus: bonusValue,
               });
             }
           } catch (e) {
@@ -161,7 +154,7 @@ export default function Wallet({ onNavigate }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -201,13 +194,13 @@ export default function Wallet({ onNavigate }) {
               </div>
               {displayRegistered ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
-                  <FaCheckCircle className="text-green-400" size={12} />
-                  <span className="text-green-400 text-xs">Verified</span>
+                  <FaCheckCircle className="text-green-400" size={10} />
+                  <span className="text-green-400 text-[9px]">Verified</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
-                  <FaCheckCircle className="text-green-400" size={12} />
-                  <span className="text-green-400 text-xs">Verified</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20">
+                  <FaExclamationCircle className="text-yellow-400" size={10} />
+                  <span className="text-yellow-400 text-[9px]">Register</span>
                 </div>
               )}
             </div>
@@ -303,6 +296,28 @@ export default function Wallet({ onNavigate }) {
               )}
             </div>
 
+            {/* Bonus Wallet Card */}
+            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <FaCoins className="text-purple-400" size={16} />
+                  </div>
+                  <span className="text-white/60 text-xs uppercase tracking-wider">
+                    Bonus Wallet
+                  </span>
+                </div>
+                <span className="text-white/50 text-xs">Promotional</span>
+              </div>
+              <div className="text-purple-400 text-2xl font-bold">
+                {wallet.bonus?.toLocaleString() || 0}{" "}
+                <span className="text-white/40 text-sm">ETB</span>
+              </div>
+              <div className="text-white/30 text-[9px] mt-1">
+                Used when Main & Play are empty
+              </div>
+            </div>
+
             {/* Coins Card */}
             <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
               <div className="flex items-center justify-between mb-2">
@@ -320,27 +335,6 @@ export default function Wallet({ onNavigate }) {
                 {wallet.coins?.toLocaleString() || 0}
               </div>
             </div>
-
-              {/* Bonus Wallet Card */}
-<div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
-  <div className="flex items-center justify-between mb-2">
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-        <FaGift className="text-purple-400" size={16} />
-      </div>
-      <span className="text-white/60 text-xs uppercase tracking-wider">
-        Bonus Wallet
-      </span>
-    </div>
-    <span className="text-white/30 text-[10px]">Promotional</span>
-  </div>
-  <div className="text-purple-400 text-2xl font-bold">
-    {wallet.bonus?.toLocaleString() || 0} <span className="text-white/40 text-sm">ETB</span>
-  </div>
-  <div className="text-white/30 text-[9px] mt-1">
-    Used when Main & Play are empty
-  </div>
-</div>
           </motion.div>
         ) : (
           <motion.div
@@ -412,7 +406,8 @@ export default function Wallet({ onNavigate }) {
                             >
                               {isPositive
                                 ? `+${transaction.amount}`
-                                : `${transaction.amount}`}
+                                : `${transaction.amount}`}{" "}
+                              ETB
                             </p>
                             <p className="text-white/40 text-[9px] uppercase">
                               {transaction.status === "completed" || isPositive
