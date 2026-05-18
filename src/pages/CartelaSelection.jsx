@@ -366,8 +366,7 @@ export default function CartelaSelection({
       }
 
       // Check if user has enough balance for ALL cartellas (current + new)
-      const totalBalance =
-        (wallet.main || 0) + (wallet.play || 0) + (wallet.bonus || 0);
+      const totalBalance = (wallet.play || 0) + (wallet.bonus || 0);
       const newTotalCount = selectedNumbers.length + 1;
       const totalNeeded = newTotalCount * Number(stake);
 
@@ -551,14 +550,14 @@ export default function CartelaSelection({
         {/* Stats Bar */}
         <div className="px-4 pb-3">
           <div className="grid grid-cols-4 gap-2">
-            <div className="bg-white/5 rounded-xl p-3 text-center">
+            {/* <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Main
               </div>
               <div className="text-white font-bold text-sm">
                 {walletLoading ? "..." : (wallet.main || 0).toLocaleString()}
               </div>
-            </div>
+            </div> */}
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Play
@@ -580,6 +579,14 @@ export default function CartelaSelection({
                 Stake
               </div>
               <div className="text-white font-bold text-sm">{stake}</div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Players
+              </div>
+              <div className="text-white font-bold text-sm">
+                {gameState.takenCards?.length || 0}
+              </div>
             </div>
           </div>
         </div>
