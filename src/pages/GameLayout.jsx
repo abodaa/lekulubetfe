@@ -171,6 +171,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
+  const [wallet, setWallet] = useState({ main: 0, play: 0, bonus: 0 });
   const confettiRef = useRef(null);
 
   // Swipe gesture refs
@@ -608,6 +609,23 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleWalletUpdate = (event) => {
+      if (event.detail && event.detail.type === "wallet_update") {
+        const { main, play, coins, source, bonus } = event.detail.payload;
+        setWallet((prev) => ({
+          ...prev,
+          main: main ?? prev.main,
+          play: play ?? prev.play,
+          coins: coins ?? prev.coins,
+          bonus: bonus ?? prev.bonus, // ADD THIS
+        }));
+      }
+    };
+    window.addEventListener("walletUpdate", handleWalletUpdate);
+    return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
+  }, []);
+
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -785,6 +803,12 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Stake : </p>
               <p className="text-white font-bold text-xs">{stake || 0}</p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/30 text-[10px]">Bonus : </p>
+              <p className="text-purple-400 font-bold text-xs">
+                {wallet.bonus?.toLocaleString() || 0}
+              </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Calls : </p>

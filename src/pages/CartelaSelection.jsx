@@ -22,6 +22,7 @@ export default function CartelaSelection({
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
   const isSelectingRef = useRef(false);
+  const [wallet, setWallet] = useState({ main: 0, play: 0, bonus: 0 });
 
   const {
     connected,
@@ -139,7 +140,13 @@ export default function CartelaSelection({
           walletResponse.play !== null && walletResponse.play !== undefined
             ? walletResponse.play
             : 0;
-        setWallet({ main: mainValue, play: playValue });
+        const bonusValue = walletResponse.bonus ?? 0;
+        setWallet({
+          main:
+            profileResponse.wallet.main ?? profileResponse.wallet.balance ?? 0,
+          play: profileResponse.wallet.play ?? 0,
+          bonus: profileResponse.wallet.bonus ?? 0, // ADD THIS
+        });
       } catch (walletErr) {
         try {
           const profileResponse = await apiFetch("/user/profile", {
@@ -365,7 +372,8 @@ export default function CartelaSelection({
       }
 
       // Check if user has enough balance for ALL cartellas (current + new)
-      const totalBalance = (wallet.main || 0) + (wallet.play || 0);
+      const totalBalance =
+        (wallet.main || 0) + (wallet.play || 0) + (wallet.bonus || 0);
       const newTotalCount = selectedNumbers.length + 1;
       const totalNeeded = newTotalCount * Number(stake);
 
@@ -426,7 +434,8 @@ export default function CartelaSelection({
     ? gameState.yourSelections
     : [];
 
-  const totalBalance = (wallet.main || 0) + (wallet.play || 0);
+  const totalBalance =
+    (wallet.main || 0) + (wallet.play || 0) + (wallet.bonus || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
 
   // Loading state
@@ -544,33 +553,38 @@ export default function CartelaSelection({
 
         {/* Stats Bar */}
         <div className="px-4 pb-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
+            {" "}
+            // Change from 3 to 4 columns
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Wallet
+                Main
               </div>
               <div className="text-white font-bold text-sm">
-                {walletLoading ? "..." : totalBalance.toLocaleString()}
+                {walletLoading ? "..." : (wallet.main || 0).toLocaleString()}
               </div>
-              {selectedNumbers.length > 0 && (
-                <div className="text-[8px] text-yellow-400 mt-1">
-                  Total: {selectedNumbers.length * stake} ETB
-                </div>
-              )}
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Play
+              </div>
+              <div className="text-white font-bold text-sm">
+                {walletLoading ? "..." : (wallet.play || 0).toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-xl p-3 text-center">
+              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+                Bonus
+              </div>
+              <div className="text-purple-400 font-bold text-sm">
+                {walletLoading ? "..." : (wallet.bonus || 0).toLocaleString()}
+              </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Stake
               </div>
               <div className="text-white font-bold text-sm">{stake}</div>
-            </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Players
-              </div>
-              <div className="text-white font-bold text-sm">
-                {gameState.takenCards?.length || 0}
-              </div>
             </div>
           </div>
         </div>
