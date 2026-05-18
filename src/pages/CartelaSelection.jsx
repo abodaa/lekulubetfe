@@ -578,10 +578,10 @@ export default function CartelaSelection({
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider">
+              <div className="text-white/40 text-xs uppercase tracking-wider">
                 Bonus
               </div>
-              <div className="text-purple-400 font-bold text-sm">
+              <div className="text-white font-bold text-sm">
                 {walletLoading ? "..." : (Number(wallet.bonus) || 0).toLocaleString()}
               </div>
             </div>

@@ -807,8 +807,8 @@ export default function GameLayout({ stake, onNavigate }) {
               <p className="text-white font-bold text-xs">{stake || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/30 text-[10px]">Bonus : </p>
-              <p className="text-purple-400 font-bold text-xs">
+              <p className="text-white/30 text-xs">Bonus : </p>
+              <p className="text-white font-bold text-xs">
                 {wallet.bonus?.toLocaleString() || 0}
               </p>
             </div>
