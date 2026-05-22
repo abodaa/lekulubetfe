@@ -171,7 +171,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
-  const [wallet, setWallet] = useState({ main: 0, play: 0, bonus: 0 });
+  const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
   const confettiRef = useRef(null);
 
   // Swipe gesture refs
@@ -613,12 +613,11 @@ export default function GameLayout({ stake, onNavigate }) {
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
-        const { main, play, coins, source, bonus } = event.detail.payload;
-        console.log("Wallet update received:", { main, play, bonus }); // Debug log
+        const { main, coins, source, bonus } = event.detail.payload;
+        console.log("Wallet update received:", { main, bonus }); // Debug log
         setWallet((prev) => ({
           ...prev,
           main: main ?? prev.main,
-          play: play ?? prev.play,
           coins: coins ?? prev.coins,
           bonus: bonus ?? prev.bonus,
         }));
@@ -634,13 +633,12 @@ export default function GameLayout({ stake, onNavigate }) {
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
-        const { main, play, coins, source, bonus } = event.detail.payload;
-        console.log("Wallet update received:", { main, play, bonus });
+        const { main, coins, source, bonus } = event.detail.payload;
+        console.log("Wallet update received:", { main, bonus });
 
         setWallet((prev) => ({
           ...prev,
           main: main !== undefined ? main : prev.main,
-          play: play !== undefined ? play : prev.play,
           coins: coins !== undefined ? coins : prev.coins,
           bonus: bonus !== undefined ? bonus : prev.bonus,
         }));

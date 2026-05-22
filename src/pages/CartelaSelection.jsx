@@ -21,7 +21,7 @@ export default function CartelaSelection({
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
   const isSelectingRef = useRef(false);
-  const [wallet, setWallet] = useState({ main: 0, play: 0, bonus: 0 });
+  const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
 
   const {
     connected,
@@ -135,10 +135,9 @@ export default function CartelaSelection({
         console.log("Wallet response:", walletResponse); // Debug log
 
         const mainValue = walletResponse.main ?? walletResponse.balance ?? 0;
-        const playValue = walletResponse.play ?? 0;
         const bonusValue = walletResponse.bonus ?? 0;
 
-        setWallet({ main: mainValue, play: playValue, bonus: bonusValue });
+        setWallet({ main: mainValue, bonus: bonusValue });
       } catch (walletErr) {
         console.error("Wallet fetch error:", walletErr);
         // Fallback to profile
@@ -152,13 +151,12 @@ export default function CartelaSelection({
                 profileResponse.wallet.main ??
                 profileResponse.wallet.balance ??
                 0,
-              play: profileResponse.wallet.play ?? 0,
               bonus: profileResponse.wallet.bonus ?? 0,
             });
           }
         } catch (profileErr) {
           console.error("Profile fetch error:", profileErr);
-          setWallet({ main: 0, play: 0, bonus: 0 });
+          setWallet({ main: 0, bonus: 0 });
         }
       } finally {
         setWalletLoading(false);
@@ -173,7 +171,6 @@ export default function CartelaSelection({
     const update = gameState.walletUpdate;
     setWallet((prev) => ({
       main: update.main ?? prev.main ?? 0,
-      play: update.play ?? prev.play ?? 0,
       bonus: update.bonus ?? prev.bonus ?? 0,
     }));
   }, [gameState.walletUpdate]);
@@ -366,19 +363,20 @@ export default function CartelaSelection({
       }
 
       // Check if user has enough balance for ALL cartellas (current + new)
-      const totalBalance = (Number(wallet.play) || 0) + (Number(wallet.bonus) || 0);
+      const totalBalance =
+        (Number(wallet.main) || 0) + (Number(wallet.bonus) || 0);
       const newTotalCount = selectedNumbers.length + 1;
       const totalNeeded = newTotalCount * Number(stake);
 
       console.log("=== Balance Check Debug ===");
-      console.log("Play wallet:", wallet.play);
+      console.log("Main wallet:", wallet.main);
       console.log("Bonus wallet:", wallet.bonus);
       console.log("Selected cartellas count:", selectedNumbers.length);
       console.log("Stake:", stake);
       console.log("Total needed:", (selectedNumbers.length + 1) * stake);
       console.log(
-        "Available (Play + Bonus):",
-        (wallet.play || 0) + (wallet.bonus || 0),
+        "Available (Main + Bonus):",
+        (wallet.main || 0) + (wallet.bonus || 0),
       );
 
       if (totalBalance < totalNeeded) {
@@ -441,8 +439,7 @@ export default function CartelaSelection({
     ? gameState.yourSelections
     : [];
 
-  const totalBalance =
-    (Number(wallet.play) || 0) + (Number(wallet.bonus) || 0);
+  const totalBalance = (Number(wallet.main) || 0) + (Number(wallet.bonus) || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
 
   // Loading state
@@ -571,10 +568,12 @@ export default function CartelaSelection({
             </div> */}
             <div className="bg-white/5 rounded-xl p-3 text-center">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Play
+                Main
               </div>
               <div className="text-white font-bold text-sm">
-                {walletLoading ? "..." : (Number(wallet.play) || 0).toLocaleString()}
+                {walletLoading
+                  ? "..."
+                  : (Number(wallet.main) || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
@@ -582,7 +581,9 @@ export default function CartelaSelection({
                 Bonus
               </div>
               <div className="text-white font-bold text-sm">
-                {walletLoading ? "..." : (Number(wallet.bonus) || 0).toLocaleString()}
+                {walletLoading
+                  ? "..."
+                  : (Number(wallet.bonus) || 0).toLocaleString()}
               </div>
             </div>
             <div className="bg-white/5 rounded-xl p-3 text-center">
