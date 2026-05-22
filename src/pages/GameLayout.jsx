@@ -628,6 +628,29 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
+  // In GameLayout.jsx - Ensure wallet updates are handled
+
+  // Listen for wallet updates from WebSocket
+  useEffect(() => {
+    const handleWalletUpdate = (event) => {
+      if (event.detail && event.detail.type === "wallet_update") {
+        const { main, play, coins, source, bonus } = event.detail.payload;
+        console.log("Wallet update received:", { main, play, bonus });
+
+        setWallet((prev) => ({
+          ...prev,
+          main: main !== undefined ? main : prev.main,
+          play: play !== undefined ? play : prev.play,
+          coins: coins !== undefined ? coins : prev.coins,
+          bonus: bonus !== undefined ? bonus : prev.bonus,
+        }));
+      }
+    };
+
+    window.addEventListener("walletUpdate", handleWalletUpdate);
+    return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
+  }, []);
+
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
