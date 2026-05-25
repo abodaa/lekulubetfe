@@ -37,6 +37,7 @@ export default function CartelaSelection({
   const hasConnectedRef = useRef(false);
   const rejoinTriedRef = useRef(false);
   const roomCheckTimerRef = useRef(null);
+  const isNavigatingBackRef = useRef(false);
 
   const totalCartellas = gameState.totalCartellas || cards.length || 200;
 
@@ -508,8 +509,13 @@ export default function CartelaSelection({
         <header className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
             {/* Back Button */}
+
             <button
               onClick={async () => {
+                // Prevent double clicks
+                if (isNavigatingBackRef.current) return;
+                isNavigatingBackRef.current = true;
+
                 // Clear alert banners
                 setAlertBanners([]);
                 alertTimersRef.current.forEach((timer) => clearTimeout(timer));
@@ -525,21 +531,25 @@ export default function CartelaSelection({
                     `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
                   );
 
-                  // Deselect each cartella one by one
                   for (const cardNum of selectedNumbers) {
                     deselectCartella(cardNum);
-                    // Small delay to prevent race conditions
                     await new Promise((resolve) => setTimeout(resolve, 50));
                   }
                 }
 
-                // Clear stake in parent component
-                if (onResetToGame) {
-                  onResetToGame();
-                }
-
-                // Navigate back to game selection
+                // Navigate FIRST to game page
                 onNavigate?.("game");
+
+                // THEN clear stake after navigation (with delay)
+                setTimeout(() => {
+                  if (onResetToGame) {
+                    onResetToGame();
+                  }
+                  // Reset the navigation flag after everything is done
+                  setTimeout(() => {
+                    isNavigatingBackRef.current = false;
+                  }, 500);
+                }, 100);
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
             >
