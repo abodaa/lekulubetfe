@@ -509,19 +509,36 @@ export default function CartelaSelection({
           <div className="flex items-center justify-between">
             {/* Back Button */}
             <button
-              onClick={() => {
-                // Clear selections and go back to stake selection
-                // Reset all local state
+              onClick={async () => {
+                // Clear alert banners
                 setAlertBanners([]);
                 alertTimersRef.current.forEach((timer) => clearTimeout(timer));
                 alertTimersRef.current.clear();
 
-                // Call onResetToGame to clear stake in parent
+                // If user has selected cartellas, deselect them all
+                const selectedNumbers = Array.isArray(gameState.yourSelections)
+                  ? gameState.yourSelections
+                  : [];
+
+                if (selectedNumbers.length > 0) {
+                  console.log(
+                    `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
+                  );
+
+                  // Deselect each cartella one by one
+                  for (const cardNum of selectedNumbers) {
+                    deselectCartella(cardNum);
+                    // Small delay to prevent race conditions
+                    await new Promise((resolve) => setTimeout(resolve, 50));
+                  }
+                }
+
+                // Clear stake in parent component
                 if (onResetToGame) {
                   onResetToGame();
                 }
 
-                // Navigate back to game/stake selection
+                // Navigate back to game selection
                 onNavigate?.("game");
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
