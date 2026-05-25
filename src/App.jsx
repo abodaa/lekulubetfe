@@ -181,7 +181,13 @@ function AppContent() {
   };
 
   // In App.jsx - Update handleNavigate
+  const navigationInProgressRef = React.useRef(false);
+
   const handleNavigate = (page, forceDirect = false) => {
+    // Prevent multiple rapid navigations
+    if (navigationInProgressRef.current) return;
+    navigationInProgressRef.current = true;
+
     setIsNavigating(true);
 
     setTimeout(() => {
@@ -210,6 +216,11 @@ function AppContent() {
         setCurrentPage(page);
       }
       setIsNavigating(false);
+
+      // Reset navigation guard after delay
+      setTimeout(() => {
+        navigationInProgressRef.current = false;
+      }, 300);
     }, 150);
   };
 

@@ -518,9 +518,26 @@ export default function CartelaSelection({
 
                 // Clear alert banners
                 setAlertBanners([]);
+                alertTimersRef.current.forEach((timer) => clearTimeout(timer));
+                alertTimersRef.current.clear();
 
-                // Just navigate - let App.jsx handle cleanup
-                onNavigate?.("game");
+                // If user has selected cartellas, deselect them all
+                const selectedNumbers = Array.isArray(gameState.yourSelections)
+                  ? gameState.yourSelections
+                  : [];
+
+                if (selectedNumbers.length > 0) {
+                  console.log(
+                    `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
+                  );
+                  // Deselect all cartellas
+                  for (const cardNum of selectedNumbers) {
+                    deselectCartella(cardNum);
+                  }
+                }
+
+                // Navigate with forceDirect = true to reset stake
+                onNavigate?.("game", true);
 
                 // Reset flag after delay
                 setTimeout(() => {
