@@ -136,14 +136,19 @@ function AppContent() {
   ]);
 
   // Handle query parameter routing
+  // In App.jsx - Add leaderboard to query param handling
+
   useEffect(() => {
     const checkUrlParams = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const isAdmin = urlParams.get("admin") === "true";
       const stakeParam = urlParams.get("stake");
+      const pageParam = urlParams.get("page"); // ✅ Add this
 
       if (isAdmin) {
         setCurrentPage("admin");
+      } else if (pageParam === "leaderboard") {
+        setCurrentPage("scores"); // Navigate to leaderboard page
       } else {
         if (stakeParam) {
           const stakeValue = parseInt(stakeParam);
