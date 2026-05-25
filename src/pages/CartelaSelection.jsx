@@ -507,6 +507,33 @@ export default function CartelaSelection({
         {/* Header */}
         <header className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                // Clear selections and go back to stake selection
+                // setSelectedStake(null);
+                onResetToGame?.();
+                onNavigate?.("game");
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back
+            </button>
+
             {/* Timer */}
             <div
               className={`px-4 py-2 rounded-xl text-center min-w-[80px] ${
