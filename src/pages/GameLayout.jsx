@@ -1011,8 +1011,8 @@ export default function GameLayout({ stake, onNavigate }) {
                   onSwiper={(swiper) => {
                     swiperRef.current = swiper;
                   }}
-                  className="w-full h-full"
-                  style={{ paddingBottom: "40px" }}
+                  className="w-full h-full [&_.swiper-pagination-bullet-active]:!bg-white [&_.swiper-pagination-bullet]:!bg-white/40"
+      style={{ paddingBottom: "40px" }}
                 >
                   {yourCards.map(({ cardNumber, card }) => {
                     const markedNumbers = isAutoMarkOn
