@@ -45,6 +45,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   }, [apiBase]);
 
   const joinStake = (s) => {
+    localStorage.removeItem("selectedStake");
     onStakeSelected?.(s);
   };
 

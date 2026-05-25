@@ -172,6 +172,8 @@ function AppContent() {
   };
 
   const handleResetToGame = () => {
+    localStorage.removeItem("selectedStake");
+
     setSelectedStake(null);
     setSelectedCartelas([]);
     setCurrentGameId(null);

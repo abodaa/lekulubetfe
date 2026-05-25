@@ -511,8 +511,17 @@ export default function CartelaSelection({
             <button
               onClick={() => {
                 // Clear selections and go back to stake selection
-                // setSelectedStake(null);
-                onResetToGame?.();
+                // Reset all local state
+                setAlertBanners([]);
+                alertTimersRef.current.forEach((timer) => clearTimeout(timer));
+                alertTimersRef.current.clear();
+
+                // Call onResetToGame to clear stake in parent
+                if (onResetToGame) {
+                  onResetToGame();
+                }
+
+                // Navigate back to game/stake selection
                 onNavigate?.("game");
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
