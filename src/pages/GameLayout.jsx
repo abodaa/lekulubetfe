@@ -15,6 +15,12 @@ import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 import { BsInfoCircle } from "react-icons/bs";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+// Import Swiper styles
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -174,45 +180,13 @@ export default function GameLayout({ stake, onNavigate }) {
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
   const confettiRef = useRef(null);
 
-  // Swipe gesture refs
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
-  const sliderRef = useRef(null);
+  // Swiper ref for programmatic control
+  const swiperRef = useRef(null);
 
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
-
-  // Swipe handlers
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (yourCards.length <= 1) return;
-
-    const swipeThreshold = 50;
-    const diff = touchStartX.current - touchEndX.current;
-
-    if (Math.abs(diff) < swipeThreshold) return;
-
-    if (diff > 0) {
-      // Swipe left - next card
-      setCurrentCardIndex((prev) => Math.min(yourCards.length - 1, prev + 1));
-    } else {
-      // Swipe right - previous card
-      setCurrentCardIndex((prev) => Math.max(0, prev - 1));
-    }
-
-    // Reset touch positions
-    touchStartX.current = 0;
-    touchEndX.current = 0;
-  };
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -1014,47 +988,51 @@ export default function GameLayout({ stake, onNavigate }) {
           </>
         )}
 
-        {/* Cartellas */}
+        {/* Cartellas - UPDATED WITH SWIPER CONTINUOUS LOOP */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1">
             {yourCards.length > 0 ? (
-              <div className="relative">
-                {/* Slider Container with Swipe Support */}
-                <div
-                  className="overflow-hidden"
-                  ref={sliderRef}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
+              <div className="relative h-full">
+                <Swiper
+                  modules={[Navigation, Pagination, Autoplay]}
+                  spaceBetween={16}
+                  slidesPerView={1}
+                  centeredSlides={true}
+                  loop={true}
+                  autoplay={false}
+                  pagination={{
+                    clickable: true,
+                    dynamicBullets: true,
+                  }}
+                  navigation={{
+                    prevEl: ".swiper-button-prev-custom",
+                    nextEl: ".swiper-button-next-custom",
+                  }}
+                  onSwiper={(swiper) => {
+                    swiperRef.current = swiper;
+                  }}
+                  className="w-full h-full"
+                  style={{ paddingBottom: "40px" }}
                 >
-                  <div
-                    className="flex transition-transform duration-300 ease-out"
-                    style={{
-                      transform: `translateX(-${currentCardIndex * 100}%)`,
-                    }}
-                  >
-                    {yourCards.map(({ cardNumber, card }) => {
-                      const markedNumbers = isAutoMarkOn
-                        ? calledNumbers
-                        : manuallyMarkedNumbers[cardNumber]
-                          ? Array.from(manuallyMarkedNumbers[cardNumber])
-                          : [];
+                  {yourCards.map(({ cardNumber, card }) => {
+                    const markedNumbers = isAutoMarkOn
+                      ? calledNumbers
+                      : manuallyMarkedNumbers[cardNumber]
+                        ? Array.from(manuallyMarkedNumbers[cardNumber])
+                        : [];
 
-                      const hasWinningPattern = checkBingoPattern(
-                        card,
-                        calledNumbers,
-                      );
-                      const isClaiming = claimingStates[cardNumber];
-                      const alreadyClaimed =
-                        claimedCartellasRef.current.has(cardNumber);
-                      const hasMissedPattern =
-                        !!missedWinningPatterns[cardNumber];
-                      return (
-                        <div
-                          key={cardNumber}
-                          className="w-full flex-shrink-0 px-2"
-                          style={{ flex: "0 0 100%" }}
-                        >
+                    const hasWinningPattern = checkBingoPattern(
+                      card,
+                      calledNumbers,
+                    );
+                    const isClaiming = claimingStates[cardNumber];
+                    const alreadyClaimed =
+                      claimedCartellasRef.current.has(cardNumber);
+                    const hasMissedPattern =
+                      !!missedWinningPatterns[cardNumber];
+                    return (
+                      <SwiperSlide key={cardNumber}>
+                        <div className="px-2 pb-8">
                           <div
                             className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
                               hasMissedPattern &&
@@ -1159,67 +1137,27 @@ export default function GameLayout({ stake, onNavigate }) {
                             />
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </SwiperSlide>
+                    );
+                  })}
+                </Swiper>
 
-                {/* Navigation Buttons - Only show if more than 1 cartella */}
+                {/* Custom Navigation Buttons */}
                 {yourCards.length > 1 && (
-                  <div className="flex justify-between items-center mt-3">
+                  <>
                     <button
-                      onClick={() =>
-                        setCurrentCardIndex((prev) => Math.max(0, prev - 1))
-                      }
-                      disabled={currentCardIndex === 0}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        currentCardIndex === 0
-                          ? "bg-white/10 text-white/30 cursor-not-allowed"
-                          : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
-                      }`}
+                      className="swiper-button-prev-custom absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all shadow-lg"
+                      onClick={() => swiperRef.current?.slidePrev()}
                     >
-                      <MdKeyboardArrowLeft />
+                      <MdKeyboardArrowLeft size={20} />
                     </button>
-
-                    <div className="flex gap-1.5">
-                      {yourCards.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentCardIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            currentCardIndex === idx
-                              ? "bg-white w-4"
-                              : "bg-white/30 hover:bg-white/50"
-                          }`}
-                        />
-                      ))}
-                    </div>
-
                     <button
-                      onClick={() =>
-                        setCurrentCardIndex((prev) =>
-                          Math.min(yourCards.length - 1, prev + 1),
-                        )
-                      }
-                      disabled={currentCardIndex === yourCards.length - 1}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        currentCardIndex === yourCards.length - 1
-                          ? "bg-white/10 text-white/30 cursor-not-allowed"
-                          : "bg-white/20 text-white hover:bg-white/30 active:scale-95"
-                      }`}
+                      className="swiper-button-next-custom absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all shadow-lg"
+                      onClick={() => swiperRef.current?.slideNext()}
                     >
-                      <MdKeyboardArrowRight />
+                      <MdKeyboardArrowRight size={20} />
                     </button>
-                  </div>
-                )}
-
-                {/* Counter indicator */}
-                {yourCards.length > 1 && (
-                  <div className="text-center mt-2">
-                    <span className="text-white/40 text-[10px]">
-                      {currentCardIndex + 1} / {yourCards.length}
-                    </span>
-                  </div>
+                  </>
                 )}
               </div>
             ) : isWatchMode ? (
@@ -1235,7 +1173,6 @@ export default function GameLayout({ stake, onNavigate }) {
                         👀
                       </motion.div>
                     </div>
-                    {/* <div className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping"></div> */}
                   </div>
 
                   <h3 className="text-white text-xl font-black mb-2 tracking-wide">
@@ -1258,7 +1195,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         Players
                       </span>
                       <span className="text-white/50 text-xs font-extrabold">
-                        {currentPlayersCount || 0}
+                        {gameState.takenCards?.length || 0}
                       </span>
                     </div>
                   </div>
