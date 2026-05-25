@@ -270,32 +270,6 @@ export default function Wallet({ onNavigate }) {
               </div>
             </div>
 
-            {/* Play Wallet Card */}
-            <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <GiPlayButton className="text-emerald-400" size={16} />
-                  </div>
-                  <span className="text-white/60 text-xs uppercase tracking-wider">
-                    Play Wallet
-                  </span>
-                </div>
-                <span className="text-white/50 text-xs">Gaming Funds</span>
-              </div>
-              <div className="text-white text-2xl font-bold">
-                {wallet.play?.toLocaleString() || 0}{" "}
-                <span className="text-white/40 text-sm">ETB</span>
-              </div>
-              {wallet.playDeposited > 0 && (
-                <div className="mt-2 text-right">
-                  <span className="text-white/50 text-xs">
-                    Transferable: {wallet.playDeposited.toLocaleString()} ETB
-                  </span>
-                </div>
-              )}
-            </div>
-
             {/* Bonus Wallet Card */}
             <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
               <div className="flex items-center justify-between mb-2">

@@ -122,6 +122,11 @@ export default function Profile({ onNavigate }) {
       });
 
       if (inviteRes) {
+        console.log("📊 Invite stats received:", inviteRes);
+        console.log(
+          "💰 totalDepositsFromInvited:",
+          inviteRes.totalDepositsFromInvited,
+        );
         setInviteStats({
           totalInvites: inviteRes.totalInvites || 0,
           totalRewards: inviteRes.totalRewards || 0,
@@ -181,12 +186,12 @@ export default function Profile({ onNavigate }) {
     </div>
   );
 
-  const copyInviteLink = () => {
-    const botUsername =
-      window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "lekuluBingo";
-    const inviteLink = `https://t.me/${botUsername}?start=invite_${inviteStats.inviteCode}`;
-    navigator.clipboard.writeText(inviteLink);
-  };
+  // const copyInviteLink = () => {
+  //   const botUsername =
+  //     window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "lekuluBingo";
+  //   const inviteLink = `https://t.me/${botUsername}?start=invite_${inviteStats.inviteCode}`;
+  //   navigator.clipboard.writeText(inviteLink);
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -268,27 +273,28 @@ export default function Profile({ onNavigate }) {
                 label="Bonus Wallet"
                 value={`${profileData.wallet.bonus?.toLocaleString() || 0} ETB`}
                 sublabel="Promotional funds"
-                color="purple"
+                // color="purple"
               />
               <StatCard
                 icon={<FaCoins size={16} className="text-yellow-400" />}
                 label="Coins"
                 value={profileData.wallet.coins?.toLocaleString() || 0}
                 sublabel="Earned from bets"
-                color="yellow"
+                // color="yellow"
               />
               <StatCard
                 icon={<FaGamepad size={16} className="text-emerald-400" />}
                 label="Games Played"
                 value={profileData.user.totalGamesPlayed.toLocaleString() || 0}
-                sublabel="Game funds"
-                color="green"
+                sublabel="Games you've played"
+                // color="green"
               />
               <StatCard
                 icon={<FaTrophy size={16} className="text-yellow-400" />}
                 label="Games Won"
                 value={profileData.user.totalGamesWon.toLocaleString() || 0}
-                color="yellow"
+                sublabel="Games you've won"
+                // color="yellow"
               />
             </motion.div>
 
@@ -372,7 +378,7 @@ export default function Profile({ onNavigate }) {
                 </div>
               )}
 
-              {/* Invite Code */}
+              {/* Invite Code
               {inviteStats.inviteCode ? (
                 <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -415,7 +421,7 @@ export default function Profile({ onNavigate }) {
                     Generate Invite Code →
                   </button>
                 </div>
-              )}
+              )} */}
             </motion.div>
           </>
         )}
