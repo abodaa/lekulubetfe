@@ -180,21 +180,32 @@ function AppContent() {
     setCurrentPage("game");
   };
 
+  // In App.jsx - Update handleNavigate
   const handleNavigate = (page, forceDirect = false) => {
     setIsNavigating(true);
 
     setTimeout(() => {
-      if (page === "game" && !forceDirect) {
-        const targetPage = determineGamePage();
-        if (targetPage !== "game") {
-          const messages = {
-            "game-layout": "🎮 Returning to your active game!",
-            "cartela-selection": "🎫 Taking you to cartella selection",
-            winner: "🏆 Showing game results",
-          };
-          showSuccess(messages[targetPage] || "Taking you to your game");
+      if (page === "game") {
+        // Check if we need smart navigation or direct
+        if (!forceDirect) {
+          const targetPage = determineGamePage();
+          if (targetPage !== "game") {
+            const messages = {
+              "game-layout": "🎮 Returning to your active game!",
+              "cartela-selection": "🎫 Taking you to cartella selection",
+              winner: "🏆 Showing game results",
+            };
+            showSuccess(messages[targetPage] || "Taking you to your game");
+          }
+          setCurrentPage(targetPage);
+        } else {
+          // Force direct navigation to game page (reset state)
+          setSelectedStake(null);
+          setSelectedCartelas([]);
+          setCurrentGameId(null);
+          localStorage.removeItem("selectedStake");
+          setCurrentPage("game");
         }
-        setCurrentPage(targetPage);
       } else {
         setCurrentPage(page);
       }

@@ -511,45 +511,21 @@ export default function CartelaSelection({
             {/* Back Button */}
 
             <button
-              onClick={async () => {
+              onClick={() => {
                 // Prevent double clicks
                 if (isNavigatingBackRef.current) return;
                 isNavigatingBackRef.current = true;
 
                 // Clear alert banners
                 setAlertBanners([]);
-                alertTimersRef.current.forEach((timer) => clearTimeout(timer));
-                alertTimersRef.current.clear();
 
-                // If user has selected cartellas, deselect them all
-                const selectedNumbers = Array.isArray(gameState.yourSelections)
-                  ? gameState.yourSelections
-                  : [];
-
-                if (selectedNumbers.length > 0) {
-                  console.log(
-                    `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
-                  );
-
-                  for (const cardNum of selectedNumbers) {
-                    deselectCartella(cardNum);
-                    await new Promise((resolve) => setTimeout(resolve, 50));
-                  }
-                }
-
-                // Navigate FIRST to game page
+                // Just navigate - let App.jsx handle cleanup
                 onNavigate?.("game");
 
-                // THEN clear stake after navigation (with delay)
+                // Reset flag after delay
                 setTimeout(() => {
-                  if (onResetToGame) {
-                    onResetToGame();
-                  }
-                  // Reset the navigation flag after everything is done
-                  setTimeout(() => {
-                    isNavigatingBackRef.current = false;
-                  }, 500);
-                }, 100);
+                  isNavigatingBackRef.current = false;
+                }, 500);
               }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
             >
