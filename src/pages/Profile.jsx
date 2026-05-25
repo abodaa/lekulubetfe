@@ -21,7 +21,6 @@ import {
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
 
 export default function Profile({ onNavigate }) {
-  const [sound, setSound] = useState(true);
   const [profileData, setProfileData] = useState({
     user: {
       firstName: "User",
@@ -73,7 +72,6 @@ export default function Profile({ onNavigate }) {
         return {
           balance: 0,
           main: 0,
-          play: 0,
           coins: 0,
           gamesWon: 0,
           bonus: 0,
@@ -101,27 +99,25 @@ export default function Profile({ onNavigate }) {
         lastName: user?.lastName || "",
         phone: user?.phone || null,
         isRegistered: user?.isRegistered || false,
-        totalGamesPlayed: 0,
-        totalGamesWon: 0,
+        totalGamesPlayed: user?.totalGamesPlayed || 0,
+        totalGamesWon: user?.totalGamesWon || 0,
         registrationDate: new Date(),
       };
 
       // Safely get wallet values with fallbacks
       const mainValue = walletRes.main ?? walletRes.balance ?? 0;
-      const playValue = walletRes.play ?? 0;
       const coinsValue = walletRes.coins ?? 0;
-      const gamesWonValue = walletRes.gamesWon ?? 0;
-      const bonusValue = walletRes.bonus ?? 0; // ADDED
+      const gamesWonValue = profileRes?.user.totalGamesWon ?? 0;
+      const bonusValue = walletRes.bonus ?? 0;
 
       setProfileData({
         user: userInfo,
         wallet: {
           balance: walletRes.balance ?? 0,
           main: mainValue,
-          play: playValue,
           coins: coinsValue,
           gamesWon: gamesWonValue,
-          bonus: bonusValue, // ADDED
+          bonus: bonusValue,
         },
       });
 
@@ -266,13 +262,7 @@ export default function Profile({ onNavigate }) {
                 value={`${profileData.wallet.main?.toLocaleString() || 0} ETB`}
                 sublabel="Withdrawable"
               />
-              <StatCard
-                icon={<GiPlayButton size={16} className="text-emerald-400" />}
-                label="Play Wallet"
-                value={`${profileData.wallet.play?.toLocaleString() || 0} ETB`}
-                sublabel="Game funds"
-                color="green"
-              />
+
               <StatCard
                 icon={<FaGift size={16} className="text-purple-400" />}
                 label="Bonus Wallet"
@@ -288,9 +278,16 @@ export default function Profile({ onNavigate }) {
                 color="yellow"
               />
               <StatCard
+                icon={<FaGamepad size={16} className="text-emerald-400" />}
+                label="Games Played"
+                value={profileData.user.totalGamesPlayed.toLocaleString() || 0}
+                sublabel="Game funds"
+                color="green"
+              />
+              <StatCard
                 icon={<FaTrophy size={16} className="text-yellow-400" />}
                 label="Games Won"
-                value={profileData.wallet.gamesWon?.toLocaleString() || 0}
+                value={profileData.user.totalGamesWon.toLocaleString() || 0}
                 color="yellow"
               />
             </motion.div>
@@ -353,9 +350,7 @@ export default function Profile({ onNavigate }) {
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-2">
                     <FaMoneyBillWave size={10} className="text-emerald-400" />
-                    <span className="text-white/50 text-xs">
-                      Credited to
-                    </span>
+                    <span className="text-white/50 text-xs">Credited to</span>
                   </div>
                   <span className="text-emerald-400 text-xs font-medium">
                     {inviteStats.rewardWallet || "Main Wallet (Withdrawable)"}
