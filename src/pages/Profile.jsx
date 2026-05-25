@@ -186,12 +186,7 @@ export default function Profile({ onNavigate }) {
     </div>
   );
 
-  // const copyInviteLink = () => {
-  //   const botUsername =
-  //     window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "lekuluBingo";
-  //   const inviteLink = `https://t.me/${botUsername}?start=invite_${inviteStats.inviteCode}`;
-  //   navigator.clipboard.writeText(inviteLink);
-  // };
+ 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -323,12 +318,12 @@ export default function Profile({ onNavigate }) {
                   </p>
                 </div>
                 <div className="text-center flex-1 border-x border-white/10">
-                  <p className="text-white/40 text-[9px] uppercase">Rewards</p>
+                  <p className="text-white/40 text-[9px] uppercase">Invitee Registration Rewards</p>
                   <p className="text-green-400 text-lg font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
                   </p>
                 </div>
-                <div className="text-center flex-1">
+                {/* <div className="text-center flex-1">
                   <p className="text-white/40 text-[9px] uppercase">
                     Invite Deposits
                   </p>
@@ -337,7 +332,7 @@ export default function Profile({ onNavigate }) {
                       0}{" "}
                     ETB
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {/* Reward Rate Info */}
@@ -365,7 +360,7 @@ export default function Profile({ onNavigate }) {
               </div>
 
               {/* Estimated Rewards */}
-              {inviteStats.estimatedDepositRewards > 0 && (
+              {/* {inviteStats.estimatedDepositRewards > 0 && (
                 <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-2 mb-3">
                   <div className="flex items-center justify-between">
                     <span className="text-white/50 text-xs">
@@ -376,7 +371,7 @@ export default function Profile({ onNavigate }) {
                     </span>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Invite Code
               {inviteStats.inviteCode ? (
