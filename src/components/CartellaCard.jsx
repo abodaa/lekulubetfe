@@ -175,18 +175,16 @@ export default function CartellaCard({
       } w-full mx-auto aspect-square`}
     >
       {/* BINGO Header */}
-      {showHeader && (
-        <div className="grid grid-cols-5 gap-1 mb-1.5">
-          {letters.map((letter, index) => (
-            <div
-              key={letter}
-              className={`text-center text-sm font-extrabold py-1.5 rounded-lg border ${letterColors[index]}`}
-            >
-              {letter}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-5 gap-1 mb-1.5">
+        {letters.map((letter, index) => (
+          <div
+            key={letter}
+            className={`text-center text-sm font-extrabold py-1.5 rounded-lg border ${letterColors[index]}`}
+          >
+            {letter}
+          </div>
+        ))}
+      </div>
 
       {/* Numbers Grid */}
       <div className="bg-white/5 backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden">
