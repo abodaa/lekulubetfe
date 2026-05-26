@@ -52,39 +52,42 @@ export default function History({ onNavigate }) {
         let gamesList = gamesData?.games || [];
 
         // ========== FIX: Process games to correctly identify wins ==========
-        gamesList = gamesList.map(game => {
+        gamesList = gamesList.map((game) => {
           // Check if current user is in winners array
-          const isWinner = game?.winners?.some(winner => {
-            const winnerId = winner?.userId?._id || winner?.userId || winner?.id;
+          const isWinner = game?.winners?.some((winner) => {
+            const winnerId =
+              winner?.userId?._id || winner?.userId || winner?.id;
             return String(winnerId) === String(sessionId);
           });
-          
+
           // Also check userResult if exists
           const hasUserResultWon = game?.userResult?.won === true;
-          
+
           // Determine if user won this game
           const won = isWinner || hasUserResultWon;
-          
+
           // Get prize amount if won
           let prize = game?.userResult?.prize || 0;
           if (isWinner && !prize) {
             // Calculate prize from winners array
-            const winnerInfo = game?.winners?.find(w => {
+            const winnerInfo = game?.winners?.find((w) => {
               const winnerId = w?.userId?._id || w?.userId || w?.id;
               return String(winnerId) === String(sessionId);
             });
             prize = winnerInfo?.prize || 0;
           }
-          
-          console.log(`Game ${game?.gameId}: winners=${JSON.stringify(game?.winners)}, isWinner=${isWinner}, won=${won}`);
-          
+
+          console.log(
+            `Game ${game?.gameId}: winners=${JSON.stringify(game?.winners)}, isWinner=${isWinner}, won=${won}`,
+          );
+
           return {
             ...game,
             userResult: {
               won: won,
               prize: prize,
-              participated: true
-            }
+              participated: true,
+            },
           };
         });
         // ========== END FIX ==========
@@ -93,17 +96,25 @@ export default function History({ onNavigate }) {
 
         // Calculate stats from processed games list
         const totalGames = gamesList.length;
-        const gamesWon = gamesList.filter(g => g?.userResult?.won === true).length;
-        const winRate = totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
+        const gamesWon = gamesList.filter(
+          (g) => g?.userResult?.won === true,
+        ).length;
+        const winRate =
+          totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
 
         // Use profile stats if available, otherwise use calculated
         if (profileData?.user) {
           setUserStats({
             totalGamesPlayed: profileData.user.totalGamesPlayed || totalGames,
             totalGamesWon: profileData.user.totalGamesWon || gamesWon,
-            winRate: profileData.user.totalGamesPlayed > 0 
-              ? Math.round((profileData.user.totalGamesWon / profileData.user.totalGamesPlayed) * 100) 
-              : winRate
+            winRate:
+              profileData.user.totalGamesPlayed > 0
+                ? Math.round(
+                    (profileData.user.totalGamesWon /
+                      profileData.user.totalGamesPlayed) *
+                      100,
+                  )
+                : winRate,
           });
         } else {
           setUserStats({
@@ -114,7 +125,6 @@ export default function History({ onNavigate }) {
         }
 
         console.log("Stats calculated:", { totalGames, gamesWon, winRate });
-
       } catch (error) {
         console.error("Failed to fetch game history:", error);
         setError("Unable to load your game history right now.");
