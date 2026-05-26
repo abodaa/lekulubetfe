@@ -899,7 +899,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                 </div>
                               </motion.div>
                             )}
-                            <motion.span
+                            <span
                               initial={isCurrent ? { scale: 0 } : {}}
                               animate={isCurrent ? { scale: 1 } : {}}
                               transition={{ duration: 0.3, delay: 0.15 }}
@@ -909,7 +909,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             >
                               {letter}
                               {n}
-                            </motion.span>
+                            </span>
                           </motion.div>
                         );
                       });
