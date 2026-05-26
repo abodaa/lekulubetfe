@@ -1001,8 +1001,9 @@ export default function GameLayout({ stake, onNavigate }) {
                   loop={true}
                   autoplay={false}
                   pagination={{
+                    type: "fraction",
                     clickable: true,
-                    dynamicBullets: true,
+                    // dynamicBullets: true,
                   }}
                   navigation={{
                     prevEl: ".swiper-button-prev-custom",
@@ -1012,7 +1013,7 @@ export default function GameLayout({ stake, onNavigate }) {
                     swiperRef.current = swiper;
                   }}
                   className="w-full h-full [&_.swiper-pagination-bullet-active]:!bg-white [&_.swiper-pagination-bullet]:!bg-white/40"
-                  style={{ paddingBottom: "40px" }}
+                  style={{ paddingBottom: "20px" }}
                 >
                   {yourCards.map(({ cardNumber, card }) => {
                     const markedNumbers = isAutoMarkOn
@@ -1133,7 +1134,7 @@ export default function GameLayout({ stake, onNavigate }) {
                               missedWinningCalledNumbers={
                                 missedWinningPatterns[cardNumber] || null
                               }
-                              size="medium"
+                              size="small"
                             />
                           </div>
                         </div>
