@@ -125,7 +125,7 @@ export default function CartellaCard({
   missedWinningCalledNumbers = null,
   isAutoMarkOn = true,
   onNumberToggle = null,
-  showHeader = false,
+  showHeader = true,
   size,
 }) {
   console.log(

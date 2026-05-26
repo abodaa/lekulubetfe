@@ -1095,7 +1095,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </div>
 
                             {/* BINGO Header */}
-                            <div className="grid grid-cols-5 gap-1 mb-2">
+                            {/* <div className="grid grid-cols-5 gap-1 mb-2">
                               {["B", "I", "N", "G", "O"].map((letter, idx) => {
                                 const colors = [
                                   "bg-blue-500/30 text-blue-200",
@@ -1113,7 +1113,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   </div>
                                 );
                               })}
-                            </div>
+                            </div> */}
 
                             <CartellaCard
                               id={cardNumber}
