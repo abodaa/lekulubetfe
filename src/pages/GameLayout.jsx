@@ -1133,7 +1133,7 @@ export default function GameLayout({ stake, onNavigate }) {
                               missedWinningCalledNumbers={
                                 missedWinningPatterns[cardNumber] || null
                               }
-                              size="small"
+                              size="medium"
                             />
                           </div>
                         </div>
