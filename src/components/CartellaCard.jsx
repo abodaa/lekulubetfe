@@ -172,7 +172,7 @@ export default function CartellaCard({
           : isPreview
             ? "max-w-[280px]"
             : "max-w-[320px]"
-      } w-full mx-auto`}
+      } w-full mx-auto aspect-square`}
     >
       {/* BINGO Header */}
       {showHeader && (
