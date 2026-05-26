@@ -1003,7 +1003,17 @@ export default function GameLayout({ stake, onNavigate }) {
                   pagination={{
                     type: "fraction",
                     clickable: true,
-                    // dynamicBullets: true,
+                    formatFractionCurrent: (number) => {
+                      return `${number}`;
+                    },
+                    formatFractionTotal: (number) => {
+                      return `${number}`;
+                    },
+                    renderFraction: (currentClass, totalClass) => {
+                      return `<span class="${currentClass}" style="color: white; font-weight: bold; font-size: 14px;"></span>
+              <span style="color: white; opacity: 0.5; margin: 0 4px;">/</span>
+              <span class="${totalClass}" style="color: white; opacity: 0.7; font-size: 12px;"></span>`;
+                    },
                   }}
                   navigation={{
                     prevEl: ".swiper-button-prev-custom",
@@ -1012,7 +1022,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   onSwiper={(swiper) => {
                     swiperRef.current = swiper;
                   }}
-                  className="w-full h-full [&_.swiper-pagination-bullet-active]:!bg-white [&_.swiper-pagination-bullet]:!bg-white/40"
+                  className="w-full h-full"
                   style={{ paddingBottom: "20px" }}
                 >
                   {yourCards.map(({ cardNumber, card }) => {
