@@ -168,7 +168,7 @@ export default function CartellaCard({
     <div
       className={`${
         size === "small"
-          ? "max-w-[220px]"
+          ? "max-w-[250px]"
           : isPreview
             ? "max-w-[280px]"
             : "max-w-[320px]"

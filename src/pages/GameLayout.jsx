@@ -1094,27 +1094,6 @@ export default function GameLayout({ stake, onNavigate }) {
                               </button>
                             </div>
 
-                            {/* BINGO Header */}
-                            {/* <div className="grid grid-cols-5 gap-1 mb-2">
-                              {["B", "I", "N", "G", "O"].map((letter, idx) => {
-                                const colors = [
-                                  "bg-blue-500/30 text-blue-200",
-                                  "bg-green-500/30 text-green-200",
-                                  "bg-purple-500/30 text-purple-200",
-                                  "bg-red-500/30 text-red-200",
-                                  "bg-yellow-500/30 text-yellow-200",
-                                ];
-                                return (
-                                  <div
-                                    key={letter}
-                                    className={`text-center text-[10px] font-extrabold py-1.5 rounded-md ${colors[idx]} border border-white/10`}
-                                  >
-                                    {letter}
-                                  </div>
-                                );
-                              })}
-                            </div> */}
-
                             <CartellaCard
                               id={cardNumber}
                               card={card}
