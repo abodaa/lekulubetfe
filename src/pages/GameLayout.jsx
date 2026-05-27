@@ -162,7 +162,6 @@ export default function GameLayout({ stake, onNavigate }) {
   };
 
   const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
-  const currentPlayersCount = gameState.playersCount || 0;
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
@@ -171,32 +170,22 @@ export default function GameLayout({ stake, onNavigate }) {
     ? gameState.yourCards
     : [];
 
-  const [isSoundOn, setIsSoundOn] = useState(() => {
-    try {
-      const saved = localStorage.getItem("soundEnabled");
-      return saved === "true";
-    } catch {
-      return false;
-    }
-  });
+  const [isSoundOn, setIsSoundOn] = useState(false);
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
   const confettiRef = useRef(null);
 
-  // Swiper ref for programmatic control
   const swiperRef = useRef(null);
-
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
-  const audioInitRef = useRef(false);
+  const audioInitializedRef = useRef(false);
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -219,40 +208,39 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => document.removeEventListener("visibilitychange", h);
   }, [stake, sessionId, connected, connectToStake]);
 
-  // Audio initialization - runs once on mount
+  // Audio initialization - only once on first user interaction
   useEffect(() => {
-    // Preload sounds in background
-    preloadNumberSounds().catch(() => {});
-
-    // Initialize audio on first user interaction
-    const handleUserInteraction = () => {
-      if (!audioInitRef.current) {
-        audioInitRef.current = true;
-        initAudio().catch(() => {});
+    const initAudioOnInteraction = async () => {
+      if (!audioInitializedRef.current) {
+        audioInitializedRef.current = true;
+        await initAudio().catch(() => {});
+        await preloadNumberSounds().catch(() => {});
       }
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("click", initAudioOnInteraction);
+      document.removeEventListener("touchstart", initAudioOnInteraction);
     };
 
-    document.addEventListener("click", handleUserInteraction);
-    document.addEventListener("touchstart", handleUserInteraction);
+    document.addEventListener("click", initAudioOnInteraction);
+    document.addEventListener("touchstart", initAudioOnInteraction);
 
     return () => {
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("click", initAudioOnInteraction);
+      document.removeEventListener("touchstart", initAudioOnInteraction);
     };
   }, []);
 
-  // Sound playing effect
+  // Play sound when number is called
   useEffect(() => {
     if (!isSoundOn) return;
     if (!currentNumber) return;
     if (startCountdown > 0) return;
     if (gameState.phase !== "running") return;
-    if (isWatchMode) return;
 
-    playNumberSound(currentNumber).catch(() => {});
-  }, [currentNumber, isSoundOn, startCountdown, gameState.phase, isWatchMode]);
+    const play = async () => {
+      await playNumberSound(currentNumber).catch(() => {});
+    };
+    play();
+  }, [currentNumber, isSoundOn, startCountdown, gameState.phase]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
@@ -297,7 +285,6 @@ export default function GameLayout({ stake, onNavigate }) {
         return;
       }
 
-      // For manual mode, verify winning pattern before sending
       if (!isAutoMarkOn) {
         const hasWin = checkBingoPattern(card, calledNumbers);
         if (!hasWin) {
@@ -346,7 +333,7 @@ export default function GameLayout({ stake, onNavigate }) {
     ],
   );
 
-  // Track missed winning patterns (when the last call that completes a pattern passes)
+  // Track missed winning patterns
   useEffect(() => {
     if (gameState.phase !== "running") {
       setMissedWinningPatterns({});
@@ -363,27 +350,19 @@ export default function GameLayout({ stake, onNavigate }) {
         continue;
       }
 
-      // Check if current card has a winning pattern NOW
       const hasWinNow = checkBingoPattern(card, calledNumbers);
-
-      // Check if card had a winning pattern on the PREVIOUS call
       const previousCalled = calledNumbers.slice(0, -1);
       const hadWinBefore =
         previousCalled.length > 0
           ? checkBingoPattern(card, previousCalled)
           : false;
 
-      // If it had a winning pattern before but doesn't now, it was missed
       if (hadWinBefore && !hasWinNow) {
         if (!newMissedPatterns[cardNumber]) {
-          console.log(
-            `🔴 Missed winning pattern for Cartella #${cardNumber} at call ${calledNumbers.length}`,
-          );
           newMissedPatterns[cardNumber] = previousCalled;
         }
       }
 
-      // If it has a winning pattern now, clear missed status
       if (hasWinNow && newMissedPatterns[cardNumber]) {
         delete newMissedPatterns[cardNumber];
       }
@@ -392,7 +371,7 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
-  // AUTO-BINGO for multiple cartellas
+  // AUTO-BINGO
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
@@ -473,7 +452,7 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
 
-  // Recovery: If a cartella has a winning pattern but is incorrectly marked as claimed, reset it
+  // Recovery
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (yourCards.length === 0) return;
@@ -481,9 +460,6 @@ export default function GameLayout({ stake, onNavigate }) {
     for (const { cardNumber, card } of yourCards) {
       const hasWin = checkBingoPattern(card, calledNumbers);
       if (hasWin && claimedCartellasRef.current.has(cardNumber)) {
-        console.log(
-          `⚠️ Resetting claimed status for Cartella #${cardNumber} - has winning pattern but was marked claimed`,
-        );
         claimedCartellasRef.current.delete(cardNumber);
       }
     }
@@ -524,24 +500,10 @@ export default function GameLayout({ stake, onNavigate }) {
   };
 
   useEffect(() => {
-    if (gameState.phase === "announce" && !isRefreshing && !isWatchMode) {
-      const winners = gameState.winners || [];
-      if (winners.length > 0) {
-        const userWon = winners.some((w) => w.userId === sessionId);
-        if (userWon) {
-          showSuccess("🎉 You won!");
-        }
-      }
+    if (gameState.phase === "announce" && !isRefreshing) {
       onNavigate?.("winner");
     }
-  }, [
-    gameState.phase,
-    gameState.winners,
-    sessionId,
-    onNavigate,
-    isRefreshing,
-    showSuccess,
-  ]);
+  }, [gameState.phase, onNavigate, isRefreshing]);
 
   useEffect(() => {
     if (!currentGameId) {
@@ -613,15 +575,14 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // Single wallet update handler - removed duplicate
+  // Wallet update handler
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
-        const { main, coins, source, bonus } = event.detail.payload;
+        const { main, bonus } = event.detail.payload;
         setWallet((prev) => ({
           ...prev,
           main: main !== undefined ? main : prev.main,
-          coins: coins !== undefined ? coins : prev.coins,
           bonus: bonus !== undefined ? bonus : prev.bonus,
         }));
       }
@@ -630,14 +591,12 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
-  // Simple sound toggle - no async during state update
+  // Simple sound toggle
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
-    localStorage.setItem("soundEnabled", newState.toString());
-
-    if (newState && !audioInitRef.current) {
-      audioInitRef.current = true;
+    if (newState && !audioInitializedRef.current) {
+      audioInitializedRef.current = true;
       initAudio().catch(() => {});
       resumeAudio().catch(() => {});
     }
@@ -797,9 +756,6 @@ export default function GameLayout({ stake, onNavigate }) {
             </div>
           </div>
         </header>
-
-        {/* Rest of your JSX remains the same - Stats Bar, Number Board, Swiper, etc. */}
-        {/* ... keep all the existing JSX from your original file from here ... */}
 
         {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
@@ -1007,7 +963,7 @@ export default function GameLayout({ stake, onNavigate }) {
           </>
         )}
 
-        {/* Cartellas - Swiper Section (keep your existing Swiper code) */}
+        {/* Cartellas - Swiper Section */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1">
             {yourCards.length > 0 ? (
