@@ -3,10 +3,10 @@ import CartellaCard from "../components/CartellaCard";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
-import {
-  playNumberSound,
-  preloadNumberSounds,
-} from "../lib/audio/numberSounds";
+// import {
+//   playNumberSound,
+//   preloadNumberSounds,
+// } from "../lib/audio/numberSounds";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,11 @@ import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import {
+  initAudio,
+  preloadNumberSounds,
+  resumeAudio,
+} from "../lib/audio/numberSounds";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -316,6 +321,37 @@ export default function GameLayout({ stake, onNavigate }) {
       showSuccess,
     ],
   );
+
+  useEffect(() => {
+    // Preload sounds in background
+    preloadNumberSounds().catch(() => {});
+
+    // Initialize audio on first user interaction (required by browsers/Telegram)
+    const handleUserInteraction = () => {
+      initAudio()
+        .then(() => {
+          console.log("🎵 Audio initialized for Mini App");
+        })
+        .catch(() => {});
+
+      // Remove listeners after first interaction
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("touchstart", handleUserInteraction);
+
+    // Also resume audio when sound button is toggled
+    if (isSoundOn) {
+      resumeAudio().catch(() => {});
+    }
+
+    return () => {
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+  }, []);
 
   // Track missed winning patterns (when the last call that completes a pattern passes)
   useEffect(() => {
@@ -738,7 +774,13 @@ export default function GameLayout({ stake, onNavigate }) {
                 {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
               </div>
               <button
-                onClick={() => setIsSoundOn(!isSoundOn)}
+                onClick={async () => {
+                  setIsSoundOn(!isSoundOn);
+                  if (!isSoundOn) {
+                    // Resume audio when turning sound ON
+                    await resumeAudio();
+                  }
+                }}
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isSoundOn ? "bg-white/20 text-white" : "bg-white/5 text-white/30"}`}
               >
                 {isSoundOn ? "🔊" : "🔇"}
