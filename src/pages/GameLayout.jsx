@@ -659,6 +659,40 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
+  // First, add a ref to track audio initialization
+  const audioInitRef = useRef(false);
+
+  // Add safe audio initialization function
+  const safeInitAudio = useCallback(async () => {
+    if (audioInitRef.current) return true;
+    try {
+      await initAudio();
+      audioInitRef.current = true;
+      return true;
+    } catch (error) {
+      console.warn("Audio init failed:", error);
+      return false;
+    }
+  }, []);
+
+  // Safe sound toggle handler
+  const handleSoundToggle = useCallback(async () => {
+    const newSoundState = !isSoundOn;
+
+    if (newSoundState) {
+      // Turning sound ON - try to initialize
+      const success = await safeInitAudio();
+      if (!success) {
+        showError("Audio not supported on this device");
+        return;
+      }
+      await resumeAudio();
+    }
+
+    // Update state after audio operations
+    setIsSoundOn(newSoundState);
+  }, [isSoundOn, safeInitAudio, showError]);
+
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -774,14 +808,13 @@ export default function GameLayout({ stake, onNavigate }) {
                 {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
               </div>
               <button
-                onClick={async () => {
-                  setIsSoundOn(!isSoundOn);
-                  if (!isSoundOn) {
-                    // Resume audio when turning sound ON
-                    await resumeAudio();
-                  }
-                }}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isSoundOn ? "bg-white/20 text-white" : "bg-white/5 text-white/30"}`}
+                onClick={handleSoundToggle}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  isSoundOn
+                    ? "bg-white/20 text-white hover:bg-white/30"
+                    : "bg-white/5 text-white/30 hover:bg-white/10"
+                }`}
+                aria-label={isSoundOn ? "Mute" : "Unmute"}
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
