@@ -3,10 +3,12 @@ import CartellaCard from "../components/CartellaCard";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
-// import {
-//   playNumberSound,
-//   preloadNumberSounds,
-// } from "../lib/audio/numberSounds";
+import {
+  playNumberSound,
+  preloadNumberSounds,
+  initAudio,
+  resumeAudio,
+} from "../lib/audio/numberSounds";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,17 +23,12 @@ import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import {
-  initAudio,
-  preloadNumberSounds,
-  resumeAudio,
-} from "../lib/audio/numberSounds";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
   const { showSuccess, showError } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
 
@@ -174,7 +171,14 @@ export default function GameLayout({ stake, onNavigate }) {
     ? gameState.yourCards
     : [];
 
-  const [isSoundOn, setIsSoundOn] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(() => {
+    try {
+      const saved = localStorage.getItem("soundEnabled");
+      return saved === "true";
+    } catch {
+      return false;
+    }
+  });
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
@@ -192,6 +196,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
+  const audioInitRef = useRef(false);
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -214,21 +219,40 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => document.removeEventListener("visibilitychange", h);
   }, [stake, sessionId, connected, connectToStake]);
 
+  // Audio initialization - runs once on mount
   useEffect(() => {
-    const id = setTimeout(() => {
-      try {
-        preloadNumberSounds();
-      } catch {
-        showError("Failed to preload number sounds.");
+    // Preload sounds in background
+    preloadNumberSounds().catch(() => {});
+
+    // Initialize audio on first user interaction
+    const handleUserInteraction = () => {
+      if (!audioInitRef.current) {
+        audioInitRef.current = true;
+        initAudio().catch(() => {});
       }
-    }, 1000);
-    return () => clearTimeout(id);
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("touchstart", handleUserInteraction);
+
+    return () => {
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
   }, []);
 
+  // Sound playing effect
   useEffect(() => {
-    if (isSoundOn && typeof currentNumber === "number" && !isWatchMode)
-      playNumberSound(currentNumber).catch(() => {});
-  }, [currentNumber, isSoundOn]);
+    if (!isSoundOn) return;
+    if (!currentNumber) return;
+    if (startCountdown > 0) return;
+    if (gameState.phase !== "running") return;
+    if (isWatchMode) return;
+
+    playNumberSound(currentNumber).catch(() => {});
+  }, [currentNumber, isSoundOn, startCountdown, gameState.phase, isWatchMode]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
@@ -321,37 +345,6 @@ export default function GameLayout({ stake, onNavigate }) {
       showSuccess,
     ],
   );
-
-  useEffect(() => {
-    // Preload sounds in background
-    preloadNumberSounds().catch(() => {});
-
-    // Initialize audio on first user interaction (required by browsers/Telegram)
-    const handleUserInteraction = () => {
-      initAudio()
-        .then(() => {
-          console.log("🎵 Audio initialized for Mini App");
-        })
-        .catch(() => {});
-
-      // Remove listeners after first interaction
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
-    };
-
-    document.addEventListener("click", handleUserInteraction);
-    document.addEventListener("touchstart", handleUserInteraction);
-
-    // Also resume audio when sound button is toggled
-    if (isSoundOn) {
-      resumeAudio().catch(() => {});
-    }
-
-    return () => {
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
-    };
-  }, []);
 
   // Track missed winning patterns (when the last call that completes a pattern passes)
   useEffect(() => {
@@ -515,6 +508,7 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [startCountdown]);
 
   const handleRefresh = async () => {
+    if (isRefreshing) return;
     try {
       setIsRefreshing(true);
       await new Promise((r) => setTimeout(r, 100));
@@ -619,33 +613,11 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // WebSocket wallet update handler
+  // Single wallet update handler - removed duplicate
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
         const { main, coins, source, bonus } = event.detail.payload;
-        console.log("Wallet update received:", { main, bonus }); // Debug log
-        setWallet((prev) => ({
-          ...prev,
-          main: main ?? prev.main,
-          coins: coins ?? prev.coins,
-          bonus: bonus ?? prev.bonus,
-        }));
-      }
-    };
-    window.addEventListener("walletUpdate", handleWalletUpdate);
-    return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
-  }, []);
-
-  // In GameLayout.jsx - Ensure wallet updates are handled
-
-  // Listen for wallet updates from WebSocket
-  useEffect(() => {
-    const handleWalletUpdate = (event) => {
-      if (event.detail && event.detail.type === "wallet_update") {
-        const { main, coins, source, bonus } = event.detail.payload;
-        console.log("Wallet update received:", { main, bonus });
-
         setWallet((prev) => ({
           ...prev,
           main: main !== undefined ? main : prev.main,
@@ -654,44 +626,22 @@ export default function GameLayout({ stake, onNavigate }) {
         }));
       }
     };
-
     window.addEventListener("walletUpdate", handleWalletUpdate);
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
-  // First, add a ref to track audio initialization
-  const audioInitRef = useRef(false);
+  // Simple sound toggle - no async during state update
+  const handleSoundToggle = () => {
+    const newState = !isSoundOn;
+    setIsSoundOn(newState);
+    localStorage.setItem("soundEnabled", newState.toString());
 
-  // Add safe audio initialization function
-  const safeInitAudio = useCallback(async () => {
-    if (audioInitRef.current) return true;
-    try {
-      await initAudio();
+    if (newState && !audioInitRef.current) {
       audioInitRef.current = true;
-      return true;
-    } catch (error) {
-      console.warn("Audio init failed:", error);
-      return false;
+      initAudio().catch(() => {});
+      resumeAudio().catch(() => {});
     }
-  }, []);
-
-  // Safe sound toggle handler
-  const handleSoundToggle = useCallback(async () => {
-    const newSoundState = !isSoundOn;
-
-    if (newSoundState) {
-      // Turning sound ON - try to initialize
-      const success = await safeInitAudio();
-      if (!success) {
-        showError("Audio not supported on this device");
-        return;
-      }
-      await resumeAudio();
-    }
-
-    // Update state after audio operations
-    setIsSoundOn(newSoundState);
-  }, [isSoundOn, safeInitAudio, showError]);
+  };
 
   if (isRefreshing) {
     return (
@@ -731,15 +681,6 @@ export default function GameLayout({ stake, onNavigate }) {
         ? "REG"
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
-
-  const letters = ["B", "I", "N", "G", "O"];
-  const letterColors = [
-    "bg-blue-500/30 text-blue-200",
-    "bg-green-500/30 text-green-200",
-    "bg-purple-500/30 text-purple-200",
-    "bg-red-500/30 text-red-200",
-    "bg-yellow-500/30 text-yellow-200",
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
@@ -856,6 +797,9 @@ export default function GameLayout({ stake, onNavigate }) {
             </div>
           </div>
         </header>
+
+        {/* Rest of your JSX remains the same - Stats Bar, Number Board, Swiper, etc. */}
+        {/* ... keep all the existing JSX from your original file from here ... */}
 
         {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
@@ -1063,7 +1007,7 @@ export default function GameLayout({ stake, onNavigate }) {
           </>
         )}
 
-        {/* Cartellas - UPDATED WITH SWIPER CONTINUOUS LOOP */}
+        {/* Cartellas - Swiper Section (keep your existing Swiper code) */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1">
             {yourCards.length > 0 ? (
@@ -1078,12 +1022,8 @@ export default function GameLayout({ stake, onNavigate }) {
                   pagination={{
                     type: "fraction",
                     clickable: true,
-                    formatFractionCurrent: (number) => {
-                      return `${number}`;
-                    },
-                    formatFractionTotal: (number) => {
-                      return `${number}`;
-                    },
+                    formatFractionCurrent: (number) => `${number}`,
+                    formatFractionTotal: (number) => `${number}`,
                     renderFraction: (currentClass, totalClass) => {
                       return `<span class="${currentClass}" style="color: white; font-weight: bold; font-size: 14px;"></span>
               <span style="color: white; opacity: 0.5; margin: 0 4px;">/</span>
