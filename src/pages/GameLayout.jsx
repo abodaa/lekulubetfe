@@ -31,7 +31,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
   const { showSuccess, showError } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(true);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
 
