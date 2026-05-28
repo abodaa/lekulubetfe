@@ -170,7 +170,15 @@ export default function GameLayout({ stake, onNavigate }) {
     ? gameState.yourCards
     : [];
 
-  const [isSoundOn, setIsSoundOn] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(() => {
+    try {
+      const saved = localStorage.getItem("lekulu_sound_enabled");
+      // Default to true if never set, otherwise use saved value
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true; // Default to ON
+    }
+  });
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
@@ -595,6 +603,8 @@ export default function GameLayout({ stake, onNavigate }) {
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
+    // Save to localStorage
+    localStorage.setItem("lekulu_sound_enabled", newState.toString());
     if (newState && !audioInitializedRef.current) {
       audioInitializedRef.current = true;
       initAudio().catch(() => {});
