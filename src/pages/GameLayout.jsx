@@ -210,6 +210,66 @@ export default function GameLayout({ stake, onNavigate }) {
     if (stake && sessionId) connectToStake(stake);
   }, [stake, sessionId, connectToStake]);
 
+  // Network recovery - reconnect WebSocket when online returns
+  useEffect(() => {
+    const handleOnline = async () => {
+      console.log("🌐 Network recovered - reconnecting to game...");
+
+      if (!connected && stake && sessionId) {
+        console.log("🔄 Reconnecting WebSocket...");
+        connectToStake(stake);
+        showSuccess("Network restored! Reconnecting to game...");
+
+        // Small delay to allow WebSocket to connect, then refresh
+        setTimeout(() => {
+          if (connected) {
+            console.log("📡 Refreshing game state after reconnect...");
+            handleRefresh();
+          }
+        }, 1000);
+      } else if (connected && currentGameId) {
+        // Already connected but may have missed messages
+        console.log("📡 Refreshing game state after network recovery...");
+        handleRefresh();
+      }
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Network lost - game connection interrupted");
+      showWarning("Network lost! Will auto-reconnect when connection returns.");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [
+    connected,
+    stake,
+    sessionId,
+    connectToStake,
+    currentGameId,
+    showSuccess,
+    showWarning,
+  ]);
+
+  // Periodic WebSocket health check
+  useEffect(() => {
+    if (!stake || !sessionId) return;
+
+    const healthCheck = setInterval(() => {
+      if (!connected && navigator.onLine) {
+        console.log("💓 WebSocket disconnected - attempting reconnect...");
+        connectToStake(stake);
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(healthCheck);
+  }, [connected, stake, sessionId, connectToStake]);
+
   useEffect(() => {
     const h = () => {
       if (document.visibilityState === "visible" && stake && sessionId) {
