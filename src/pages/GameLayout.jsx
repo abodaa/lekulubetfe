@@ -167,7 +167,6 @@ export default function GameLayout({ stake, onNavigate }) {
     connectToStake,
     ws,
     forceReconnect,
-    requestNumberResume,
   } = useWebSocket();
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
@@ -216,21 +215,6 @@ export default function GameLayout({ stake, onNavigate }) {
     if (stake && sessionId) connectToStake(stake);
   }, [stake, sessionId, connectToStake]);
 
-  // Track WebSocket connection status
-  const wsConnectionRef = useRef(false);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 10;
-
-  useEffect(() => {
-    wsConnectionRef.current = connected;
-    if (connected) {
-      reconnectAttemptsRef.current = 0;
-      console.log("✅ WebSocket connected");
-    } else {
-      console.log("⚠️ WebSocket disconnected");
-    }
-  }, [connected]);
-
   useEffect(() => {
     const h = () => {
       if (document.visibilityState === "visible" && stake && sessionId) {
@@ -242,32 +226,6 @@ export default function GameLayout({ stake, onNavigate }) {
     document.addEventListener("visibilitychange", h);
     return () => document.removeEventListener("visibilitychange", h);
   }, [stake, sessionId, connected, connectToStake]);
-
-  // WebSocket error handler for auto-reconnect
-  useEffect(() => {
-    if (!ws) return;
-
-    const handleClose = () => {
-      console.log("🔌 WebSocket closed - scheduling reconnect...");
-      if (navigator.onLine && stake) {
-        setTimeout(() => {
-          connectToStake(stake);
-        }, 1000);
-      }
-    };
-
-    const handleError = (err) => {
-      console.log("❌ WebSocket error:", err);
-    };
-
-    ws.addEventListener("close", handleClose);
-    ws.addEventListener("error", handleError);
-
-    return () => {
-      ws.removeEventListener("close", handleClose);
-      ws.removeEventListener("error", handleError);
-    };
-  }, [ws, stake, connectToStake]);
 
   // Audio initialization
   useEffect(() => {
@@ -660,82 +618,27 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  // ========== FORCE GAME STATE SYNC FROM HTTP API ==========
-  const forceGameStateSync = useCallback(async () => {
-    if (!stake || !sessionId) return false;
-
-    console.log("🔄 Force syncing game state from HTTP API...");
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
-      const data = await response.json();
-
-      if (
-        data.success &&
-        data.game &&
-        (data.game.status === "running" || data.game.status === "registration")
-      ) {
-        console.log("✅ Game state fetched:", {
-          calledNumbers: data.game.calledNumbers?.length,
-          lastCalledNumber: data.game.lastCalledNumber,
-          phase: data.game.status,
-        });
-
-        // Directly update the gameState in WebSocket context
-        if (data.game.calledNumbers && data.game.calledNumbers.length > 0) {
-          // Update the local state immediately
-          setWallet((prev) => ({ ...prev }));
-
-          // Dispatch event to update WebSocket context
-          window.dispatchEvent(
-            new CustomEvent("forceGameStateUpdate", {
-              detail: {
-                calledNumbers: data.game.calledNumbers || [],
-                currentNumber: data.game.lastCalledNumber,
-                gameId: data.game.gameId,
-                phase: data.game.status,
-              },
-            }),
-          );
-        }
-
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to force game state sync:", error);
-      return false;
-    }
-  }, [stake, sessionId]);
-  // ========== NETWORK RECOVERY WITH DIRECT NUMBER RESUMPTION ==========
   // ========== NETWORK RECOVERY - RELOAD PAGE ==========
   useEffect(() => {
     let reloadTimer = null;
+    let countdownInterval = null;
 
     const handleOnline = () => {
       console.log("🌐 Network recovered - reloading page to resume game...");
       showWarning("Network restored! Refreshing game...");
 
-      // Clear any existing timer
       if (reloadTimer) clearTimeout(reloadTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
 
-      // Show countdown before reload
       let countdown = 3;
-      const interval = setInterval(() => {
+      countdownInterval = setInterval(() => {
         showWarning(`Refreshing in ${countdown}...`);
         countdown--;
         if (countdown < 0) {
-          clearInterval(interval);
+          clearInterval(countdownInterval);
         }
       }, 1000);
 
-      // Reload the page after 3 seconds
       reloadTimer = setTimeout(() => {
         window.location.reload();
       }, 3000);
@@ -745,6 +648,7 @@ export default function GameLayout({ stake, onNavigate }) {
       console.log("⚠️ Network lost");
       showWarning("Network lost! Page will refresh when connection returns.");
       if (reloadTimer) clearTimeout(reloadTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
     };
 
     window.addEventListener("online", handleOnline);
@@ -754,6 +658,7 @@ export default function GameLayout({ stake, onNavigate }) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       if (reloadTimer) clearTimeout(reloadTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
     };
   }, [showWarning]);
 
@@ -1060,30 +965,6 @@ export default function GameLayout({ stake, onNavigate }) {
               >
                 <BiRefresh />
               </button>
-
-              {!connected && !isRefreshing && (
-                <button
-                  onClick={async () => {
-                    console.log("🔌 Manual reconnect requested");
-                    showWarning("Reconnecting...");
-
-                    if (forceReconnect) {
-                      forceReconnect(stake);
-                    } else {
-                      connectToStake(stake);
-                    }
-
-                    setTimeout(async () => {
-                      await forceGameStateSync();
-                      showSuccess("Reconnected! Game resuming...");
-                    }, 2000);
-                  }}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
-                  title="Reconnect"
-                >
-                  🔌
-                </button>
-              )}
             </div>
             <div className="text-right">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
@@ -1096,7 +977,6 @@ export default function GameLayout({ stake, onNavigate }) {
           </div>
         </header>
 
-        {/* Stats Bar */}
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-3 gap-1.5">
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -1237,7 +1117,6 @@ export default function GameLayout({ stake, onNavigate }) {
               </p>
             )}
 
-            {/* Number Board */}
             <div className="px-3 pb-1 flex-shrink-0">
               <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
                 <table className="w-full border-collapse">
@@ -1302,7 +1181,6 @@ export default function GameLayout({ stake, onNavigate }) {
           </>
         )}
 
-        {/* Cartellas - Swiper Section */}
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1">
             {yourCards.length > 0 ? (
@@ -1442,7 +1320,6 @@ export default function GameLayout({ stake, onNavigate }) {
                   })}
                 </Swiper>
 
-                {/* Custom Navigation Buttons */}
                 {yourCards.length > 1 && (
                   <>
                     <button
@@ -1536,7 +1413,6 @@ export default function GameLayout({ stake, onNavigate }) {
             ) : null}
           </div>
 
-          {/* Confetti Overlay */}
           {showConfetti && (
             <div className="confetti-container" ref={confettiRef}>
               {Array.from({ length: 50 }).map((_, i) => {
