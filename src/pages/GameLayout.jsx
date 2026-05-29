@@ -714,66 +714,37 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [stake, sessionId]);
   // ========== NETWORK RECOVERY WITH DIRECT NUMBER RESUMPTION ==========
+  // ========== NETWORK RECOVERY - RELOAD PAGE ==========
   useEffect(() => {
-    let syncInterval = null;
-    let lastNumberCount = calledNumbers.length;
+    let reloadTimer = null;
 
-    const handleOnline = async () => {
-      console.log("🌐 Network recovered - reconnecting...");
-      showWarning("Network restored! Reconnecting to game...");
+    const handleOnline = () => {
+      console.log("🌐 Network recovered - reloading page to resume game...");
+      showWarning("Network restored! Refreshing game...");
 
-      // Force WebSocket reconnect
-      if (forceReconnect) {
-        forceReconnect(stake);
-      } else {
-        connectToStake(stake);
-      }
+      // Clear any existing timer
+      if (reloadTimer) clearTimeout(reloadTimer);
 
-      // Wait for connection and then sync
-      setTimeout(async () => {
-        const synced = await forceGameStateSync();
-        if (synced) {
-          showSuccess("Game reconnected! Numbers will resume.");
-
-          // ✅ Request number drawing to resume
-          if (requestNumberResume) {
-            requestNumberResume();
-          }
-        } else {
-          setTimeout(async () => {
-            const retrySynced = await forceGameStateSync();
-            if (retrySynced) {
-              showSuccess("Game reconnected! Numbers will resume.");
-              if (requestNumberResume) {
-                requestNumberResume();
-              }
-            } else {
-              showError("Failed to sync game state. Please refresh.");
-            }
-          }, 3000);
+      // Show countdown before reload
+      let countdown = 3;
+      const interval = setInterval(() => {
+        showWarning(`Refreshing in ${countdown}...`);
+        countdown--;
+        if (countdown < 0) {
+          clearInterval(interval);
         }
-      }, 2000);
+      }, 1000);
 
-      // Set up periodic sync to catch missed numbers
-      if (syncInterval) clearInterval(syncInterval);
-      syncInterval = setInterval(async () => {
-        if (navigator.onLine && ws && ws.readyState === WebSocket.OPEN) {
-          if (calledNumbers.length === lastNumberCount) {
-            console.log("⚠️ No new numbers received - requesting resume...");
-            if (requestNumberResume) {
-              requestNumberResume();
-            }
-            await forceGameStateSync();
-          }
-          lastNumberCount = calledNumbers.length;
-        }
-      }, 5000);
+      // Reload the page after 3 seconds
+      reloadTimer = setTimeout(() => {
+        window.location.reload();
+      }, 3000);
     };
 
     const handleOffline = () => {
       console.log("⚠️ Network lost");
-      showWarning("Network lost! Will reconnect when connection returns.");
-      if (syncInterval) clearInterval(syncInterval);
+      showWarning("Network lost! Page will refresh when connection returns.");
+      if (reloadTimer) clearTimeout(reloadTimer);
     };
 
     window.addEventListener("online", handleOnline);
@@ -782,22 +753,9 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      if (syncInterval) clearInterval(syncInterval);
+      if (reloadTimer) clearTimeout(reloadTimer);
     };
-  }, [
-    stake,
-    sessionId,
-    connectToStake,
-    forceReconnect,
-    forceGameStateSync,
-    requestNumberResume,
-    ws,
-    currentGameId,
-    calledNumbers.length,
-    showSuccess,
-    showError,
-    showWarning,
-  ]);
+  }, [showWarning]);
 
   // Clear pending claims on game end
   useEffect(() => {
