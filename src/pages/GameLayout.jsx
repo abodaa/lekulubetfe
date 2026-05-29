@@ -161,7 +161,8 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   };
 
-  const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
+  const { connected, gameState, claimBingo, connectToStake, getWsReadyState } =
+    useWebSocket();
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
@@ -634,28 +635,33 @@ export default function GameLayout({ stake, onNavigate }) {
   // ========== END handleRefresh ==========
 
   // ========== NETWORK RECOVERY useEffect (AFTER handleRefresh) ==========
+  // ========== NETWORK RECOVERY useEffect ==========
   useEffect(() => {
     const handleOnline = async () => {
       console.log("🌐 Network recovered - reconnecting to game...");
       showWarning("Network restored! Reconnecting to game...");
 
+      let isConnected = false;
+
       for (let attempt = 1; attempt <= 5; attempt++) {
         console.log(`🔄 Reconnection attempt ${attempt}/5`);
 
-        if (!connected) {
-          connectToStake(stake);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        }
+        connectToStake(stake);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (connected) {
-          console.log("✅ Reconnected successfully!");
-          handleRefresh();
-          showSuccess("Game reconnected! Numbers will resume.");
+        // Use the actual WebSocket readyState
+        if (getWsReadyState && getWsReadyState()) {
+          isConnected = true;
           break;
         }
       }
 
-      if (!connected) {
+      if (isConnected) {
+        console.log("✅ Reconnected successfully!");
+        await handleRefresh();
+        showSuccess("Game reconnected! Numbers will resume.");
+      } else {
+        console.log("❌ Failed to reconnect");
         showError("Unable to reconnect. Please refresh the page.");
       }
     };
@@ -673,7 +679,6 @@ export default function GameLayout({ stake, onNavigate }) {
       window.removeEventListener("offline", handleOffline);
     };
   }, [
-    connected,
     stake,
     sessionId,
     connectToStake,
@@ -681,10 +686,10 @@ export default function GameLayout({ stake, onNavigate }) {
     showSuccess,
     showError,
     showWarning,
+    getWsReadyState, // Add this to dependencies
   ]);
   // ========== END NETWORK RECOVERY ==========
 
-  // Periodic reconnect check (every 10 seconds)
   useEffect(() => {
     if (!stake || !sessionId) return;
 
@@ -1023,17 +1028,31 @@ export default function GameLayout({ stake, onNavigate }) {
 
               {!connected && !isRefreshing && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     console.log("🔌 Manual reconnect requested");
-                    connectToStake(stake);
-                    setTimeout(() => {
-                      if (connected) {
-                        handleRefresh();
-                        showSuccess("Reconnected successfully!");
-                      } else {
-                        showError("Failed to reconnect. Please refresh.");
+                    showWarning("Attempting to reconnect...");
+
+                    let isConnected = false;
+
+                    for (let attempt = 1; attempt <= 5; attempt++) {
+                      console.log(`🔄 Manual reconnect attempt ${attempt}/5`);
+                      connectToStake(stake);
+                      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+                      if (getWsReadyState && getWsReadyState()) {
+                        isConnected = true;
+                        break;
                       }
-                    }, 1500);
+                    }
+
+                    if (isConnected) {
+                      await handleRefresh();
+                      showSuccess("Reconnected successfully!");
+                    } else {
+                      showError(
+                        "Failed to reconnect. Please refresh the page.",
+                      );
+                    }
                   }}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
                   title="Reconnect"
