@@ -660,6 +660,28 @@ export function WebSocketProvider({ children }) {
     [safeSessionId, currentStake],
   );
 
+  // Force reconnect function
+  const forceReconnect = useCallback(
+    (stake) => {
+      console.log("🔄 Force reconnecting...");
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch (e) {}
+        wsRef.current = null;
+      }
+      setConnected(false);
+      connectionAttemptRef.current = false;
+      // Reconnect
+      if (stake) {
+        connectToStake(stake);
+      } else {
+        connectGeneral();
+      }
+    },
+    [connectToStake, connectGeneral],
+  );
+
   useEffect(() => {
     if (
       sessionId &&
@@ -708,6 +730,8 @@ export function WebSocketProvider({ children }) {
     isConnecting:
       isConnecting || wsRef.current?.readyState === WebSocket.CONNECTING,
     messageCount,
+    ws: wsRef.current,
+    forceReconnect,
   };
 
   return (

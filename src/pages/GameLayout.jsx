@@ -161,7 +161,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   };
 
-  const { connected, gameState, claimBingo, connectToStake, getWsReadyState } =
+  const { connected, gameState, claimBingo, connectToStake, ws, forceReconnect } =
     useWebSocket();
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
@@ -234,12 +234,8 @@ export default function GameLayout({ stake, onNavigate }) {
 
       console.log("📡 Received game state refresh:", event.detail);
 
-      // This will force the WebSocket context to update
-      // The WebSocket context should already have a snapshot handler
-      // We're just ensuring UI updates
-
       // Force a re-render by updating a state
-      setWallet((prev) => ({ ...prev })); // Just to trigger re-render
+      setWallet((prev) => ({ ...prev }));
     };
 
     window.addEventListener("gameStateRefresh", handleGameStateRefresh);
@@ -248,6 +244,32 @@ export default function GameLayout({ stake, onNavigate }) {
       window.removeEventListener("gameStateRefresh", handleGameStateRefresh);
     };
   }, []);
+
+  // WebSocket error handler for auto-reconnect
+  useEffect(() => {
+    if (!ws) return;
+    
+    const handleClose = () => {
+      console.log("🔌 WebSocket closed - scheduling reconnect...");
+      if (navigator.onLine && stake) {
+        setTimeout(() => {
+          connectToStake(stake);
+        }, 1000);
+      }
+    };
+    
+    const handleError = (err) => {
+      console.log("❌ WebSocket error:", err);
+    };
+    
+    ws.addEventListener('close', handleClose);
+    ws.addEventListener('error', handleError);
+    
+    return () => {
+      ws.removeEventListener('close', handleClose);
+      ws.removeEventListener('error', handleError);
+    };
+  }, [ws, stake, connectToStake]);
 
   useEffect(() => {
     const h = () => {
@@ -656,115 +678,66 @@ export default function GameLayout({ stake, onNavigate }) {
   };
   // ========== END handleRefresh ==========
 
-  // Add this function near handleRefresh (around line 650)
-  const forceGameStateRefresh = useCallback(async () => {
-    if (!stake || !sessionId) return;
-
-    console.log("📡 Force refreshing game state via HTTP...");
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      // Fetch current game state directly from API
-      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
-      const data = await response.json();
-
-      if (data.success && data.game && data.game.status === "running") {
-        console.log("✅ Game state fetched:", data.game);
-
-        // Update local game state with fetched data
-        // This will trigger UI updates
-        if (data.game.calledNumbers) {
-          // Dispatch a custom event that the WebSocket context can pick up
-          window.dispatchEvent(
-            new CustomEvent("gameStateRefresh", {
-              detail: {
-                calledNumbers: data.game.calledNumbers,
-                currentNumber: data.game.lastCalledNumber,
-                phase: data.game.status,
-                gameId: data.game.gameId,
-                playersCount: data.game.playersCount,
-                prizePool: data.game.totalPrizes,
-              },
-            }),
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Failed to force game state refresh:", error);
-    }
-  }, [stake, sessionId]);
   // ========== NETWORK RECOVERY useEffect ==========
   useEffect(() => {
-    let reconnectInterval = null;
-    let isReconnecting = false;
+    let reconnectTimer = null;
+    let retryCount = 0;
 
-    const attemptReconnect = async () => {
-      if (isReconnecting) return;
+    const attemptReconnect = () => {
       if (!stake || !sessionId) return;
       if (!navigator.onLine) return;
-
-      // If we already have a gameId and WebSocket is open, we're good
-      if (currentGameId && getWsReadyState && getWsReadyState()) {
-        console.log("✅ Already connected with gameId:", currentGameId);
+      
+      // Check actual WebSocket state
+      const isActuallyConnected = ws && ws.readyState === WebSocket.OPEN;
+      
+      if (isActuallyConnected && currentGameId) {
+        console.log("✅ Already connected");
+        retryCount = 0;
         return;
       }
-
-      isReconnecting = true;
-      console.log(`🔄 Attempting to reconnect...`);
-
-      // Force reconnect
-      connectToStake(stake);
-
-      // Wait for connection
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const isConnectedNow = getWsReadyState && getWsReadyState();
-
-      if (isConnectedNow) {
-        console.log("✅ WebSocket reconnected!");
-
-        // Force refresh game state
-        await forceGameStateRefresh();
-
-        // Also send join_room again to trigger snapshot
-        connectToStake(stake);
-
-        showSuccess("Game reconnected! Numbers will resume.");
-        if (reconnectInterval) clearInterval(reconnectInterval);
+      
+      retryCount++;
+      console.log(`🔄 Reconnect attempt ${retryCount}...`);
+      
+      // Force reconnect using the context method
+      if (forceReconnect) {
+        forceReconnect(stake);
       } else {
-        console.log("⚠️ Still disconnected, will retry...");
+        connectToStake(stake);
       }
-
-      isReconnecting = false;
+      
+      // After reconnecting, explicitly request snapshot
+      setTimeout(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          console.log("📡 Requesting game snapshot...");
+          ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
+        }
+      }, 1000);
     };
 
     const handleOnline = () => {
       console.log("🌐 Network recovered - reconnecting...");
       showWarning("Network restored! Reconnecting to game...");
-
-      if (reconnectInterval) clearInterval(reconnectInterval);
-
+      retryCount = 0;
       attemptReconnect();
-
-      reconnectInterval = setInterval(() => {
-        const isConnected = getWsReadyState && getWsReadyState();
-        if (!isConnected && navigator.onLine) {
+      
+      // Keep trying
+      if (reconnectTimer) clearInterval(reconnectTimer);
+      reconnectTimer = setInterval(() => {
+        const isActuallyConnected = ws && ws.readyState === WebSocket.OPEN;
+        if (!isActuallyConnected && navigator.onLine) {
           attemptReconnect();
-        } else if (isConnected) {
-          if (reconnectInterval) clearInterval(reconnectInterval);
+        } else if (isActuallyConnected) {
+          if (reconnectTimer) clearInterval(reconnectTimer);
+          showSuccess("Game reconnected!");
         }
-      }, 5000);
+      }, 3000);
     };
 
     const handleOffline = () => {
       console.log("⚠️ Network lost");
-      showWarning("Network lost! Will auto-reconnect when connection returns.");
-      if (reconnectInterval) clearInterval(reconnectInterval);
+      showWarning("Network lost! Will reconnect when connection returns.");
+      if (reconnectTimer) clearInterval(reconnectTimer);
     };
 
     window.addEventListener("online", handleOnline);
@@ -773,20 +746,9 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      if (reconnectInterval) clearInterval(reconnectInterval);
+      if (reconnectTimer) clearInterval(reconnectTimer);
     };
-  }, [
-    stake,
-    sessionId,
-    connectToStake,
-    forceGameStateRefresh,
-    showSuccess,
-    showError,
-    showWarning,
-    getWsReadyState,
-    currentGameId,
-  ]);
-  // ========== END NETWORK RECOVERY ==========
+  }, [stake, sessionId, connectToStake, forceReconnect, ws, currentGameId, showSuccess, showWarning]);
 
   // ========== Clear pending claims on game end ==========
   useEffect(() => {
@@ -1096,35 +1058,24 @@ export default function GameLayout({ stake, onNavigate }) {
 
               {!connected && !isRefreshing && (
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     console.log("🔌 Manual reconnect requested");
-                    showWarning("Attempting to reconnect...");
-
-                    connectToStake(stake);
-
-                    let attempts = 0;
-                    const checkInterval = setInterval(async () => {
-                      attempts++;
-                      const isConnected = getWsReadyState && getWsReadyState();
-
-                      if (isConnected) {
-                        clearInterval(checkInterval);
-                        console.log("✅ Manual reconnect successful!");
-
-                        // Force refresh game state
-                        await forceGameStateRefresh();
-
-                        // Send join_room again
-                        connectToStake(stake);
-
-                        showSuccess("Reconnected successfully! Game resumed.");
-                      } else if (attempts >= 10) {
-                        clearInterval(checkInterval);
-                        showError(
-                          "Failed to reconnect. Please refresh the page.",
-                        );
+                    showWarning("Reconnecting...");
+                    
+                    if (forceReconnect) {
+                      forceReconnect(stake);
+                    } else {
+                      connectToStake(stake);
+                    }
+                    
+                    setTimeout(() => {
+                      if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
+                        showSuccess("Reconnected! Game resuming...");
+                      } else {
+                        showError("Failed to reconnect. Please refresh.");
                       }
-                    }, 1000);
+                    }, 1500);
                   }}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
                   title="Reconnect"
@@ -1341,7 +1292,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </tr>
+                      </table>
                     ))}
                   </tbody>
                 </table>
