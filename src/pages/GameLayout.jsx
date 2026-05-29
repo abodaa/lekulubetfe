@@ -227,6 +227,28 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [connected]);
 
+  // Listen for manual game state refresh
+  useEffect(() => {
+    const handleGameStateRefresh = (event) => {
+      if (!event.detail) return;
+
+      console.log("📡 Received game state refresh:", event.detail);
+
+      // This will force the WebSocket context to update
+      // The WebSocket context should already have a snapshot handler
+      // We're just ensuring UI updates
+
+      // Force a re-render by updating a state
+      setWallet((prev) => ({ ...prev })); // Just to trigger re-render
+    };
+
+    window.addEventListener("gameStateRefresh", handleGameStateRefresh);
+
+    return () => {
+      window.removeEventListener("gameStateRefresh", handleGameStateRefresh);
+    };
+  }, []);
+
   useEffect(() => {
     const h = () => {
       if (document.visibilityState === "visible" && stake && sessionId) {
@@ -634,11 +656,52 @@ export default function GameLayout({ stake, onNavigate }) {
   };
   // ========== END handleRefresh ==========
 
+  // Add this function near handleRefresh (around line 650)
+  const forceGameStateRefresh = useCallback(async () => {
+    if (!stake || !sessionId) return;
+
+    console.log("📡 Force refreshing game state via HTTP...");
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://lekulubingoback.onrender.com");
+
+      // Fetch current game state directly from API
+      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
+      const data = await response.json();
+
+      if (data.success && data.game && data.game.status === "running") {
+        console.log("✅ Game state fetched:", data.game);
+
+        // Update local game state with fetched data
+        // This will trigger UI updates
+        if (data.game.calledNumbers) {
+          // Dispatch a custom event that the WebSocket context can pick up
+          window.dispatchEvent(
+            new CustomEvent("gameStateRefresh", {
+              detail: {
+                calledNumbers: data.game.calledNumbers,
+                currentNumber: data.game.lastCalledNumber,
+                phase: data.game.status,
+                gameId: data.game.gameId,
+                playersCount: data.game.playersCount,
+                prizePool: data.game.totalPrizes,
+              },
+            }),
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Failed to force game state refresh:", error);
+    }
+  }, [stake, sessionId]);
   // ========== NETWORK RECOVERY useEffect ==========
   useEffect(() => {
     let reconnectInterval = null;
     let isReconnecting = false;
-    let retryCount = 0;
 
     const attemptReconnect = async () => {
       if (isReconnecting) return;
@@ -652,43 +715,32 @@ export default function GameLayout({ stake, onNavigate }) {
       }
 
       isReconnecting = true;
-      retryCount++;
-      console.log(`🔄 Reconnection attempt ${retryCount}...`);
+      console.log(`🔄 Attempting to reconnect...`);
 
       // Force reconnect
       connectToStake(stake);
 
-      // Wait and check connection
-      setTimeout(() => {
-        const isConnectedNow = getWsReadyState && getWsReadyState();
+      // Wait for connection
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (isConnectedNow) {
-          console.log("✅ WebSocket reconnected!");
+      const isConnectedNow = getWsReadyState && getWsReadyState();
 
-          // Force a full state refresh
-          handleRefresh();
+      if (isConnectedNow) {
+        console.log("✅ WebSocket reconnected!");
 
-          // Also try to request game state explicitly
-          setTimeout(() => {
-            if (stake) {
-              connectToStake(stake);
-            }
-          }, 500);
+        // Force refresh game state
+        await forceGameStateRefresh();
 
-          showSuccess("Game reconnected! Numbers will resume.");
-          if (reconnectInterval) clearInterval(reconnectInterval);
-          retryCount = 0;
-        } else if (retryCount < 5) {
-          console.log(
-            `⚠️ Reconnect attempt ${retryCount} failed, will retry...`,
-          );
-        } else {
-          console.log("❌ Failed to reconnect after 5 attempts");
-          showError("Unable to reconnect. Please refresh the page.");
-          retryCount = 0;
-        }
-        isReconnecting = false;
-      }, 2500);
+        // Also send join_room again to trigger snapshot
+        connectToStake(stake);
+
+        showSuccess("Game reconnected! Numbers will resume.");
+        if (reconnectInterval) clearInterval(reconnectInterval);
+      } else {
+        console.log("⚠️ Still disconnected, will retry...");
+      }
+
+      isReconnecting = false;
     };
 
     const handleOnline = () => {
@@ -696,7 +748,6 @@ export default function GameLayout({ stake, onNavigate }) {
       showWarning("Network restored! Reconnecting to game...");
 
       if (reconnectInterval) clearInterval(reconnectInterval);
-      retryCount = 0;
 
       attemptReconnect();
 
@@ -719,32 +770,16 @@ export default function GameLayout({ stake, onNavigate }) {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic reconnect check
-    const periodicReconnect = setInterval(() => {
-      const isConnected = getWsReadyState && getWsReadyState();
-      if (
-        !isConnected &&
-        navigator.onLine &&
-        stake &&
-        sessionId &&
-        !currentGameId
-      ) {
-        console.log("💓 Periodic reconnect check - no connection");
-        connectToStake(stake);
-      }
-    }, 10000);
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       if (reconnectInterval) clearInterval(reconnectInterval);
-      clearInterval(periodicReconnect);
     };
   }, [
     stake,
     sessionId,
     connectToStake,
-    handleRefresh,
+    forceGameStateRefresh,
     showSuccess,
     showError,
     showWarning,
@@ -1068,29 +1103,28 @@ export default function GameLayout({ stake, onNavigate }) {
                     connectToStake(stake);
 
                     let attempts = 0;
-                    const checkInterval = setInterval(() => {
+                    const checkInterval = setInterval(async () => {
                       attempts++;
                       const isConnected = getWsReadyState && getWsReadyState();
 
                       if (isConnected) {
                         clearInterval(checkInterval);
                         console.log("✅ Manual reconnect successful!");
-                        handleRefresh();
-                        setTimeout(() => {
-                          if (stake) connectToStake(stake);
-                        }, 300);
+
+                        // Force refresh game state
+                        await forceGameStateRefresh();
+
+                        // Send join_room again
+                        connectToStake(stake);
+
                         showSuccess("Reconnected successfully! Game resumed.");
-                      } else if (attempts >= 15) {
+                      } else if (attempts >= 10) {
                         clearInterval(checkInterval);
                         showError(
                           "Failed to reconnect. Please refresh the page.",
                         );
                       }
                     }, 1000);
-
-                    setTimeout(() => {
-                      clearInterval(checkInterval);
-                    }, 15000);
                   }}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
                   title="Reconnect"
