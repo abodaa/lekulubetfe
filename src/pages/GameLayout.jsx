@@ -195,12 +195,12 @@ export default function GameLayout({ stake, onNavigate }) {
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
 
-  // ========== NEW: OFFLINE BINGO QUEUE ==========
+  // ========== OFFLINE BINGO QUEUE ==========
   const pendingBingoClaimsRef = useRef([]);
   const isProcessingQueueRef = useRef(false);
   const offlineWinDetectedRef = useRef(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  // ========== END NEW ==========
+  // ========== END ==========
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -364,7 +364,7 @@ export default function GameLayout({ stake, onNavigate }) {
     ],
   );
 
-  // ========== NEW: Process pending claims function ==========
+  // ========== Process pending claims function ==========
   const processPendingClaims = useCallback(async () => {
     if (isProcessingQueueRef.current) return;
     if (pendingBingoClaimsRef.current.length === 0) return;
@@ -424,7 +424,7 @@ export default function GameLayout({ stake, onNavigate }) {
     gameState.winners,
     gameState.phase,
   ]);
-  // ========== END NEW ==========
+  // ========== END ==========
 
   // Track missed winning patterns
   useEffect(() => {
@@ -464,7 +464,7 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
-  // ========== NEW: UPDATED AUTO-BINGO with offline support ==========
+  // ========== AUTO-BINGO with offline support ==========
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
@@ -543,7 +543,7 @@ export default function GameLayout({ stake, onNavigate }) {
     showWarning,
     processPendingClaims,
   ]);
-  // ========== END NEW ==========
+  // ========== END ==========
 
   // TRACK MISSED WINNING PATTERNS
   useEffect(() => {
@@ -616,7 +616,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => clearTimeout(t);
   }, [startCountdown]);
 
-  // ========== handleRefresh DEFINED HERE (BEFORE it's used) ==========
+  // ========== handleRefresh DEFINED HERE ==========
   const handleRefresh = async () => {
     if (isRefreshing) return;
     try {
@@ -634,49 +634,111 @@ export default function GameLayout({ stake, onNavigate }) {
   };
   // ========== END handleRefresh ==========
 
-  // ========== NETWORK RECOVERY useEffect (AFTER handleRefresh) ==========
   // ========== NETWORK RECOVERY useEffect ==========
   useEffect(() => {
-    const handleOnline = async () => {
-      console.log("🌐 Network recovered - reconnecting to game...");
+    let reconnectInterval = null;
+    let isReconnecting = false;
+    let retryCount = 0;
+
+    const attemptReconnect = async () => {
+      if (isReconnecting) return;
+      if (!stake || !sessionId) return;
+      if (!navigator.onLine) return;
+
+      // If we already have a gameId and WebSocket is open, we're good
+      if (currentGameId && getWsReadyState && getWsReadyState()) {
+        console.log("✅ Already connected with gameId:", currentGameId);
+        return;
+      }
+
+      isReconnecting = true;
+      retryCount++;
+      console.log(`🔄 Reconnection attempt ${retryCount}...`);
+
+      // Force reconnect
+      connectToStake(stake);
+
+      // Wait and check connection
+      setTimeout(() => {
+        const isConnectedNow = getWsReadyState && getWsReadyState();
+
+        if (isConnectedNow) {
+          console.log("✅ WebSocket reconnected!");
+
+          // Force a full state refresh
+          handleRefresh();
+
+          // Also try to request game state explicitly
+          setTimeout(() => {
+            if (stake) {
+              connectToStake(stake);
+            }
+          }, 500);
+
+          showSuccess("Game reconnected! Numbers will resume.");
+          if (reconnectInterval) clearInterval(reconnectInterval);
+          retryCount = 0;
+        } else if (retryCount < 5) {
+          console.log(
+            `⚠️ Reconnect attempt ${retryCount} failed, will retry...`,
+          );
+        } else {
+          console.log("❌ Failed to reconnect after 5 attempts");
+          showError("Unable to reconnect. Please refresh the page.");
+          retryCount = 0;
+        }
+        isReconnecting = false;
+      }, 2500);
+    };
+
+    const handleOnline = () => {
+      console.log("🌐 Network recovered - reconnecting...");
       showWarning("Network restored! Reconnecting to game...");
 
-      let isConnected = false;
+      if (reconnectInterval) clearInterval(reconnectInterval);
+      retryCount = 0;
 
-      for (let attempt = 1; attempt <= 5; attempt++) {
-        console.log(`🔄 Reconnection attempt ${attempt}/5`);
+      attemptReconnect();
 
-        connectToStake(stake);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Use the actual WebSocket readyState
-        if (getWsReadyState && getWsReadyState()) {
-          isConnected = true;
-          break;
+      reconnectInterval = setInterval(() => {
+        const isConnected = getWsReadyState && getWsReadyState();
+        if (!isConnected && navigator.onLine) {
+          attemptReconnect();
+        } else if (isConnected) {
+          if (reconnectInterval) clearInterval(reconnectInterval);
         }
-      }
-
-      if (isConnected) {
-        console.log("✅ Reconnected successfully!");
-        await handleRefresh();
-        showSuccess("Game reconnected! Numbers will resume.");
-      } else {
-        console.log("❌ Failed to reconnect");
-        showError("Unable to reconnect. Please refresh the page.");
-      }
+      }, 5000);
     };
 
     const handleOffline = () => {
-      console.log("⚠️ Network lost - game connection interrupted");
+      console.log("⚠️ Network lost");
       showWarning("Network lost! Will auto-reconnect when connection returns.");
+      if (reconnectInterval) clearInterval(reconnectInterval);
     };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
+    // Periodic reconnect check
+    const periodicReconnect = setInterval(() => {
+      const isConnected = getWsReadyState && getWsReadyState();
+      if (
+        !isConnected &&
+        navigator.onLine &&
+        stake &&
+        sessionId &&
+        !currentGameId
+      ) {
+        console.log("💓 Periodic reconnect check - no connection");
+        connectToStake(stake);
+      }
+    }, 10000);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      if (reconnectInterval) clearInterval(reconnectInterval);
+      clearInterval(periodicReconnect);
     };
   }, [
     stake,
@@ -686,39 +748,10 @@ export default function GameLayout({ stake, onNavigate }) {
     showSuccess,
     showError,
     showWarning,
-    getWsReadyState, // Add this to dependencies
+    getWsReadyState,
+    currentGameId,
   ]);
   // ========== END NETWORK RECOVERY ==========
-
-  useEffect(() => {
-    if (!stake || !sessionId) return;
-
-    const interval = setInterval(() => {
-      if (!connected && navigator.onLine) {
-        console.log("💓 WebSocket disconnected - forcing reconnect...");
-        connectToStake(stake);
-
-        setTimeout(() => {
-          if (connected) {
-            handleRefresh();
-          }
-        }, 1500);
-      }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [connected, stake, sessionId, connectToStake]);
-
-  // Auto-reconnect when WebSocket closes unexpectedly
-  useEffect(() => {
-    if (!connected && stake && sessionId && navigator.onLine) {
-      console.log("🔌 WebSocket closed while online - auto-reconnecting...");
-      const timer = setTimeout(() => {
-        connectToStake(stake);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [connected, stake, sessionId, connectToStake]);
 
   // ========== Clear pending claims on game end ==========
   useEffect(() => {
@@ -1032,27 +1065,32 @@ export default function GameLayout({ stake, onNavigate }) {
                     console.log("🔌 Manual reconnect requested");
                     showWarning("Attempting to reconnect...");
 
-                    let isConnected = false;
+                    connectToStake(stake);
 
-                    for (let attempt = 1; attempt <= 5; attempt++) {
-                      console.log(`🔄 Manual reconnect attempt ${attempt}/5`);
-                      connectToStake(stake);
-                      await new Promise((resolve) => setTimeout(resolve, 2000));
+                    let attempts = 0;
+                    const checkInterval = setInterval(() => {
+                      attempts++;
+                      const isConnected = getWsReadyState && getWsReadyState();
 
-                      if (getWsReadyState && getWsReadyState()) {
-                        isConnected = true;
-                        break;
+                      if (isConnected) {
+                        clearInterval(checkInterval);
+                        console.log("✅ Manual reconnect successful!");
+                        handleRefresh();
+                        setTimeout(() => {
+                          if (stake) connectToStake(stake);
+                        }, 300);
+                        showSuccess("Reconnected successfully! Game resumed.");
+                      } else if (attempts >= 15) {
+                        clearInterval(checkInterval);
+                        showError(
+                          "Failed to reconnect. Please refresh the page.",
+                        );
                       }
-                    }
+                    }, 1000);
 
-                    if (isConnected) {
-                      await handleRefresh();
-                      showSuccess("Reconnected successfully!");
-                    } else {
-                      showError(
-                        "Failed to reconnect. Please refresh the page.",
-                      );
-                    }
+                    setTimeout(() => {
+                      clearInterval(checkInterval);
+                    }, 15000);
                   }}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
                   title="Reconnect"

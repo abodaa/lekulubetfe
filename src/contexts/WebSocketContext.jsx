@@ -708,7 +708,6 @@ export function WebSocketProvider({ children }) {
     isConnecting:
       isConnecting || wsRef.current?.readyState === WebSocket.CONNECTING,
     messageCount,
-    getWsReadyState: () => wsRef.current?.readyState === WebSocket.OPEN, // Add this line
   };
 
   return (
