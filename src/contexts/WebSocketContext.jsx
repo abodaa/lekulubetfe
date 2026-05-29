@@ -676,6 +676,17 @@ export function WebSocketProvider({ children }) {
     [connectToStake, connectGeneral],
   );
 
+  const requestNumberResume = useCallback(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN && currentStake) {
+      console.log("🎯 Requesting number drawing to resume...");
+      ws.send(
+        JSON.stringify({ type: "join_room", payload: { stake: currentStake } }),
+      );
+      ws.send(JSON.stringify({ type: "ping" }));
+    }
+  }, [currentStake]);
+
   useEffect(() => {
     if (
       sessionId &&
@@ -748,6 +759,7 @@ export function WebSocketProvider({ children }) {
     messageCount,
     ws: wsRef.current,
     forceReconnect,
+    requestNumberResume,
   };
 
   return (
