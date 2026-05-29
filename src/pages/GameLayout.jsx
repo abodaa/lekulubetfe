@@ -26,7 +26,7 @@ import "swiper/css/pagination";
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWarning } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
@@ -173,10 +173,9 @@ export default function GameLayout({ stake, onNavigate }) {
   const [isSoundOn, setIsSoundOn] = useState(() => {
     try {
       const saved = localStorage.getItem("lekulu_sound_enabled");
-      // Default to true if never set, otherwise use saved value
       return saved !== null ? saved === "true" : true;
     } catch {
-      return true; // Default to ON
+      return true;
     }
   });
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
@@ -194,6 +193,13 @@ export default function GameLayout({ stake, onNavigate }) {
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
+
+  // ========== NEW: OFFLINE BINGO QUEUE ==========
+  const pendingBingoClaimsRef = useRef([]);
+  const isProcessingQueueRef = useRef(false);
+  const offlineWinDetectedRef = useRef(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  // ========== END NEW ==========
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -341,6 +347,74 @@ export default function GameLayout({ stake, onNavigate }) {
     ],
   );
 
+  // ========== NEW: Process pending claims function ==========
+  const processPendingClaims = useCallback(async () => {
+    if (isProcessingQueueRef.current) return;
+    if (pendingBingoClaimsRef.current.length === 0) return;
+
+    if (!navigator.onLine) {
+      console.log("Still offline, waiting to process claims...");
+      return;
+    }
+
+    isProcessingQueueRef.current = true;
+
+    while (pendingBingoClaimsRef.current.length > 0) {
+      const claim = pendingBingoClaimsRef.current[0];
+
+      // Check if we still have a winning pattern or if game is still running
+      const card = yourCards.find(
+        (c) => c.cardNumber === claim.cardNumber,
+      )?.card;
+      if (card && checkBingoPattern(card, calledNumbers)) {
+        const result = claimBingo({ cardNumber: claim.cardNumber });
+        if (result) {
+          // Success - remove from queue
+          pendingBingoClaimsRef.current.shift();
+          showSuccess(
+            `🎉 Auto-BINGO claimed for Cartella #${claim.cardNumber}!`,
+          );
+          claimedCartellasRef.current.add(claim.cardNumber);
+        } else {
+          // Still failing, wait and retry later
+          break;
+        }
+      } else if (gameState.phase === "announce") {
+        // Game ended, check if this cartella actually won
+        const winners = gameState.winners || [];
+        const isWinner = winners.some(
+          (w) => w.cartelaNumber === claim.cardNumber,
+        );
+        if (isWinner) {
+          // User won but claim failed - credit manually via API? Or just remove
+          console.log(
+            `Cartella #${claim.cardNumber} was a winner, but claim failed`,
+          );
+          showWarning(
+            `Your win for Cartella #${claim.cardNumber} has been recorded. Please contact support if not credited.`,
+          );
+        }
+        pendingBingoClaimsRef.current.shift();
+      } else {
+        // No longer a winning pattern, remove from queue
+        pendingBingoClaimsRef.current.shift();
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    isProcessingQueueRef.current = false;
+  }, [
+    yourCards,
+    calledNumbers,
+    claimBingo,
+    showSuccess,
+    showWarning,
+    gameState.winners,
+    gameState.phase,
+  ]);
+  // ========== END NEW ==========
+
   // Track missed winning patterns
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -379,7 +453,7 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
-  // AUTO-BINGO
+  // ========== NEW: UPDATED AUTO-BINGO with offline support ==========
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
@@ -397,17 +471,60 @@ export default function GameLayout({ stake, onNavigate }) {
       );
       if (!lastNumberInPattern) continue;
 
+      // Check if already in pending queue
+      const alreadyPending = pendingBingoClaimsRef.current.some(
+        (c) => c.cardNumber === cardNumber,
+      );
+      if (alreadyPending) continue;
+
+      // Mark as claimed to prevent duplicate attempts
       claimedCartellasRef.current.add(cardNumber);
       triggerConfetti();
-      claimBingo({ cardNumber });
-      showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
 
-      setMissedPatterns((prev) => {
-        const newPatterns = { ...prev };
-        delete newPatterns[cardNumber];
-        return newPatterns;
-      });
-      delete missedPatternsPersistentRef.current[cardNumber];
+      // Check if we're online
+      if (!navigator.onLine) {
+        // Offline - add to queue
+        console.log(
+          `📱 Device offline, queueing BINGO claim for Cartella #${cardNumber}`,
+        );
+        pendingBingoClaimsRef.current.push({
+          cardNumber,
+          timestamp: Date.now(),
+          calledNumbersAtWin: [...calledNumbers],
+        });
+        showWarning(
+          `You're offline! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
+        );
+        offlineWinDetectedRef.current = true;
+        continue;
+      }
+
+      // Try to claim immediately
+      const result = claimBingo({ cardNumber });
+
+      if (result) {
+        showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
+        setMissedPatterns((prev) => {
+          const newPatterns = { ...prev };
+          delete newPatterns[cardNumber];
+          return newPatterns;
+        });
+        delete missedPatternsPersistentRef.current[cardNumber];
+      } else {
+        // Network failure - add to queue for retry
+        console.log(
+          `⚠️ Network failure, queueing BINGO claim for Cartella #${cardNumber}`,
+        );
+        pendingBingoClaimsRef.current.push({
+          cardNumber,
+          timestamp: Date.now(),
+          calledNumbersAtWin: [...calledNumbers],
+        });
+        showWarning(
+          `Network issue! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
+        );
+        processPendingClaims();
+      }
 
       break;
     }
@@ -418,7 +535,10 @@ export default function GameLayout({ stake, onNavigate }) {
     yourCards,
     claimBingo,
     showSuccess,
+    showWarning,
+    processPendingClaims,
   ]);
+  // ========== END NEW ==========
 
   // TRACK MISSED WINNING PATTERNS
   useEffect(() => {
@@ -507,11 +627,58 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
+  // ========== NEW: Clear pending claims on game end and add network listeners ==========
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
+      // Clear pending claims when game ends
+      if (pendingBingoClaimsRef.current.length > 0) {
+        console.log("Game ended with pending claims - clearing queue");
+        pendingBingoClaimsRef.current = [];
+      }
+      offlineWinDetectedRef.current = false;
       onNavigate?.("winner");
     }
   }, [gameState.phase, onNavigate, isRefreshing]);
+
+  // Network status listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("🌐 Network recovered - processing pending claims");
+      setIsOffline(false);
+      if (offlineWinDetectedRef.current) {
+        showSuccess("Network restored! Claiming your wins...");
+        offlineWinDetectedRef.current = false;
+      }
+      processPendingClaims();
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Network disconnected");
+      setIsOffline(true);
+      if (pendingBingoClaimsRef.current.length > 0) {
+        showWarning(
+          "Network disconnected! Your win will be claimed when connection returns.",
+        );
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Periodic check for pending claims
+    const interval = setInterval(() => {
+      if (pendingBingoClaimsRef.current.length > 0 && navigator.onLine) {
+        processPendingClaims();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      clearInterval(interval);
+    };
+  }, [processPendingClaims, showSuccess, showWarning]);
+  // ========== END NEW ==========
 
   useEffect(() => {
     if (!currentGameId) {
@@ -528,6 +695,9 @@ export default function GameLayout({ stake, onNavigate }) {
       setClaimingStates({});
       setMissedPatterns({});
       missedPatternsPersistentRef.current = {};
+      // Clear pending claims when new registration starts
+      pendingBingoClaimsRef.current = [];
+      offlineWinDetectedRef.current = false;
     }
   }, [gameState.phase]);
 
@@ -603,7 +773,6 @@ export default function GameLayout({ stake, onNavigate }) {
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
-    // Save to localStorage
     localStorage.setItem("lekulu_sound_enabled", newState.toString());
     if (newState && !audioInitializedRef.current) {
       audioInitializedRef.current = true;
@@ -653,6 +822,21 @@ export default function GameLayout({ stake, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+      {/* ========== NEW: Offline indicator banner ========== */}
+      {isOffline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black text-center py-1 text-xs font-medium">
+          ⚠️ You're offline - wins will be stored and claimed when online
+        </div>
+      )}
+
+      {/* Pending claims indicator */}
+      {pendingBingoClaimsRef.current.length > 0 && !isOffline && (
+        <div className="fixed top-12 left-0 right-0 z-50 bg-blue-500 text-white text-center py-1 text-xs font-medium">
+          🔄 Processing {pendingBingoClaimsRef.current.length} pending win(s)...
+        </div>
+      )}
+      {/* ========== END NEW ========== */}
+
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
