@@ -73,8 +73,7 @@ export function WebSocketProvider({ children }) {
     [connected],
   );
 
-  // Countdown timer effect - uses server-sent countdownSeconds when available,
-  // falls back to local calculation from registrationEndTime
+  // Countdown timer effect
   useEffect(() => {
     let intervalId = null;
 
@@ -157,7 +156,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_WS_URL ||
         (window.location.hostname === "localhost"
           ? "ws://localhost:3001"
-          : "wss://markbingo.com");
+          : "wss://lekulubingoback.onrender.com");
       wsBase = (wsBase || "").replace(/\/+$/, "");
       if (!/\/ws$/i.test(wsBase)) {
         wsBase += "/ws";
@@ -249,7 +248,6 @@ export function WebSocketProvider({ children }) {
                   event.payload.nextStartAt ||
                   event.payload.registrationEndTime;
 
-                // Use server-sent countdownSeconds if available, otherwise calculate locally
                 const serverCountdown =
                   event.payload.countdownSeconds != null
                     ? event.payload.countdownSeconds
@@ -321,7 +319,6 @@ export function WebSocketProvider({ children }) {
 
             case "registration_open": {
               const registrationEndTime = event.payload.endsAt;
-              // Use server-sent countdownSeconds if available
               const serverCountdown =
                 event.payload.countdownSeconds != null
                   ? event.payload.countdownSeconds
@@ -353,7 +350,6 @@ export function WebSocketProvider({ children }) {
 
             case "registration_extended": {
               const registrationEndTime = event.payload.endsAt;
-              // Use server-sent countdownSeconds if available
               const serverCountdown =
                 event.payload.countdownSeconds != null
                   ? event.payload.countdownSeconds
@@ -660,7 +656,6 @@ export function WebSocketProvider({ children }) {
     [safeSessionId, currentStake],
   );
 
-  // Force reconnect function
   const forceReconnect = useCallback(
     (stake) => {
       console.log("🔄 Force reconnecting...");
@@ -672,7 +667,6 @@ export function WebSocketProvider({ children }) {
       }
       setConnected(false);
       connectionAttemptRef.current = false;
-      // Reconnect
       if (stake) {
         connectToStake(stake);
       } else {
@@ -699,6 +693,28 @@ export function WebSocketProvider({ children }) {
         wsRef.current.close();
         wsRef.current = null;
       }
+    };
+  }, []);
+
+  // Listen for forced game state updates from HTTP API
+  useEffect(() => {
+    const handleForceUpdate = (event) => {
+      if (!event.detail) return;
+
+      console.log("📡 WebSocket context received forced update:", event.detail);
+
+      setGameState((prev) => ({
+        ...prev,
+        calledNumbers: event.detail.calledNumbers || prev.calledNumbers,
+        currentNumber: event.detail.currentNumber || prev.currentNumber,
+        gameId: event.detail.gameId || prev.gameId,
+        phase: event.detail.phase || prev.phase,
+      }));
+    };
+
+    window.addEventListener("forceGameStateUpdate", handleForceUpdate);
+    return () => {
+      window.removeEventListener("forceGameStateUpdate", handleForceUpdate);
     };
   }, []);
 

@@ -17,7 +17,6 @@ import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 import { BsInfoCircle } from "react-icons/bs";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
-// Import Swiper styles
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -161,8 +160,14 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   };
 
-  const { connected, gameState, claimBingo, connectToStake, ws, forceReconnect } =
-    useWebSocket();
+  const {
+    connected,
+    gameState,
+    claimBingo,
+    connectToStake,
+    ws,
+    forceReconnect,
+  } = useWebSocket();
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
@@ -195,12 +200,11 @@ export default function GameLayout({ stake, onNavigate }) {
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
 
-  // ========== OFFLINE BINGO QUEUE ==========
+  // OFFLINE BINGO QUEUE
   const pendingBingoClaimsRef = useRef([]);
   const isProcessingQueueRef = useRef(false);
   const offlineWinDetectedRef = useRef(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  // ========== END ==========
 
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -211,12 +215,11 @@ export default function GameLayout({ stake, onNavigate }) {
     if (stake && sessionId) connectToStake(stake);
   }, [stake, sessionId, connectToStake]);
 
-  // Track WebSocket connection status for recovery
+  // Track WebSocket connection status
   const wsConnectionRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 10;
 
-  // Monitor WebSocket connection status
   useEffect(() => {
     wsConnectionRef.current = connected;
     if (connected) {
@@ -226,50 +229,6 @@ export default function GameLayout({ stake, onNavigate }) {
       console.log("⚠️ WebSocket disconnected");
     }
   }, [connected]);
-
-  // Listen for manual game state refresh
-  useEffect(() => {
-    const handleGameStateRefresh = (event) => {
-      if (!event.detail) return;
-
-      console.log("📡 Received game state refresh:", event.detail);
-
-      // Force a re-render by updating a state
-      setWallet((prev) => ({ ...prev }));
-    };
-
-    window.addEventListener("gameStateRefresh", handleGameStateRefresh);
-
-    return () => {
-      window.removeEventListener("gameStateRefresh", handleGameStateRefresh);
-    };
-  }, []);
-
-  // WebSocket error handler for auto-reconnect
-  useEffect(() => {
-    if (!ws) return;
-    
-    const handleClose = () => {
-      console.log("🔌 WebSocket closed - scheduling reconnect...");
-      if (navigator.onLine && stake) {
-        setTimeout(() => {
-          connectToStake(stake);
-        }, 1000);
-      }
-    };
-    
-    const handleError = (err) => {
-      console.log("❌ WebSocket error:", err);
-    };
-    
-    ws.addEventListener('close', handleClose);
-    ws.addEventListener('error', handleError);
-    
-    return () => {
-      ws.removeEventListener('close', handleClose);
-      ws.removeEventListener('error', handleError);
-    };
-  }, [ws, stake, connectToStake]);
 
   useEffect(() => {
     const h = () => {
@@ -283,7 +242,33 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => document.removeEventListener("visibilitychange", h);
   }, [stake, sessionId, connected, connectToStake]);
 
-  // Audio initialization - only once on first user interaction
+  // WebSocket error handler for auto-reconnect
+  useEffect(() => {
+    if (!ws) return;
+
+    const handleClose = () => {
+      console.log("🔌 WebSocket closed - scheduling reconnect...");
+      if (navigator.onLine && stake) {
+        setTimeout(() => {
+          connectToStake(stake);
+        }, 1000);
+      }
+    };
+
+    const handleError = (err) => {
+      console.log("❌ WebSocket error:", err);
+    };
+
+    ws.addEventListener("close", handleClose);
+    ws.addEventListener("error", handleError);
+
+    return () => {
+      ws.removeEventListener("close", handleClose);
+      ws.removeEventListener("error", handleError);
+    };
+  }, [ws, stake, connectToStake]);
+
+  // Audio initialization
   useEffect(() => {
     const initAudioOnInteraction = async () => {
       if (!audioInitializedRef.current) {
@@ -408,7 +393,7 @@ export default function GameLayout({ stake, onNavigate }) {
     ],
   );
 
-  // ========== Process pending claims function ==========
+  // Process pending claims function
   const processPendingClaims = useCallback(async () => {
     if (isProcessingQueueRef.current) return;
     if (pendingBingoClaimsRef.current.length === 0) return;
@@ -468,7 +453,6 @@ export default function GameLayout({ stake, onNavigate }) {
     gameState.winners,
     gameState.phase,
   ]);
-  // ========== END ==========
 
   // Track missed winning patterns
   useEffect(() => {
@@ -508,7 +492,7 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
-  // ========== AUTO-BINGO with offline support ==========
+  // AUTO-BINGO with offline support
   useEffect(() => {
     if (gameState.phase !== "running") return;
     if (!isAutoMarkOn) return;
@@ -587,7 +571,6 @@ export default function GameLayout({ stake, onNavigate }) {
     showWarning,
     processPendingClaims,
   ]);
-  // ========== END ==========
 
   // TRACK MISSED WINNING PATTERNS
   useEffect(() => {
@@ -660,7 +643,6 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => clearTimeout(t);
   }, [startCountdown]);
 
-  // ========== handleRefresh DEFINED HERE ==========
   const handleRefresh = async () => {
     if (isRefreshing) return;
     try {
@@ -676,68 +658,92 @@ export default function GameLayout({ stake, onNavigate }) {
       setIsRefreshing(false);
     }
   };
-  // ========== END handleRefresh ==========
 
-  // ========== NETWORK RECOVERY useEffect ==========
-  useEffect(() => {
-    let reconnectTimer = null;
-    let retryCount = 0;
+  // ========== FORCE GAME STATE SYNC AFTER RECONNECT ==========
+  const forceGameStateSync = useCallback(async () => {
+    if (!stake || !sessionId) return;
 
-    const attemptReconnect = () => {
-      if (!stake || !sessionId) return;
-      if (!navigator.onLine) return;
-      
-      // Check actual WebSocket state
-      const isActuallyConnected = ws && ws.readyState === WebSocket.OPEN;
-      
-      if (isActuallyConnected && currentGameId) {
-        console.log("✅ Already connected");
-        retryCount = 0;
-        return;
+    console.log("🔄 Force syncing game state from server...");
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://lekulubingoback.onrender.com");
+
+      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
+      const data = await response.json();
+
+      if (
+        data.success &&
+        data.game &&
+        (data.game.status === "running" || data.game.status === "registration")
+      ) {
+        console.log("✅ Game state fetched:", {
+          calledNumbers: data.game.calledNumbers?.length,
+          lastCalledNumber: data.game.lastCalledNumber,
+          phase: data.game.status,
+        });
+
+        if (data.game.calledNumbers && data.game.calledNumbers.length > 0) {
+          window.dispatchEvent(
+            new CustomEvent("forceGameStateUpdate", {
+              detail: {
+                calledNumbers: data.game.calledNumbers,
+                currentNumber: data.game.lastCalledNumber,
+                gameId: data.game.gameId,
+                phase: data.game.status,
+              },
+            }),
+          );
+        }
       }
-      
-      retryCount++;
-      console.log(`🔄 Reconnect attempt ${retryCount}...`);
-      
-      // Force reconnect using the context method
+    } catch (error) {
+      console.error("Failed to force game state sync:", error);
+    }
+  }, [stake, sessionId]);
+
+  // ========== NETWORK RECOVERY with FORCED SYNC ==========
+  useEffect(() => {
+    let syncTimer = null;
+
+    const handleOnline = async () => {
+      console.log("🌐 Network recovered - reconnecting...");
+      showWarning("Network restored! Reconnecting to game...");
+
       if (forceReconnect) {
         forceReconnect(stake);
       } else {
         connectToStake(stake);
       }
-      
-      // After reconnecting, explicitly request snapshot
-      setTimeout(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          console.log("📡 Requesting game snapshot...");
-          ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
-        }
-      }, 1000);
-    };
 
-    const handleOnline = () => {
-      console.log("🌐 Network recovered - reconnecting...");
-      showWarning("Network restored! Reconnecting to game...");
-      retryCount = 0;
-      attemptReconnect();
-      
-      // Keep trying
-      if (reconnectTimer) clearInterval(reconnectTimer);
-      reconnectTimer = setInterval(() => {
-        const isActuallyConnected = ws && ws.readyState === WebSocket.OPEN;
-        if (!isActuallyConnected && navigator.onLine) {
-          attemptReconnect();
-        } else if (isActuallyConnected) {
-          if (reconnectTimer) clearInterval(reconnectTimer);
-          showSuccess("Game reconnected!");
+      setTimeout(async () => {
+        await forceGameStateSync();
+        if (currentGameId) {
+          showSuccess("Game reconnected! Numbers will resume.");
+        } else {
+          setTimeout(async () => {
+            await forceGameStateSync();
+            if (currentGameId) {
+              showSuccess("Game reconnected! Numbers will resume.");
+            }
+          }, 3000);
         }
-      }, 3000);
+      }, 2000);
+
+      if (syncTimer) clearInterval(syncTimer);
+      syncTimer = setInterval(async () => {
+        if (navigator.onLine) {
+          await forceGameStateSync();
+        }
+      }, 10000);
     };
 
     const handleOffline = () => {
       console.log("⚠️ Network lost");
       showWarning("Network lost! Will reconnect when connection returns.");
-      if (reconnectTimer) clearInterval(reconnectTimer);
+      if (syncTimer) clearInterval(syncTimer);
     };
 
     window.addEventListener("online", handleOnline);
@@ -746,11 +752,21 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      if (reconnectTimer) clearInterval(reconnectTimer);
+      if (syncTimer) clearInterval(syncTimer);
     };
-  }, [stake, sessionId, connectToStake, forceReconnect, ws, currentGameId, showSuccess, showWarning]);
+  }, [
+    stake,
+    sessionId,
+    connectToStake,
+    forceReconnect,
+    forceGameStateSync,
+    currentGameId,
+    showSuccess,
+    showError,
+    showWarning,
+  ]);
 
-  // ========== Clear pending claims on game end ==========
+  // Clear pending claims on game end
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
       if (pendingBingoClaimsRef.current.length > 0) {
@@ -799,7 +815,6 @@ export default function GameLayout({ stake, onNavigate }) {
       clearInterval(interval);
     };
   }, [processPendingClaims, showSuccess, showWarning]);
-  // ========== END ==========
 
   useEffect(() => {
     if (!currentGameId) {
@@ -889,7 +904,6 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
-  // Simple sound toggle
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
@@ -1058,24 +1072,20 @@ export default function GameLayout({ stake, onNavigate }) {
 
               {!connected && !isRefreshing && (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     console.log("🔌 Manual reconnect requested");
                     showWarning("Reconnecting...");
-                    
+
                     if (forceReconnect) {
                       forceReconnect(stake);
                     } else {
                       connectToStake(stake);
                     }
-                    
-                    setTimeout(() => {
-                      if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
-                        showSuccess("Reconnected! Game resuming...");
-                      } else {
-                        showError("Failed to reconnect. Please refresh.");
-                      }
-                    }, 1500);
+
+                    setTimeout(async () => {
+                      await forceGameStateSync();
+                      showSuccess("Reconnected! Game resuming...");
+                    }, 2000);
                   }}
                   className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
                   title="Reconnect"
