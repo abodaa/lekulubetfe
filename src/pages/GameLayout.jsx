@@ -219,99 +219,12 @@ export default function GameLayout({ stake, onNavigate }) {
   useEffect(() => {
     wsConnectionRef.current = connected;
     if (connected) {
-      reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
+      reconnectAttemptsRef.current = 0;
       console.log("✅ WebSocket connected");
     } else {
       console.log("⚠️ WebSocket disconnected");
     }
   }, [connected]);
-
-  // Auto-reconnect when network returns
-  // Replace your existing network listeners with this more aggressive version
-  useEffect(() => {
-    const handleOnline = async () => {
-      console.log("🌐 Network recovered - reconnecting to game...");
-
-      // Show status message
-      showWarning("Network restored! Reconnecting to game...");
-
-      // Multiple reconnection attempts
-      for (let attempt = 1; attempt <= 5; attempt++) {
-        console.log(`🔄 Reconnection attempt ${attempt}/5`);
-
-        if (!connected) {
-          connectToStake(stake);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-        }
-
-        if (connected) {
-          console.log("✅ Reconnected successfully!");
-          // Refresh game state
-          handleRefresh();
-          showSuccess("Game reconnected! Numbers will resume.");
-          break;
-        }
-      }
-
-      if (!connected) {
-        showError("Unable to reconnect. Please refresh the page.");
-      }
-    };
-
-    const handleOffline = () => {
-      console.log("⚠️ Network lost - game connection interrupted");
-      showWarning("Network lost! Will auto-reconnect when connection returns.");
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [
-    connected,
-    stake,
-    sessionId,
-    connectToStake,
-    handleRefresh,
-    showSuccess,
-    showError,
-    showWarning,
-  ]);
-
-  // Periodic reconnect check (every 10 seconds)
-  useEffect(() => {
-    if (!stake || !sessionId) return;
-
-    const interval = setInterval(() => {
-      if (!connected && navigator.onLine) {
-        console.log("💓 WebSocket disconnected - forcing reconnect...");
-        connectToStake(stake);
-
-        // Also try to refresh after reconnect
-        setTimeout(() => {
-          if (connected) {
-            handleRefresh();
-          }
-        }, 1500);
-      }
-    }, 10000); // Check every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [connected, stake, sessionId, connectToStake]);
-
-  // Also listen for WebSocket close event and auto-reconnect
-  useEffect(() => {
-    if (!connected && stake && sessionId && navigator.onLine) {
-      console.log("🔌 WebSocket closed while online - auto-reconnecting...");
-      const timer = setTimeout(() => {
-        connectToStake(stake);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [connected, stake, sessionId, connectToStake]);
 
   useEffect(() => {
     const h = () => {
@@ -465,31 +378,26 @@ export default function GameLayout({ stake, onNavigate }) {
     while (pendingBingoClaimsRef.current.length > 0) {
       const claim = pendingBingoClaimsRef.current[0];
 
-      // Check if we still have a winning pattern or if game is still running
       const card = yourCards.find(
         (c) => c.cardNumber === claim.cardNumber,
       )?.card;
       if (card && checkBingoPattern(card, calledNumbers)) {
         const result = claimBingo({ cardNumber: claim.cardNumber });
         if (result) {
-          // Success - remove from queue
           pendingBingoClaimsRef.current.shift();
           showSuccess(
             `🎉 Auto-BINGO claimed for Cartella #${claim.cardNumber}!`,
           );
           claimedCartellasRef.current.add(claim.cardNumber);
         } else {
-          // Still failing, wait and retry later
           break;
         }
       } else if (gameState.phase === "announce") {
-        // Game ended, check if this cartella actually won
         const winners = gameState.winners || [];
         const isWinner = winners.some(
           (w) => w.cartelaNumber === claim.cardNumber,
         );
         if (isWinner) {
-          // User won but claim failed - credit manually via API? Or just remove
           console.log(
             `Cartella #${claim.cardNumber} was a winner, but claim failed`,
           );
@@ -499,7 +407,6 @@ export default function GameLayout({ stake, onNavigate }) {
         }
         pendingBingoClaimsRef.current.shift();
       } else {
-        // No longer a winning pattern, remove from queue
         pendingBingoClaimsRef.current.shift();
       }
 
@@ -574,19 +481,15 @@ export default function GameLayout({ stake, onNavigate }) {
       );
       if (!lastNumberInPattern) continue;
 
-      // Check if already in pending queue
       const alreadyPending = pendingBingoClaimsRef.current.some(
         (c) => c.cardNumber === cardNumber,
       );
       if (alreadyPending) continue;
 
-      // Mark as claimed to prevent duplicate attempts
       claimedCartellasRef.current.add(cardNumber);
       triggerConfetti();
 
-      // Check if we're online
       if (!navigator.onLine) {
-        // Offline - add to queue
         console.log(
           `📱 Device offline, queueing BINGO claim for Cartella #${cardNumber}`,
         );
@@ -602,7 +505,6 @@ export default function GameLayout({ stake, onNavigate }) {
         continue;
       }
 
-      // Try to claim immediately
       const result = claimBingo({ cardNumber });
 
       if (result) {
@@ -614,7 +516,6 @@ export default function GameLayout({ stake, onNavigate }) {
         });
         delete missedPatternsPersistentRef.current[cardNumber];
       } else {
-        // Network failure - add to queue for retry
         console.log(
           `⚠️ Network failure, queueing BINGO claim for Cartella #${cardNumber}`,
         );
@@ -714,6 +615,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => clearTimeout(t);
   }, [startCountdown]);
 
+  // ========== handleRefresh DEFINED HERE (BEFORE it's used) ==========
   const handleRefresh = async () => {
     if (isRefreshing) return;
     try {
@@ -729,11 +631,93 @@ export default function GameLayout({ stake, onNavigate }) {
       setIsRefreshing(false);
     }
   };
+  // ========== END handleRefresh ==========
 
-  // ========== NEW: Clear pending claims on game end and add network listeners ==========
+  // ========== NETWORK RECOVERY useEffect (AFTER handleRefresh) ==========
+  useEffect(() => {
+    const handleOnline = async () => {
+      console.log("🌐 Network recovered - reconnecting to game...");
+      showWarning("Network restored! Reconnecting to game...");
+
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        console.log(`🔄 Reconnection attempt ${attempt}/5`);
+
+        if (!connected) {
+          connectToStake(stake);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+
+        if (connected) {
+          console.log("✅ Reconnected successfully!");
+          handleRefresh();
+          showSuccess("Game reconnected! Numbers will resume.");
+          break;
+        }
+      }
+
+      if (!connected) {
+        showError("Unable to reconnect. Please refresh the page.");
+      }
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Network lost - game connection interrupted");
+      showWarning("Network lost! Will auto-reconnect when connection returns.");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [
+    connected,
+    stake,
+    sessionId,
+    connectToStake,
+    handleRefresh,
+    showSuccess,
+    showError,
+    showWarning,
+  ]);
+  // ========== END NETWORK RECOVERY ==========
+
+  // Periodic reconnect check (every 10 seconds)
+  useEffect(() => {
+    if (!stake || !sessionId) return;
+
+    const interval = setInterval(() => {
+      if (!connected && navigator.onLine) {
+        console.log("💓 WebSocket disconnected - forcing reconnect...");
+        connectToStake(stake);
+
+        setTimeout(() => {
+          if (connected) {
+            handleRefresh();
+          }
+        }, 1500);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [connected, stake, sessionId, connectToStake]);
+
+  // Auto-reconnect when WebSocket closes unexpectedly
+  useEffect(() => {
+    if (!connected && stake && sessionId && navigator.onLine) {
+      console.log("🔌 WebSocket closed while online - auto-reconnecting...");
+      const timer = setTimeout(() => {
+        connectToStake(stake);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [connected, stake, sessionId, connectToStake]);
+
+  // ========== Clear pending claims on game end ==========
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
-      // Clear pending claims when game ends
       if (pendingBingoClaimsRef.current.length > 0) {
         console.log("Game ended with pending claims - clearing queue");
         pendingBingoClaimsRef.current = [];
@@ -743,7 +727,7 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [gameState.phase, onNavigate, isRefreshing]);
 
-  // Network status listeners
+  // Network status listeners for offline indicator
   useEffect(() => {
     const handleOnline = () => {
       console.log("🌐 Network recovered - processing pending claims");
@@ -768,7 +752,6 @@ export default function GameLayout({ stake, onNavigate }) {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic check for pending claims
     const interval = setInterval(() => {
       if (pendingBingoClaimsRef.current.length > 0 && navigator.onLine) {
         processPendingClaims();
@@ -781,7 +764,7 @@ export default function GameLayout({ stake, onNavigate }) {
       clearInterval(interval);
     };
   }, [processPendingClaims, showSuccess, showWarning]);
-  // ========== END NEW ==========
+  // ========== END ==========
 
   useEffect(() => {
     if (!currentGameId) {
@@ -798,7 +781,6 @@ export default function GameLayout({ stake, onNavigate }) {
       setClaimingStates({});
       setMissedPatterns({});
       missedPatternsPersistentRef.current = {};
-      // Clear pending claims when new registration starts
       pendingBingoClaimsRef.current = [];
       offlineWinDetectedRef.current = false;
     }
@@ -925,20 +907,17 @@ export default function GameLayout({ stake, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
-      {/* ========== NEW: Offline indicator banner ========== */}
       {isOffline && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black text-center py-1 text-xs font-medium">
           ⚠️ You're offline - wins will be stored and claimed when online
         </div>
       )}
 
-      {/* Pending claims indicator */}
       {pendingBingoClaimsRef.current.length > 0 && !isOffline && (
         <div className="fixed top-12 left-0 right-0 z-50 bg-blue-500 text-white text-center py-1 text-xs font-medium">
           🔄 Processing {pendingBingoClaimsRef.current.length} pending win(s)...
         </div>
       )}
-      {/* ========== END NEW ========== */}
 
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
@@ -989,7 +968,6 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-        {/* Header */}
         <header className="px-3 pt-2 pb-1 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -1272,7 +1250,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </tr>
+                      </table>
                     ))}
                   </tbody>
                 </table>
