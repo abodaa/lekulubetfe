@@ -210,27 +210,51 @@ export default function GameLayout({ stake, onNavigate }) {
     if (stake && sessionId) connectToStake(stake);
   }, [stake, sessionId, connectToStake]);
 
-  // Network recovery - reconnect WebSocket when online returns
+  // Track WebSocket connection status for recovery
+  const wsConnectionRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 10;
+
+  // Monitor WebSocket connection status
+  useEffect(() => {
+    wsConnectionRef.current = connected;
+    if (connected) {
+      reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
+      console.log("✅ WebSocket connected");
+    } else {
+      console.log("⚠️ WebSocket disconnected");
+    }
+  }, [connected]);
+
+  // Auto-reconnect when network returns
+  // Replace your existing network listeners with this more aggressive version
   useEffect(() => {
     const handleOnline = async () => {
       console.log("🌐 Network recovered - reconnecting to game...");
 
-      if (!connected && stake && sessionId) {
-        console.log("🔄 Reconnecting WebSocket...");
-        connectToStake(stake);
-        showSuccess("Network restored! Reconnecting to game...");
+      // Show status message
+      showWarning("Network restored! Reconnecting to game...");
 
-        // Small delay to allow WebSocket to connect, then refresh
-        setTimeout(() => {
-          if (connected) {
-            console.log("📡 Refreshing game state after reconnect...");
-            handleRefresh();
-          }
-        }, 1000);
-      } else if (connected && currentGameId) {
-        // Already connected but may have missed messages
-        console.log("📡 Refreshing game state after network recovery...");
-        handleRefresh();
+      // Multiple reconnection attempts
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        console.log(`🔄 Reconnection attempt ${attempt}/5`);
+
+        if (!connected) {
+          connectToStake(stake);
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+
+        if (connected) {
+          console.log("✅ Reconnected successfully!");
+          // Refresh game state
+          handleRefresh();
+          showSuccess("Game reconnected! Numbers will resume.");
+          break;
+        }
+      }
+
+      if (!connected) {
+        showError("Unable to reconnect. Please refresh the page.");
       }
     };
 
@@ -251,23 +275,42 @@ export default function GameLayout({ stake, onNavigate }) {
     stake,
     sessionId,
     connectToStake,
-    currentGameId,
+    handleRefresh,
     showSuccess,
+    showError,
     showWarning,
   ]);
 
-  // Periodic WebSocket health check
+  // Periodic reconnect check (every 10 seconds)
   useEffect(() => {
     if (!stake || !sessionId) return;
 
-    const healthCheck = setInterval(() => {
+    const interval = setInterval(() => {
       if (!connected && navigator.onLine) {
-        console.log("💓 WebSocket disconnected - attempting reconnect...");
+        console.log("💓 WebSocket disconnected - forcing reconnect...");
         connectToStake(stake);
-      }
-    }, 30000); // Check every 30 seconds
 
-    return () => clearInterval(healthCheck);
+        // Also try to refresh after reconnect
+        setTimeout(() => {
+          if (connected) {
+            handleRefresh();
+          }
+        }, 1500);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [connected, stake, sessionId, connectToStake]);
+
+  // Also listen for WebSocket close event and auto-reconnect
+  useEffect(() => {
+    if (!connected && stake && sessionId && navigator.onLine) {
+      console.log("🔌 WebSocket closed while online - auto-reconnecting...");
+      const timer = setTimeout(() => {
+        connectToStake(stake);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
   }, [connected, stake, sessionId, connectToStake]);
 
   useEffect(() => {
@@ -999,6 +1042,27 @@ export default function GameLayout({ stake, onNavigate }) {
               >
                 <BiRefresh />
               </button>
+
+              {!connected && !isRefreshing && (
+                <button
+                  onClick={() => {
+                    console.log("🔌 Manual reconnect requested");
+                    connectToStake(stake);
+                    setTimeout(() => {
+                      if (connected) {
+                        handleRefresh();
+                        showSuccess("Reconnected successfully!");
+                      } else {
+                        showError("Failed to reconnect. Please refresh.");
+                      }
+                    }, 1500);
+                  }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-yellow-500/20 text-white font-bold hover:bg-yellow-500/30 transition-all"
+                  title="Reconnect"
+                >
+                  🔌
+                </button>
+              )}
             </div>
             <div className="text-right">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
