@@ -1292,7 +1292,7 @@ export default function GameLayout({ stake, onNavigate }) {
                             </td>
                           );
                         })}
-                      </table>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
