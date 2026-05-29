@@ -618,17 +618,43 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  // ========== NETWORK RECOVERY - RELOAD PAGE ==========
+  // Detect WebSocket disconnection while game is active
+  useEffect(() => {
+    if (!ws) return;
+
+    const handleClose = () => {
+      console.log("🔌 WebSocket closed - checking if reload needed");
+      if (currentGameId && navigator.onLine) {
+        console.log(
+          "⚠️ WebSocket closed while online and game active - scheduling reload",
+        );
+        showWarning("Connection lost! Refreshing game...");
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+    };
+
+    ws.addEventListener("close", handleClose);
+
+    return () => {
+      ws.removeEventListener("close", handleClose);
+    };
+  }, [ws, currentGameId, showWarning]);
+
+  // ========== NETWORK RECOVERY - PERIODIC CHECK + RELOAD ==========
   useEffect(() => {
     let reloadTimer = null;
     let countdownInterval = null;
+    let wasOffline = false;
+    let periodicCheckInterval = null;
 
-    const handleOnline = () => {
-      console.log("🌐 Network recovered - reloading page to resume game...");
-      showWarning("Network restored! Refreshing game...");
+    // Function to trigger reload with countdown
+    const triggerReload = () => {
+      if (reloadTimer) return; // Already scheduled
 
-      if (reloadTimer) clearTimeout(reloadTimer);
-      if (countdownInterval) clearInterval(countdownInterval);
+      console.log("🔄 Scheduling page reload...");
+      showWarning("Network recovered! Refreshing game in 3 seconds...");
 
       let countdown = 3;
       countdownInterval = setInterval(() => {
@@ -636,31 +662,83 @@ export default function GameLayout({ stake, onNavigate }) {
         countdown--;
         if (countdown < 0) {
           clearInterval(countdownInterval);
+          countdownInterval = null;
         }
       }, 1000);
 
       reloadTimer = setTimeout(() => {
+        console.log("🔄 Reloading page...");
         window.location.reload();
       }, 3000);
     };
 
-    const handleOffline = () => {
-      console.log("⚠️ Network lost");
-      showWarning("Network lost! Page will refresh when connection returns.");
-      if (reloadTimer) clearTimeout(reloadTimer);
-      if (countdownInterval) clearInterval(countdownInterval);
+    // Check network and connection status periodically
+    const checkConnection = () => {
+      // Check if we're online AND WebSocket is disconnected AND we have a gameId
+      if (navigator.onLine && !connected && currentGameId && !isRefreshing) {
+        console.log(
+          "⚠️ Detected: Online but WebSocket disconnected with active game",
+        );
+        if (!reloadTimer) {
+          triggerReload();
+        }
+      }
+
+      // Reset offline flag when online and connected
+      if (navigator.onLine && connected) {
+        wasOffline = false;
+        if (reloadTimer) {
+          clearTimeout(reloadTimer);
+          reloadTimer = null;
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      }
     };
 
+    // Listen for online/offline events
+    const handleOnline = () => {
+      console.log("🌐 Online event fired");
+      wasOffline = true;
+      // Small delay to allow WebSocket to potentially reconnect
+      setTimeout(() => {
+        checkConnection();
+      }, 2000);
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Offline event fired");
+      wasOffline = true;
+      showWarning("Network lost! Will refresh when connection returns.");
+      if (reloadTimer) {
+        clearTimeout(reloadTimer);
+        reloadTimer = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+    };
+
+    // Add event listeners
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
+    // Periodically check connection status (every 5 seconds)
+    periodicCheckInterval = setInterval(() => {
+      checkConnection();
+    }, 5000);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      if (periodicCheckInterval) clearInterval(periodicCheckInterval);
       if (reloadTimer) clearTimeout(reloadTimer);
       if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, [showWarning]);
+  }, [connected, currentGameId, isRefreshing, showWarning]);
 
   // Clear pending claims on game end
   useEffect(() => {
