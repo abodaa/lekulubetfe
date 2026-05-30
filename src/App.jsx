@@ -143,27 +143,55 @@ function AppContent() {
       const urlParams = new URLSearchParams(window.location.search);
       const isAdmin = urlParams.get("admin") === "true";
       const stakeParam = urlParams.get("stake");
-      const pageParam = urlParams.get("page"); // ✅ Add this
+      const pageParam = urlParams.get("page");
 
       if (isAdmin) {
         setCurrentPage("admin");
       } else if (pageParam === "leaderboard") {
-        setCurrentPage("scores"); // Navigate to leaderboard page
+        setCurrentPage("scores");
       } else {
         if (stakeParam) {
           const stakeValue = parseInt(stakeParam);
           if (stakeValue && [10, 20, 50].includes(stakeValue)) {
             setSelectedStake(stakeValue);
             localStorage.setItem("selectedStake", stakeValue.toString());
+            setCurrentPage("cartela-selection");
           }
         }
-        setCurrentPage("game");
+        // Only set to game if no stake is selected
+        if (!stakeParam && !selectedStake) {
+          setCurrentPage("game");
+        }
       }
     };
 
     checkUrlParams();
     window.addEventListener("popstate", checkUrlParams);
     return () => window.removeEventListener("popstate", checkUrlParams);
+  }, []);
+
+  // Add this useEffect in App.jsx - after other useEffects
+  useEffect(() => {
+    // Check if we have a reconnect stake saved
+    const reconnectStake = sessionStorage.getItem("reconnect_stake");
+    const reconnectTimestamp = sessionStorage.getItem("reconnect_timestamp");
+
+    if (reconnectStake && reconnectTimestamp) {
+      const timestamp = parseInt(reconnectTimestamp);
+      // Only use if less than 10 seconds old
+      if (Date.now() - timestamp < 10000) {
+        const stakeValue = parseInt(reconnectStake);
+        if (stakeValue && [10, 20, 50].includes(stakeValue)) {
+          console.log("🔄 Restoring stake from reconnect:", stakeValue);
+          setSelectedStake(stakeValue);
+          localStorage.setItem("selectedStake", stakeValue.toString());
+          setCurrentPage("cartela-selection");
+        }
+      }
+      // Clear sessionStorage
+      sessionStorage.removeItem("reconnect_stake");
+      sessionStorage.removeItem("reconnect_timestamp");
+    }
   }, []);
 
   const handleStakeSelected = (stake) => {

@@ -628,6 +628,10 @@ export default function GameLayout({ stake, onNavigate }) {
         console.log(
           "⚠️ WebSocket closed while online and game active - scheduling reload",
         );
+        if (stake) {
+          sessionStorage.setItem("reconnect_stake", stake);
+          sessionStorage.setItem("reconnect_timestamp", Date.now().toString());
+        }
         showWarning("Connection lost! Refreshing game...");
         setTimeout(() => {
           window.location.reload();
@@ -640,7 +644,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => {
       ws.removeEventListener("close", handleClose);
     };
-  }, [ws, currentGameId, showWarning]);
+  }, [ws, currentGameId, stake, showWarning]);
 
   // ========== NETWORK RECOVERY - PERIODIC CHECK + RELOAD ==========
   useEffect(() => {
@@ -654,6 +658,13 @@ export default function GameLayout({ stake, onNavigate }) {
       if (reloadTimer) return; // Already scheduled
 
       console.log("🔄 Scheduling page reload...");
+
+      // Save current stake to sessionStorage before reload
+      if (stake) {
+        sessionStorage.setItem("reconnect_stake", stake);
+        sessionStorage.setItem("reconnect_timestamp", Date.now().toString());
+      }
+
       showWarning("Network recovered! Refreshing game in 3 seconds...");
 
       let countdown = 3;
@@ -674,7 +685,6 @@ export default function GameLayout({ stake, onNavigate }) {
 
     // Check network and connection status periodically
     const checkConnection = () => {
-      // Check if we're online AND WebSocket is disconnected AND we have a gameId
       if (navigator.onLine && !connected && currentGameId && !isRefreshing) {
         console.log(
           "⚠️ Detected: Online but WebSocket disconnected with active game",
@@ -684,7 +694,6 @@ export default function GameLayout({ stake, onNavigate }) {
         }
       }
 
-      // Reset offline flag when online and connected
       if (navigator.onLine && connected) {
         wasOffline = false;
         if (reloadTimer) {
@@ -698,11 +707,9 @@ export default function GameLayout({ stake, onNavigate }) {
       }
     };
 
-    // Listen for online/offline events
     const handleOnline = () => {
       console.log("🌐 Online event fired");
       wasOffline = true;
-      // Small delay to allow WebSocket to potentially reconnect
       setTimeout(() => {
         checkConnection();
       }, 2000);
@@ -722,11 +729,9 @@ export default function GameLayout({ stake, onNavigate }) {
       }
     };
 
-    // Add event listeners
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodically check connection status (every 5 seconds)
     periodicCheckInterval = setInterval(() => {
       checkConnection();
     }, 5000);
@@ -738,7 +743,7 @@ export default function GameLayout({ stake, onNavigate }) {
       if (reloadTimer) clearTimeout(reloadTimer);
       if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, [connected, currentGameId, isRefreshing, showWarning]);
+  }, [connected, currentGameId, isRefreshing, stake, showWarning]);
 
   // Clear pending claims on game end
   useEffect(() => {
