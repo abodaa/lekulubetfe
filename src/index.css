@@ -322,6 +322,20 @@ body {
   justify-content: flex-end;
 }
 
+@keyframes animate-confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+.animate-confetti {
+  animation: animate-confetti 1s ease-out forwards;
+}
+
 /* Zoom-resistant navigation */
 @media (max-width: 480px) {
   .nav-wrap {
