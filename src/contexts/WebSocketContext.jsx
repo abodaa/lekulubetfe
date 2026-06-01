@@ -40,29 +40,6 @@ export function WebSocketProvider({ children }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const rejoinScheduledRef = useRef(false);
   const connectionAttemptRef = useRef(false);
-  const pendingJoinRef = useRef(false);
-
-  // Batch updates for performance
-  const pendingUpdatesRef = useRef([]);
-  const batchTimerRef = useRef(null);
-  const batchUpdateGameState = useCallback((updater) => {
-    pendingUpdatesRef.current.push(updater);
-    if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
-    batchTimerRef.current = setTimeout(() => {
-      const updates = pendingUpdatesRef.current;
-      pendingUpdatesRef.current = [];
-      setGameState((prev) => {
-        let newState = prev;
-        for (const update of updates) {
-          newState =
-            typeof update === "function"
-              ? update(newState)
-              : { ...newState, ...update };
-        }
-        return newState;
-      });
-    }, 16);
-  }, []);
 
   const send = useCallback(
     (type, payload) => {
@@ -106,7 +83,8 @@ export function WebSocketProvider({ children }) {
         const endTime = gameState.registrationEndTime;
         const remainingSeconds = Math.max(0, Math.ceil((endTime - now) / 1000));
 
-        batchUpdateGameState(() => ({
+        setGameState((prev) => ({
+          ...prev,
           countdown: remainingSeconds,
         }));
 
@@ -121,7 +99,7 @@ export function WebSocketProvider({ children }) {
         clearInterval(intervalId);
       }
     };
-  }, [gameState.phase, gameState.registrationEndTime, batchUpdateGameState]);
+  }, [gameState.phase, gameState.registrationEndTime]);
 
   const connectGeneral = useCallback(() => {
     console.log("🔍 WebSocket connectGeneral called:", {
@@ -196,7 +174,6 @@ export function WebSocketProvider({ children }) {
         connecting = false;
         connectionAttemptRef.current = false;
         retry = 0;
-        pendingJoinRef.current = false;
 
         heartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -204,13 +181,9 @@ export function WebSocketProvider({ children }) {
           }
         }, 30000);
 
-        // ALWAYS send join_room for currentStake on connection
         if (currentStake) {
           try {
-            console.log(
-              "🎯 Joining room after connect for stake:",
-              currentStake,
-            );
+            console.log("Joining room after connect:", { stake: currentStake });
             ws.send(
               JSON.stringify({
                 type: "join_room",
@@ -220,8 +193,6 @@ export function WebSocketProvider({ children }) {
           } catch (e) {
             console.warn("Failed to send join_room on open", e);
           }
-        } else {
-          console.log("⚠️ No currentStake to join on open");
         }
       };
 
@@ -250,11 +221,14 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "general_update":
-              batchUpdateGameState(() => event.payload);
+              setGameState((prev) => ({
+                ...prev,
+                ...event.payload,
+              }));
               break;
 
             case "snapshot": {
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 const snapshotPhase = event.payload.phase || "waiting";
                 const snapshotGameId = event.payload.gameId;
 
@@ -311,7 +285,7 @@ export function WebSocketProvider({ children }) {
                   }
                 }
 
-                return {
+                const newState = {
                   ...prev,
                   playersCount:
                     event.payload.playersCount ?? prev.playersCount ?? 0,
@@ -337,6 +311,8 @@ export function WebSocketProvider({ children }) {
                     ? { currentNumber: null, winners: [] }
                     : {}),
                 };
+
+                return newState;
               });
               break;
             }
@@ -352,7 +328,8 @@ export function WebSocketProvider({ children }) {
                         Math.ceil((registrationEndTime - Date.now()) / 1000),
                       )
                     : 0;
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 phase: "registration",
                 gameId: event.payload.gameId,
                 playersCount: event.payload.playersCount || 0,
@@ -382,31 +359,32 @@ export function WebSocketProvider({ children }) {
                         Math.ceil((registrationEndTime - Date.now()) / 1000),
                       )
                     : 0;
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 phase: "registration",
-                gameId: event.payload.gameId || gameState.gameId,
+                gameId: event.payload.gameId || prev.gameId,
                 playersCount:
-                  event.payload.playersCount ?? gameState.playersCount ?? 0,
+                  event.payload.playersCount ?? prev.playersCount ?? 0,
                 countdown: serverCountdown,
                 registrationEndTime,
-                takenCards:
-                  event.payload.takenCards || gameState.takenCards || [],
-                prizePool: event.payload.prizePool ?? gameState.prizePool ?? 0,
+                takenCards: event.payload.takenCards || prev.takenCards || [],
+                prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
               }));
               break;
             }
 
             case "registration_closed": {
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 phase: "starting",
-                gameId: event.payload?.gameId || gameState.gameId,
+                gameId: event.payload?.gameId || prev.gameId,
                 countdown: 0,
               }));
               break;
             }
 
             case "game_started":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   prev.phase === "running" &&
                   Array.isArray(prev.yourCards) &&
@@ -419,7 +397,7 @@ export function WebSocketProvider({ children }) {
                 const cardNumbers = cards
                   .map((card) => card.cardNumber || card)
                   .filter((num) => num != null);
-                return {
+                const newState = {
                   ...prev,
                   phase: "running",
                   gameId: event.payload.gameId,
@@ -430,12 +408,23 @@ export function WebSocketProvider({ children }) {
                   yourCards: cards,
                   yourSelections: cardNumbers,
                 };
+                window.dispatchEvent(
+                  new CustomEvent("gameStarted", {
+                    detail: {
+                      gameId: newState.gameId,
+                      phase: newState.phase,
+                      playersCount: newState.playersCount,
+                      hasCards: newState.yourCards?.length > 0,
+                    },
+                  }),
+                );
+                return newState;
               });
               setPendingGameStart(null);
               break;
 
             case "number_called":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   event.payload.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -451,7 +440,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "players_update":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -466,7 +455,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "registration_update":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -481,7 +470,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "selection_confirmed":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -499,27 +488,28 @@ export function WebSocketProvider({ children }) {
 
             case "card_selected":
             case "select_card":
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 yourSelections:
-                  event.payload.selections || gameState.yourSelections || [],
-                takenCards: event.payload.takenCards || gameState.takenCards,
-                playersCount:
-                  event.payload.playersCount || gameState.playersCount,
+                  event.payload.selections || prev.yourSelections || [],
+                takenCards: event.payload.takenCards || prev.takenCards,
+                playersCount: event.payload.playersCount || prev.playersCount,
               }));
               break;
 
             case "selection_cleared":
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 yourSelections: event.payload.selections || [],
-                playersCount:
-                  event.payload.playersCount ?? gameState.playersCount,
-                prizePool: event.payload.prizePool ?? gameState.prizePool,
+                playersCount: event.payload.playersCount ?? prev.playersCount,
+                prizePool: event.payload.prizePool ?? prev.prizePool,
               }));
               break;
 
             case "bingo_accepted":
-              batchUpdateGameState(() => ({
-                winners: event.payload.winners || [],
+              setGameState((prev) => ({
+                ...prev,
+                winners: event.payload.winners || prev.winners || [],
               }));
               break;
 
@@ -533,7 +523,7 @@ export function WebSocketProvider({ children }) {
 
             case "game_finished":
             case "game_ended":
-              batchUpdateGameState((prev) => {
+              setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   prev.gameId &&
@@ -562,7 +552,8 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "wallet_update":
-              batchUpdateGameState(() => ({
+              setGameState((prev) => ({
+                ...prev,
                 walletUpdate: {
                   main: event.payload.main,
                   play: event.payload.play,
@@ -589,7 +580,6 @@ export function WebSocketProvider({ children }) {
         setIsConnecting(false);
         connecting = false;
         connectionAttemptRef.current = false;
-        pendingJoinRef.current = false;
 
         if (heartbeat) {
           clearInterval(heartbeat);
@@ -614,7 +604,6 @@ export function WebSocketProvider({ children }) {
         setIsConnecting(false);
         connecting = false;
         connectionAttemptRef.current = false;
-        pendingJoinRef.current = false;
       };
     };
 
@@ -623,33 +612,20 @@ export function WebSocketProvider({ children }) {
     return () => {
       stopped = true;
       connectionAttemptRef.current = false;
-      pendingJoinRef.current = false;
       if (heartbeat) clearInterval(heartbeat);
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [
-    safeSessionId,
-    connected,
-    isConnecting,
-    currentStake,
-    gameState,
-    batchUpdateGameState,
-  ]);
+  }, [safeSessionId]);
 
   const connectToStake = useCallback(
     (stake) => {
       if (!safeSessionId || !stake) return;
-
-      console.log("🎯 connectToStake called with stake:", stake);
-      console.log("📡 Current WebSocket state:", wsRef.current?.readyState);
-
       const isSameStake = currentStake === stake;
 
       if (!isSameStake) {
-        console.log("🔄 Resetting game state for new stake:", stake);
         setGameState({
           phase: "waiting",
           gameId: null,
@@ -671,57 +647,18 @@ export function WebSocketProvider({ children }) {
       }
 
       const ws = wsRef.current;
-
       if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log("📤 Sending join_room for stake:", stake);
         try {
           ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
-          pendingJoinRef.current = false;
-        } catch (e) {
-          console.error("Failed to send join_room:", e);
-        }
-      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-        console.log("⏳ WebSocket connecting, will send join_room when open");
-        pendingJoinRef.current = true;
-        const onOpen = () => {
-          if (
-            pendingJoinRef.current &&
-            wsRef.current?.readyState === WebSocket.OPEN
-          ) {
-            console.log(
-              "✅ WebSocket opened, now sending join_room for stake:",
-              stake,
-            );
-            wsRef.current.send(
-              JSON.stringify({ type: "join_room", payload: { stake } }),
-            );
-            pendingJoinRef.current = false;
-          }
-          ws.removeEventListener("open", onOpen);
-        };
-        ws.addEventListener("open", onOpen);
-
-        // Timeout for pending join
-        setTimeout(() => {
-          if (pendingJoinRef.current) {
-            console.log("⚠️ Pending join timeout, retrying...");
-            pendingJoinRef.current = false;
-            connectToStake(stake);
-          }
-        }, 5000);
-      } else {
-        console.log("⚠️ WebSocket not connected, cannot send join_room");
-        // Try to reconnect
-        connectGeneral();
+        } catch (e) {}
       }
     },
-    [safeSessionId, currentStake, connectGeneral],
+    [safeSessionId, currentStake],
   );
 
   const forceReconnect = useCallback(
     (stake) => {
       console.log("🔄 Force reconnecting...");
-      pendingJoinRef.current = false;
       if (wsRef.current) {
         try {
           wsRef.current.close();
@@ -750,133 +687,6 @@ export function WebSocketProvider({ children }) {
     }
   }, [currentStake]);
 
-  // Auto-reconnect with state recovery
-  const recoverGameStateFromHTTP = useCallback(async () => {
-    if (!currentStake || !safeSessionId) return false;
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      const response = await fetch(
-        `${apiBase}/api/games/${currentStake}/status`,
-      );
-      const data = await response.json();
-
-      if (data.success && data.game && data.game.calledNumbers) {
-        console.log(
-          "🔄 Recovered game state from HTTP:",
-          data.game.calledNumbers.length,
-          "numbers",
-        );
-
-        batchUpdateGameState(() => ({
-          calledNumbers: data.game.calledNumbers || [],
-          currentNumber: data.game.lastCalledNumber || gameState.currentNumber,
-          phase: data.game.status === "running" ? "running" : gameState.phase,
-          gameId: data.game.gameId || gameState.gameId,
-          playersCount: data.game.playersCount || gameState.playersCount,
-        }));
-
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to recover game state:", error);
-      return false;
-    }
-  }, [currentStake, safeSessionId, gameState, batchUpdateGameState]);
-
-  // Auto-reconnect with health check
-  useEffect(() => {
-    let reconnectAttempts = 0;
-    let reconnectTimer = null;
-    let isReconnecting = false;
-    let healthInterval = null;
-
-    const attemptReconnect = async () => {
-      if (isReconnecting) return;
-      isReconnecting = true;
-
-      console.log(`🔄 Reconnect attempt ${reconnectAttempts + 1}...`);
-
-      // Force reconnect
-      if (wsRef.current) {
-        try {
-          wsRef.current.close();
-        } catch (e) {}
-        wsRef.current = null;
-      }
-      setConnected(false);
-      connectionAttemptRef.current = false;
-      pendingJoinRef.current = false;
-
-      // Reconnect
-      connectGeneral();
-
-      // Wait for connection
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Re-join room
-      if (currentStake && wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "join_room",
-            payload: { stake: currentStake },
-          }),
-        );
-      }
-
-      // Recover game state from HTTP API
-      const recovered = await recoverGameStateFromHTTP();
-
-      if (recovered) {
-        console.log("✅ Game state recovered successfully");
-        reconnectAttempts = 0;
-      } else if (reconnectAttempts < 5) {
-        reconnectAttempts++;
-        reconnectTimer = setTimeout(attemptReconnect, 3000);
-      }
-
-      isReconnecting = false;
-    };
-
-    const handleOnline = () => {
-      console.log("🌐 Network recovered - reconnecting...");
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      reconnectAttempts = 0;
-      attemptReconnect();
-    };
-
-    const handleOffline = () => {
-      console.log("⚠️ Network lost");
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    // Periodic health check
-    healthInterval = setInterval(() => {
-      if (navigator.onLine && !connected && currentStake && !isReconnecting) {
-        console.log(
-          "💓 Health check: connection lost, attempting reconnect...",
-        );
-        attemptReconnect();
-      }
-    }, 10000);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      if (healthInterval) clearInterval(healthInterval);
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-    };
-  }, [connected, currentStake, connectGeneral, recoverGameStateFromHTTP]);
-
   useEffect(() => {
     if (
       sessionId &&
@@ -886,7 +696,7 @@ export function WebSocketProvider({ children }) {
     ) {
       connectGeneral();
     }
-  }, [sessionId, connected, isConnecting, connectGeneral]);
+  }, [sessionId, connected, isConnecting]);
 
   useEffect(() => {
     return () => {
@@ -904,11 +714,12 @@ export function WebSocketProvider({ children }) {
 
       console.log("📡 WebSocket context received forced update:", event.detail);
 
-      batchUpdateGameState(() => ({
-        calledNumbers: event.detail.calledNumbers || gameState.calledNumbers,
-        currentNumber: event.detail.currentNumber || gameState.currentNumber,
-        gameId: event.detail.gameId || gameState.gameId,
-        phase: event.detail.phase || gameState.phase,
+      setGameState((prev) => ({
+        ...prev,
+        calledNumbers: event.detail.calledNumbers || prev.calledNumbers,
+        currentNumber: event.detail.currentNumber || prev.currentNumber,
+        gameId: event.detail.gameId || prev.gameId,
+        phase: event.detail.phase || prev.phase,
       }));
     };
 
@@ -916,7 +727,7 @@ export function WebSocketProvider({ children }) {
     return () => {
       window.removeEventListener("forceGameStateUpdate", handleForceUpdate);
     };
-  }, [gameState, batchUpdateGameState]);
+  }, []);
 
   const selectCartella = useCallback(
     (cardNumber) => send("select_card", { cardNumber }),
@@ -949,7 +760,6 @@ export function WebSocketProvider({ children }) {
     ws: wsRef.current,
     forceReconnect,
     requestNumberResume,
-    recoverGameStateFromHTTP,
   };
 
   return (
