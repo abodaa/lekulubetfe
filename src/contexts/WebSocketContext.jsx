@@ -40,6 +40,7 @@ export function WebSocketProvider({ children }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const rejoinScheduledRef = useRef(false);
   const connectionAttemptRef = useRef(false);
+  const pendingJoinRef = useRef(false);
 
   // Batch updates for performance
   const pendingUpdatesRef = useRef([]);
@@ -53,7 +54,10 @@ export function WebSocketProvider({ children }) {
       setGameState((prev) => {
         let newState = prev;
         for (const update of updates) {
-          newState = { ...newState, ...update };
+          newState =
+            typeof update === "function"
+              ? update(newState)
+              : { ...newState, ...update };
         }
         return newState;
       });
@@ -192,6 +196,7 @@ export function WebSocketProvider({ children }) {
         connecting = false;
         connectionAttemptRef.current = false;
         retry = 0;
+        pendingJoinRef.current = false;
 
         heartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -199,9 +204,13 @@ export function WebSocketProvider({ children }) {
           }
         }, 30000);
 
+        // ALWAYS send join_room for currentStake on connection
         if (currentStake) {
           try {
-            console.log("Joining room after connect:", { stake: currentStake });
+            console.log(
+              "🎯 Joining room after connect for stake:",
+              currentStake,
+            );
             ws.send(
               JSON.stringify({
                 type: "join_room",
@@ -211,6 +220,8 @@ export function WebSocketProvider({ children }) {
           } catch (e) {
             console.warn("Failed to send join_room on open", e);
           }
+        } else {
+          console.log("⚠️ No currentStake to join on open");
         }
       };
 
@@ -578,6 +589,7 @@ export function WebSocketProvider({ children }) {
         setIsConnecting(false);
         connecting = false;
         connectionAttemptRef.current = false;
+        pendingJoinRef.current = false;
 
         if (heartbeat) {
           clearInterval(heartbeat);
@@ -602,6 +614,7 @@ export function WebSocketProvider({ children }) {
         setIsConnecting(false);
         connecting = false;
         connectionAttemptRef.current = false;
+        pendingJoinRef.current = false;
       };
     };
 
@@ -610,6 +623,7 @@ export function WebSocketProvider({ children }) {
     return () => {
       stopped = true;
       connectionAttemptRef.current = false;
+      pendingJoinRef.current = false;
       if (heartbeat) clearInterval(heartbeat);
       if (wsRef.current) {
         wsRef.current.close();
@@ -628,9 +642,14 @@ export function WebSocketProvider({ children }) {
   const connectToStake = useCallback(
     (stake) => {
       if (!safeSessionId || !stake) return;
+
+      console.log("🎯 connectToStake called with stake:", stake);
+      console.log("📡 Current WebSocket state:", wsRef.current?.readyState);
+
       const isSameStake = currentStake === stake;
 
       if (!isSameStake) {
+        console.log("🔄 Resetting game state for new stake:", stake);
         setGameState({
           phase: "waiting",
           gameId: null,
@@ -652,18 +671,57 @@ export function WebSocketProvider({ children }) {
       }
 
       const ws = wsRef.current;
+
       if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log("📤 Sending join_room for stake:", stake);
         try {
           ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
-        } catch (e) {}
+          pendingJoinRef.current = false;
+        } catch (e) {
+          console.error("Failed to send join_room:", e);
+        }
+      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+        console.log("⏳ WebSocket connecting, will send join_room when open");
+        pendingJoinRef.current = true;
+        const onOpen = () => {
+          if (
+            pendingJoinRef.current &&
+            wsRef.current?.readyState === WebSocket.OPEN
+          ) {
+            console.log(
+              "✅ WebSocket opened, now sending join_room for stake:",
+              stake,
+            );
+            wsRef.current.send(
+              JSON.stringify({ type: "join_room", payload: { stake } }),
+            );
+            pendingJoinRef.current = false;
+          }
+          ws.removeEventListener("open", onOpen);
+        };
+        ws.addEventListener("open", onOpen);
+
+        // Timeout for pending join
+        setTimeout(() => {
+          if (pendingJoinRef.current) {
+            console.log("⚠️ Pending join timeout, retrying...");
+            pendingJoinRef.current = false;
+            connectToStake(stake);
+          }
+        }, 5000);
+      } else {
+        console.log("⚠️ WebSocket not connected, cannot send join_room");
+        // Try to reconnect
+        connectGeneral();
       }
     },
-    [safeSessionId, currentStake],
+    [safeSessionId, currentStake, connectGeneral],
   );
 
   const forceReconnect = useCallback(
     (stake) => {
       console.log("🔄 Force reconnecting...");
+      pendingJoinRef.current = false;
       if (wsRef.current) {
         try {
           wsRef.current.close();
@@ -692,7 +750,7 @@ export function WebSocketProvider({ children }) {
     }
   }, [currentStake]);
 
-  // ========== NETWORK RECOVERY WITH HTTP STATE RECOVERY ==========
+  // Auto-reconnect with state recovery
   const recoverGameStateFromHTTP = useCallback(async () => {
     if (!currentStake || !safeSessionId) return false;
 
@@ -707,6 +765,7 @@ export function WebSocketProvider({ children }) {
         `${apiBase}/api/games/${currentStake}/status`,
       );
       const data = await response.json();
+
       if (data.success && data.game && data.game.calledNumbers) {
         console.log(
           "🔄 Recovered game state from HTTP:",
@@ -731,7 +790,7 @@ export function WebSocketProvider({ children }) {
     }
   }, [currentStake, safeSessionId, gameState, batchUpdateGameState]);
 
-  // Auto-reconnect with state recovery
+  // Auto-reconnect with health check
   useEffect(() => {
     let reconnectAttempts = 0;
     let reconnectTimer = null;
@@ -753,6 +812,7 @@ export function WebSocketProvider({ children }) {
       }
       setConnected(false);
       connectionAttemptRef.current = false;
+      pendingJoinRef.current = false;
 
       // Reconnect
       connectGeneral();
