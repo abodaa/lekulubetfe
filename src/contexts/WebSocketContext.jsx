@@ -41,6 +41,25 @@ export function WebSocketProvider({ children }) {
   const rejoinScheduledRef = useRef(false);
   const connectionAttemptRef = useRef(false);
 
+  // Batch updates for performance
+  const pendingUpdatesRef = useRef([]);
+  const batchTimerRef = useRef(null);
+  const batchUpdateGameState = useCallback((updater) => {
+    pendingUpdatesRef.current.push(updater);
+    if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
+    batchTimerRef.current = setTimeout(() => {
+      const updates = pendingUpdatesRef.current;
+      pendingUpdatesRef.current = [];
+      setGameState((prev) => {
+        let newState = prev;
+        for (const update of updates) {
+          newState = { ...newState, ...update };
+        }
+        return newState;
+      });
+    }, 16);
+  }, []);
+
   const send = useCallback(
     (type, payload) => {
       const ws = wsRef.current;
@@ -83,8 +102,7 @@ export function WebSocketProvider({ children }) {
         const endTime = gameState.registrationEndTime;
         const remainingSeconds = Math.max(0, Math.ceil((endTime - now) / 1000));
 
-        setGameState((prev) => ({
-          ...prev,
+        batchUpdateGameState(() => ({
           countdown: remainingSeconds,
         }));
 
@@ -99,7 +117,7 @@ export function WebSocketProvider({ children }) {
         clearInterval(intervalId);
       }
     };
-  }, [gameState.phase, gameState.registrationEndTime]);
+  }, [gameState.phase, gameState.registrationEndTime, batchUpdateGameState]);
 
   const connectGeneral = useCallback(() => {
     console.log("🔍 WebSocket connectGeneral called:", {
@@ -156,7 +174,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_WS_URL ||
         (window.location.hostname === "localhost"
           ? "ws://localhost:3001"
-          : "wss://lekulubingoback.onrender.com");
+          : "wss://prodbe.lekulubingo.com");
       wsBase = (wsBase || "").replace(/\/+$/, "");
       if (!/\/ws$/i.test(wsBase)) {
         wsBase += "/ws";
@@ -221,14 +239,11 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "general_update":
-              setGameState((prev) => ({
-                ...prev,
-                ...event.payload,
-              }));
+              batchUpdateGameState(() => event.payload);
               break;
 
             case "snapshot": {
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 const snapshotPhase = event.payload.phase || "waiting";
                 const snapshotGameId = event.payload.gameId;
 
@@ -285,7 +300,7 @@ export function WebSocketProvider({ children }) {
                   }
                 }
 
-                const newState = {
+                return {
                   ...prev,
                   playersCount:
                     event.payload.playersCount ?? prev.playersCount ?? 0,
@@ -311,8 +326,6 @@ export function WebSocketProvider({ children }) {
                     ? { currentNumber: null, winners: [] }
                     : {}),
                 };
-
-                return newState;
               });
               break;
             }
@@ -328,8 +341,7 @@ export function WebSocketProvider({ children }) {
                         Math.ceil((registrationEndTime - Date.now()) / 1000),
                       )
                     : 0;
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 phase: "registration",
                 gameId: event.payload.gameId,
                 playersCount: event.payload.playersCount || 0,
@@ -359,32 +371,31 @@ export function WebSocketProvider({ children }) {
                         Math.ceil((registrationEndTime - Date.now()) / 1000),
                       )
                     : 0;
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 phase: "registration",
-                gameId: event.payload.gameId || prev.gameId,
+                gameId: event.payload.gameId || gameState.gameId,
                 playersCount:
-                  event.payload.playersCount ?? prev.playersCount ?? 0,
+                  event.payload.playersCount ?? gameState.playersCount ?? 0,
                 countdown: serverCountdown,
                 registrationEndTime,
-                takenCards: event.payload.takenCards || prev.takenCards || [],
-                prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
+                takenCards:
+                  event.payload.takenCards || gameState.takenCards || [],
+                prizePool: event.payload.prizePool ?? gameState.prizePool ?? 0,
               }));
               break;
             }
 
             case "registration_closed": {
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 phase: "starting",
-                gameId: event.payload?.gameId || prev.gameId,
+                gameId: event.payload?.gameId || gameState.gameId,
                 countdown: 0,
               }));
               break;
             }
 
             case "game_started":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   prev.phase === "running" &&
                   Array.isArray(prev.yourCards) &&
@@ -397,7 +408,7 @@ export function WebSocketProvider({ children }) {
                 const cardNumbers = cards
                   .map((card) => card.cardNumber || card)
                   .filter((num) => num != null);
-                const newState = {
+                return {
                   ...prev,
                   phase: "running",
                   gameId: event.payload.gameId,
@@ -408,23 +419,12 @@ export function WebSocketProvider({ children }) {
                   yourCards: cards,
                   yourSelections: cardNumbers,
                 };
-                window.dispatchEvent(
-                  new CustomEvent("gameStarted", {
-                    detail: {
-                      gameId: newState.gameId,
-                      phase: newState.phase,
-                      playersCount: newState.playersCount,
-                      hasCards: newState.yourCards?.length > 0,
-                    },
-                  }),
-                );
-                return newState;
               });
               setPendingGameStart(null);
               break;
 
             case "number_called":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   event.payload.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -440,7 +440,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "players_update":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -455,7 +455,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "registration_update":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -470,7 +470,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "selection_confirmed":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   event.payload.gameId !== prev.gameId
@@ -488,28 +488,27 @@ export function WebSocketProvider({ children }) {
 
             case "card_selected":
             case "select_card":
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 yourSelections:
-                  event.payload.selections || prev.yourSelections || [],
-                takenCards: event.payload.takenCards || prev.takenCards,
-                playersCount: event.payload.playersCount || prev.playersCount,
+                  event.payload.selections || gameState.yourSelections || [],
+                takenCards: event.payload.takenCards || gameState.takenCards,
+                playersCount:
+                  event.payload.playersCount || gameState.playersCount,
               }));
               break;
 
             case "selection_cleared":
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 yourSelections: event.payload.selections || [],
-                playersCount: event.payload.playersCount ?? prev.playersCount,
-                prizePool: event.payload.prizePool ?? prev.prizePool,
+                playersCount:
+                  event.payload.playersCount ?? gameState.playersCount,
+                prizePool: event.payload.prizePool ?? gameState.prizePool,
               }));
               break;
 
             case "bingo_accepted":
-              setGameState((prev) => ({
-                ...prev,
-                winners: event.payload.winners || prev.winners || [],
+              batchUpdateGameState(() => ({
+                winners: event.payload.winners || [],
               }));
               break;
 
@@ -523,7 +522,7 @@ export function WebSocketProvider({ children }) {
 
             case "game_finished":
             case "game_ended":
-              setGameState((prev) => {
+              batchUpdateGameState((prev) => {
                 if (
                   event.payload?.gameId &&
                   prev.gameId &&
@@ -552,8 +551,7 @@ export function WebSocketProvider({ children }) {
               break;
 
             case "wallet_update":
-              setGameState((prev) => ({
-                ...prev,
+              batchUpdateGameState(() => ({
                 walletUpdate: {
                   main: event.payload.main,
                   play: event.payload.play,
@@ -618,7 +616,14 @@ export function WebSocketProvider({ children }) {
         wsRef.current = null;
       }
     };
-  }, [safeSessionId]);
+  }, [
+    safeSessionId,
+    connected,
+    isConnecting,
+    currentStake,
+    gameState,
+    batchUpdateGameState,
+  ]);
 
   const connectToStake = useCallback(
     (stake) => {
@@ -687,6 +692,132 @@ export function WebSocketProvider({ children }) {
     }
   }, [currentStake]);
 
+  // ========== NETWORK RECOVERY WITH HTTP STATE RECOVERY ==========
+  const recoverGameStateFromHTTP = useCallback(async () => {
+    if (!currentStake || !safeSessionId) return false;
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://prodbe.lekulubingo.com");
+
+      const response = await fetch(
+        `${apiBase}/api/games/${currentStake}/status`,
+      );
+      const data = await response.json();
+
+      if (data.success && data.game && data.game.calledNumbers) {
+        console.log(
+          "🔄 Recovered game state from HTTP:",
+          data.game.calledNumbers.length,
+          "numbers",
+        );
+
+        batchUpdateGameState(() => ({
+          calledNumbers: data.game.calledNumbers || [],
+          currentNumber: data.game.lastCalledNumber || gameState.currentNumber,
+          phase: data.game.status === "running" ? "running" : gameState.phase,
+          gameId: data.game.gameId || gameState.gameId,
+          playersCount: data.game.playersCount || gameState.playersCount,
+        }));
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to recover game state:", error);
+      return false;
+    }
+  }, [currentStake, safeSessionId, gameState, batchUpdateGameState]);
+
+  // Auto-reconnect with state recovery
+  useEffect(() => {
+    let reconnectAttempts = 0;
+    let reconnectTimer = null;
+    let isReconnecting = false;
+    let healthInterval = null;
+
+    const attemptReconnect = async () => {
+      if (isReconnecting) return;
+      isReconnecting = true;
+
+      console.log(`🔄 Reconnect attempt ${reconnectAttempts + 1}...`);
+
+      // Force reconnect
+      if (wsRef.current) {
+        try {
+          wsRef.current.close();
+        } catch (e) {}
+        wsRef.current = null;
+      }
+      setConnected(false);
+      connectionAttemptRef.current = false;
+
+      // Reconnect
+      connectGeneral();
+
+      // Wait for connection
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Re-join room
+      if (currentStake && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "join_room",
+            payload: { stake: currentStake },
+          }),
+        );
+      }
+
+      // Recover game state from HTTP API
+      const recovered = await recoverGameStateFromHTTP();
+
+      if (recovered) {
+        console.log("✅ Game state recovered successfully");
+        reconnectAttempts = 0;
+      } else if (reconnectAttempts < 5) {
+        reconnectAttempts++;
+        reconnectTimer = setTimeout(attemptReconnect, 3000);
+      }
+
+      isReconnecting = false;
+    };
+
+    const handleOnline = () => {
+      console.log("🌐 Network recovered - reconnecting...");
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectAttempts = 0;
+      attemptReconnect();
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Network lost");
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    // Periodic health check
+    healthInterval = setInterval(() => {
+      if (navigator.onLine && !connected && currentStake && !isReconnecting) {
+        console.log(
+          "💓 Health check: connection lost, attempting reconnect...",
+        );
+        attemptReconnect();
+      }
+    }, 10000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (healthInterval) clearInterval(healthInterval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [connected, currentStake, connectGeneral, recoverGameStateFromHTTP]);
+
   useEffect(() => {
     if (
       sessionId &&
@@ -696,7 +827,7 @@ export function WebSocketProvider({ children }) {
     ) {
       connectGeneral();
     }
-  }, [sessionId, connected, isConnecting]);
+  }, [sessionId, connected, isConnecting, connectGeneral]);
 
   useEffect(() => {
     return () => {
@@ -714,12 +845,11 @@ export function WebSocketProvider({ children }) {
 
       console.log("📡 WebSocket context received forced update:", event.detail);
 
-      setGameState((prev) => ({
-        ...prev,
-        calledNumbers: event.detail.calledNumbers || prev.calledNumbers,
-        currentNumber: event.detail.currentNumber || prev.currentNumber,
-        gameId: event.detail.gameId || prev.gameId,
-        phase: event.detail.phase || prev.phase,
+      batchUpdateGameState(() => ({
+        calledNumbers: event.detail.calledNumbers || gameState.calledNumbers,
+        currentNumber: event.detail.currentNumber || gameState.currentNumber,
+        gameId: event.detail.gameId || gameState.gameId,
+        phase: event.detail.phase || gameState.phase,
       }));
     };
 
@@ -727,7 +857,7 @@ export function WebSocketProvider({ children }) {
     return () => {
       window.removeEventListener("forceGameStateUpdate", handleForceUpdate);
     };
-  }, []);
+  }, [gameState, batchUpdateGameState]);
 
   const selectCartella = useCallback(
     (cardNumber) => send("select_card", { cardNumber }),
@@ -760,6 +890,7 @@ export function WebSocketProvider({ children }) {
     ws: wsRef.current,
     forceReconnect,
     requestNumberResume,
+    recoverGameStateFromHTTP,
   };
 
   return (

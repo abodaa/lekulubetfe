@@ -4,6 +4,7 @@ import React, {
   useRef,
   useCallback,
   useMemo,
+  startTransition,
 } from "react";
 import CartellaCard from "../components/CartellaCard";
 import { useWebSocket } from "../contexts/WebSocketContext";
@@ -29,325 +30,8 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 
-// ---------------------------------------------------------------------------
-// Pure helpers – defined outside the component so they are never re-created
-// ---------------------------------------------------------------------------
-
-function checkBingoPattern(cartella, calledNumbers) {
-  if (!cartella || !Array.isArray(cartella) || cartella.length !== 5)
-    return false;
-  if (!calledNumbers || !Array.isArray(calledNumbers)) return false;
-
-  const calledSet = new Set(calledNumbers);
-
-  // Rows
-  for (let i = 0; i < 5; i++) {
-    if (!cartella[i] || !Array.isArray(cartella[i])) continue;
-    if (cartella[i].every((num) => num === 0 || calledSet.has(num)))
-      return true;
-  }
-
-  // Columns
-  for (let j = 0; j < 5; j++) {
-    let colComplete = true;
-    for (let i = 0; i < 5; i++) {
-      const num = cartella[i][j];
-      if (num !== 0 && !calledSet.has(num)) {
-        colComplete = false;
-        break;
-      }
-    }
-    if (colComplete) return true;
-  }
-
-  // Diagonal top-left → bottom-right
-  if (
-    Array.from({ length: 5 }, (_, i) => cartella[i][i]).every(
-      (n) => n === 0 || calledSet.has(n),
-    )
-  )
-    return true;
-
-  // Diagonal top-right → bottom-left
-  if (
-    Array.from({ length: 5 }, (_, i) => cartella[i][4 - i]).every(
-      (n) => n === 0 || calledSet.has(n),
-    )
-  )
-    return true;
-
-  // Corners
-  const corners = [
-    cartella[0][0],
-    cartella[0][4],
-    cartella[4][0],
-    cartella[4][4],
-  ];
-  if (corners.every((n) => n === 0 || calledSet.has(n))) return true;
-
-  return false;
-}
-
-function isLastCallPartOfWinningPattern(card, calledNumbers) {
-  if (!card || !calledNumbers || calledNumbers.length === 0) return false;
-
-  const lastCall = calledNumbers[calledNumbers.length - 1];
-  const calledSet = new Set(calledNumbers);
-
-  // Rows
-  for (let row = 0; row < 5; row++) {
-    if (!card[row]) continue;
-    if (
-      card[row].every((num) => num === 0 || calledSet.has(num)) &&
-      card[row].includes(lastCall)
-    )
-      return true;
-  }
-
-  // Columns
-  for (let col = 0; col < 5; col++) {
-    let complete = true,
-      hasLast = false;
-    for (let row = 0; row < 5; row++) {
-      const num = card[row][col];
-      if (num !== 0 && !calledSet.has(num)) {
-        complete = false;
-        break;
-      }
-      if (num === lastCall) hasLast = true;
-    }
-    if (complete && hasLast) return true;
-  }
-
-  // Diagonals
-  const checkDiag = (getIdx) => {
-    let complete = true,
-      hasLast = false;
-    for (let i = 0; i < 5; i++) {
-      const num = card[i][getIdx(i)];
-      if (num !== 0 && !calledSet.has(num)) {
-        complete = false;
-        break;
-      }
-      if (num === lastCall) hasLast = true;
-    }
-    return complete && hasLast;
-  };
-  if (checkDiag((i) => i)) return true;
-  if (checkDiag((i) => 4 - i)) return true;
-
-  // Corners
-  const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
-  if (
-    corners.every((n) => n === 0 || calledSet.has(n)) &&
-    corners.includes(lastCall)
-  )
-    return true;
-
-  return false;
-}
-
-// Pre-generate confetti so it's not recreated on every render
-const CONFETTI_PIECES = Array.from({ length: 50 }, (_, i) => {
-  const colors = [
-    "#ff6b6b",
-    "#ffd93d",
-    "#6bcb77",
-    "#4d96ff",
-    "#ff6b9d",
-    "#c44dff",
-    "#00d2ff",
-    "#ff9f43",
-  ];
-  return {
-    id: i,
-    left: `${Math.random() * 100}%`,
-    top: `-${Math.random() * 20}px`,
-    width: `${Math.random() * 8 + 6}px`,
-    height: `${Math.random() * 8 + 6}px`,
-    backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-    borderRadius: Math.random() > 0.5 ? "50%" : "2px",
-    animationDelay: `${Math.random() * 0.5}s`,
-    animationDuration: `${1 + Math.random()}s`,
-  };
-});
-
-const CONFETTI_EMOJIS = ["🎉", "🎊", "✨", "🌟", "💫", "🏆", "⭐", "🎯"];
-
-// Stable row definitions for the bingo board
-const BINGO_ROWS = [
-  {
-    letter: "B",
-    color: "bg-blue-600/70 text-blue-100",
-    nums: Array.from({ length: 15 }, (_, i) => i + 1),
-  },
-  {
-    letter: "I",
-    color: "bg-green-600/70 text-green-100",
-    nums: Array.from({ length: 15 }, (_, i) => i + 16),
-  },
-  {
-    letter: "N",
-    color: "bg-purple-600/70 text-purple-100",
-    nums: Array.from({ length: 15 }, (_, i) => i + 31),
-  },
-  {
-    letter: "G",
-    color: "bg-red-600/70 text-red-100",
-    nums: Array.from({ length: 15 }, (_, i) => i + 46),
-  },
-  {
-    letter: "O",
-    color: "bg-yellow-600/70 text-yellow-100",
-    nums: Array.from({ length: 15 }, (_, i) => i + 61),
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Sub-components to reduce re-render surface
-// ---------------------------------------------------------------------------
-
-const BingoBoard = React.memo(function BingoBoard({
-  calledNumbers,
-  currentNumber,
-}) {
-  const calledSet = useMemo(() => new Set(calledNumbers), [calledNumbers]);
-  return (
-    <div className="px-3 pb-1 flex-shrink-0">
-      <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full border-collapse">
-          <tbody>
-            {BINGO_ROWS.map(({ letter, color, nums }) => (
-              <tr key={letter}>
-                <td
-                  className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
-                >
-                  {letter}
-                </td>
-                {nums.map((n) => {
-                  const isCurrent = currentNumber === n;
-                  const isCalled = calledSet.has(n);
-                  return (
-                    <td
-                      key={n}
-                      className={`text-center text-[10px] py-0.5 font-bold transition-all duration-200 ${
-                        isCurrent
-                          ? "bg-orange-500 text-white font-extrabold rounded-sm shadow-lg shadow-orange-500/50 scale-110"
-                          : isCalled
-                            ? "bg-white/20 text-white font-extrabold"
-                            : "text-white/20"
-                      }`}
-                    >
-                      {n}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-});
-
-// Letter lookup is O(1) via Map instead of conditional chain
-const NUMBER_LETTER_MAP = new Map([
-  ...Array.from({ length: 15 }, (_, i) => [i + 1, "B"]),
-  ...Array.from({ length: 15 }, (_, i) => [i + 16, "I"]),
-  ...Array.from({ length: 15 }, (_, i) => [i + 31, "N"]),
-  ...Array.from({ length: 15 }, (_, i) => [i + 46, "G"]),
-  ...Array.from({ length: 15 }, (_, i) => [i + 61, "O"]),
-]);
-
-const LETTER_COLORS = {
-  B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-  I: "bg-green-500/30 text-green-200 border-green-400/40",
-  N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-  G: "bg-red-500/30 text-red-200 border-red-400/40",
-  O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-};
-
-const RecentNumbers = React.memo(function RecentNumbers({
-  calledNumbers,
-  currentNumber,
-}) {
-  const lastFive = useMemo(
-    () => [...calledNumbers].slice(-5).reverse(),
-    [calledNumbers],
-  );
-
-  return (
-    <div className="px-3 pb-1 flex-shrink-0 my-2">
-      <div className="flex justify-center gap-1.5 flex-wrap relative">
-        <AnimatePresence mode="popLayout">
-          {lastFive.map((n, i) => {
-            const isCurrent = n === currentNumber;
-            const letter = NUMBER_LETTER_MAP.get(n) ?? "B";
-            return (
-              <motion.div
-                key={`${n}-${calledNumbers.length - i}`}
-                layout
-                initial={
-                  isCurrent
-                    ? { scale: 0, rotate: -180 }
-                    : { opacity: 0, scale: 0.3, y: 20 }
-                }
-                animate={{
-                  opacity: 1,
-                  scale: isCurrent ? [0, 1.2, 1] : 1,
-                  y: 0,
-                  rotate: 0,
-                }}
-                exit={{ opacity: 0, scale: 0.3, y: -20 }}
-                transition={{
-                  type: "spring",
-                  damping: isCurrent ? 10 : 15,
-                  stiffness: isCurrent ? 200 : 250,
-                  delay: isCurrent ? 0 : i * 0.05,
-                }}
-                whileHover={{ scale: 1.1 }}
-                className={`rounded-full w-8 h-8 flex items-center justify-center text-[11px] font-extrabold font-mono border ${LETTER_COLORS[letter]} ${
-                  isCurrent
-                    ? "ring-4 ring-yellow-400 ring-offset-2 ring-offset-purple-900 scale-110 bg-opacity-80 shadow-2xl shadow-yellow-500/50"
-                    : i === 0 && !isCurrent
-                      ? "ring-1 ring-blue-400/50 ring-offset-1 ring-offset-[var(--cardbackground)]"
-                      : ""
-                }`}
-                style={{
-                  boxShadow: isCurrent
-                    ? "0 0 20px rgba(234, 179, 8, 0.6)"
-                    : undefined,
-                }}
-              >
-                {isCurrent && (
-                  <motion.div
-                    className="absolute -top-2 -left-2"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: "spring" }}
-                  >
-                    <div className="bg-red-500 text-white text-[8px] font-bold p-1 rounded-full animate-pulse">
-                      <CgLivePhoto className="inline-block w-3 h-3" />
-                    </div>
-                  </motion.div>
-                )}
-                <span className={isCurrent ? "text-white drop-shadow-lg" : ""}>
-                  {letter}
-                  {n}
-                </span>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-});
-
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+// Memoized CartellaCard to prevent unnecessary re-renders
+const MemoizedCartellaCard = React.memo(CartellaCard);
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -357,28 +41,164 @@ export default function GameLayout({ stake, onNavigate }) {
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
 
-  const { connected, gameState, claimBingo, connectToStake, ws } =
-    useWebSocket();
+  const triggerConfetti = () => {
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2000);
+  };
 
-  // ---------------------------------------------------------------------------
-  // Derived state – memoized so downstream hooks/renders don't over-compute
-  // ---------------------------------------------------------------------------
-  const calledNumbers = useMemo(
-    () =>
-      Array.isArray(gameState.calledNumbers) ? gameState.calledNumbers : [],
-    [gameState.calledNumbers],
-  );
+  const checkBingoPattern = (cartella, calledNumbers) => {
+    if (!cartella || !Array.isArray(cartella) || cartella.length !== 5)
+      return false;
+    if (!calledNumbers || !Array.isArray(calledNumbers)) return false;
+
+    const calledSet = new Set(calledNumbers);
+
+    for (let i = 0; i < 5; i++) {
+      if (!cartella[i] || !Array.isArray(cartella[i])) continue;
+      const rowComplete = cartella[i].every((num) => {
+        if (num === 0) return true;
+        return calledSet.has(num);
+      });
+      if (rowComplete) return true;
+    }
+
+    for (let j = 0; j < 5; j++) {
+      let colComplete = true;
+      for (let i = 0; i < 5; i++) {
+        const num = cartella[i][j];
+        if (num !== 0 && !calledSet.has(num)) {
+          colComplete = false;
+          break;
+        }
+      }
+      if (colComplete) return true;
+    }
+
+    let diag1Complete = true;
+    for (let i = 0; i < 5; i++) {
+      const num = cartella[i][i];
+      if (num !== 0 && !calledSet.has(num)) {
+        diag1Complete = false;
+        break;
+      }
+    }
+    if (diag1Complete) return true;
+
+    let diag2Complete = true;
+    for (let i = 0; i < 5; i++) {
+      const num = cartella[i][4 - i];
+      if (num !== 0 && !calledSet.has(num)) {
+        diag2Complete = false;
+        break;
+      }
+    }
+    if (diag2Complete) return true;
+
+    const corners = [
+      cartella[0][0],
+      cartella[0][4],
+      cartella[4][0],
+      cartella[4][4],
+    ];
+    const cornersComplete = corners.every((num) => {
+      if (num === 0) return true;
+      return calledSet.has(num);
+    });
+    if (cornersComplete) return true;
+
+    return false;
+  };
+
+  const isLastCallPartOfWinningPattern = (card, calledNumbers) => {
+    if (!card || !calledNumbers || calledNumbers.length === 0) return false;
+
+    const lastCall = calledNumbers[calledNumbers.length - 1];
+    const calledSet = new Set(calledNumbers);
+
+    for (let row = 0; row < 5; row++) {
+      if (!card[row]) continue;
+      if (
+        card[row].every((num) => num === 0 || calledSet.has(num)) &&
+        card[row].includes(lastCall)
+      )
+        return true;
+    }
+    for (let col = 0; col < 5; col++) {
+      let complete = true,
+        hasLast = false;
+      for (let row = 0; row < 5; row++) {
+        const num = card[row][col];
+        if (num !== 0 && !calledSet.has(num)) {
+          complete = false;
+          break;
+        }
+        if (num === lastCall) hasLast = true;
+      }
+      if (complete && hasLast) return true;
+    }
+    let d1 = true,
+      h1 = false;
+    for (let i = 0; i < 5; i++) {
+      const num = card[i][i];
+      if (num !== 0 && !calledSet.has(num)) {
+        d1 = false;
+        break;
+      }
+      if (num === lastCall) h1 = true;
+    }
+    if (d1 && h1) return true;
+
+    let d2 = true,
+      h2 = false;
+    for (let i = 0; i < 5; i++) {
+      const num = card[i][4 - i];
+      if (num !== 0 && !calledSet.has(num)) {
+        d2 = false;
+        break;
+      }
+      if (num === lastCall) h2 = true;
+    }
+    if (d2 && h2) return true;
+
+    const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
+    if (
+      corners.every((num) => num === 0 || calledSet.has(num)) &&
+      corners.includes(lastCall)
+    )
+      return true;
+
+    return false;
+  };
+
+  const {
+    connected,
+    gameState,
+    claimBingo,
+    connectToStake,
+    ws,
+    forceReconnect,
+    recoverGameStateFromHTTP,
+  } = useWebSocket();
+  const currentPrizePool = gameState.prizePool || 0;
+  const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
   const currentGameId = gameState.gameId;
-  const currentPrizePool = gameState.prizePool || 0;
-  const yourCards = useMemo(
-    () => (Array.isArray(gameState.yourCards) ? gameState.yourCards : []),
-    [gameState.yourCards],
+  const yourCards = Array.isArray(gameState.yourCards)
+    ? gameState.yourCards
+    : [];
+
+  // ========== PERFORMANCE OPTIMIZATIONS ==========
+  const memoizedCalledNumbers = useMemo(() => calledNumbers, [calledNumbers]);
+  const memoizedYourCards = useMemo(() => yourCards, [yourCards]);
+  const memoizedCalledSet = useMemo(
+    () => new Set(memoizedCalledNumbers),
+    [memoizedCalledNumbers],
   );
 
-  // ---------------------------------------------------------------------------
-  // Local state
-  // ---------------------------------------------------------------------------
+  // Throttle auto-bingo checks
+  const lastAutoCheckRef = useRef(0);
+  const AUTO_CHECK_DELAY = 300;
+
   const [isSoundOn, setIsSoundOn] = useState(() => {
     try {
       const saved = localStorage.getItem("lekulu_sound_enabled");
@@ -392,70 +212,270 @@ export default function GameLayout({ stake, onNavigate }) {
   const [claimingStates, setClaimingStates] = useState({});
   const [startCountdown, setStartCountdown] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  // Single source of truth for missed winning patterns (removed duplicate)
-  const [missedPatterns, setMissedPatterns] = useState({});
+  const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-
   const confettiRef = useRef(null);
+
   const swiperRef = useRef(null);
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
+  const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
+
+  // ========== SOUND QUEUE SYSTEM (Prevents mix-up during lag) ==========
+  const soundQueueRef = useRef([]);
+  const isPlayingSoundRef = useRef(false);
+  const lastPlayedNumberRef = useRef(null);
+  const soundTimeoutRef = useRef(null);
+
+  const processSoundQueue = useCallback(async () => {
+    if (!isSoundOn) {
+      soundQueueRef.current = [];
+      return;
+    }
+    if (isPlayingSoundRef.current) return;
+    if (soundQueueRef.current.length === 0) return;
+    if (startCountdown > 0) return;
+    if (gameState.phase !== "running") return;
+
+    const number = soundQueueRef.current.shift();
+    if (!number) return;
+
+    if (lastPlayedNumberRef.current === number) {
+      processSoundQueue();
+      return;
+    }
+
+    isPlayingSoundRef.current = true;
+    lastPlayedNumberRef.current = number;
+
+    try {
+      const letter =
+        number <= 15
+          ? "B"
+          : number <= 30
+            ? "I"
+            : number <= 45
+              ? "N"
+              : number <= 60
+                ? "G"
+                : "O";
+      const audio = new Audio(`/sound/${letter}${number}.mp3`);
+      audio.volume = 0.5;
+
+      await audio.play();
+
+      audio.onended = () => {
+        isPlayingSoundRef.current = false;
+        soundTimeoutRef.current = setTimeout(() => processSoundQueue(), 100);
+      };
+    } catch (error) {
+      console.warn("Sound play error:", error);
+      isPlayingSoundRef.current = false;
+      setTimeout(() => processSoundQueue(), 50);
+    }
+  }, [isSoundOn, startCountdown, gameState.phase]);
+
+  const queueSound = useCallback(
+    (number) => {
+      if (!isSoundOn) return;
+      if (!number) return;
+      if (startCountdown > 0) return;
+
+      if (soundQueueRef.current.includes(number)) return;
+      if (lastPlayedNumberRef.current === number) return;
+
+      soundQueueRef.current.push(number);
+
+      if (soundQueueRef.current.length > 10) {
+        soundQueueRef.current = soundQueueRef.current.slice(-10);
+      }
+
+      if (!isPlayingSoundRef.current) {
+        processSoundQueue();
+      }
+    },
+    [isSoundOn, startCountdown, processSoundQueue],
+  );
+
+  // ========== OFFLINE BINGO QUEUE WITH PERSISTENCE ==========
   const pendingBingoClaimsRef = useRef([]);
   const isProcessingQueueRef = useRef(false);
   const offlineWinDetectedRef = useRef(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const dbRef = useRef(null);
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
+  // Initialize IndexedDB for persistent storage
+  const initOfflineDB = useCallback(() => {
+    return new Promise((resolve, reject) => {
+      if (dbRef.current) {
+        resolve(dbRef.current);
+        return;
+      }
 
-  const triggerConfetti = useCallback(() => {
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
+      const request = indexedDB.open("BingoOfflineDB", 1);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        dbRef.current = request.result;
+        resolve(dbRef.current);
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("pendingWins")) {
+          const store = db.createObjectStore("pendingWins", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+          store.createIndex("gameId", "gameId");
+          store.createIndex("timestamp", "timestamp");
+          store.createIndex("claimed", "claimed");
+        }
+      };
+    });
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Process pending offline bingo claims
-  // ---------------------------------------------------------------------------
-  const processPendingClaims = useCallback(async () => {
+  // Save pending win to IndexedDB
+  const savePendingWin = useCallback(
+    async (winData) => {
+      try {
+        const db = await initOfflineDB();
+        const transaction = db.transaction(["pendingWins"], "readwrite");
+        const store = transaction.objectStore("pendingWins");
+
+        const pendingWin = {
+          ...winData,
+          timestamp: Date.now(),
+          claimed: false,
+          retryCount: 0,
+        };
+
+        await store.add(pendingWin);
+        pendingBingoClaimsRef.current.push(pendingWin);
+        console.log(
+          "💾 Saved pending win to offline storage:",
+          winData.cardNumber,
+        );
+      } catch (error) {
+        console.error("Failed to save pending win:", error);
+        const existing = JSON.parse(
+          localStorage.getItem("pending_bingo_wins") || "[]",
+        );
+        existing.push(winData);
+        localStorage.setItem("pending_bingo_wins", JSON.stringify(existing));
+      }
+    },
+    [initOfflineDB],
+  );
+
+  // Load pending wins from storage on mount
+  const loadPendingWins = useCallback(async () => {
+    try {
+      const db = await initOfflineDB();
+      const transaction = db.transaction(["pendingWins"], "readonly");
+      const store = transaction.objectStore("pendingWins");
+      const index = store.index("claimed");
+      const request = index.getAll(IDBKeyRange.only(false));
+
+      request.onsuccess = () => {
+        const pending = request.result;
+        pendingBingoClaimsRef.current = pending;
+        console.log(`📦 Loaded ${pending.length} pending wins from storage`);
+
+        if (navigator.onLine && pending.length > 0) {
+          setTimeout(() => processPendingWins(), 1000);
+        }
+      };
+    } catch (error) {
+      console.error("Failed to load pending wins:", error);
+      const stored = localStorage.getItem("pending_bingo_wins");
+      if (stored) {
+        pendingBingoClaimsRef.current = JSON.parse(stored);
+        if (navigator.onLine && pendingBingoClaimsRef.current.length > 0) {
+          setTimeout(() => processPendingWins(), 1000);
+        }
+      }
+    }
+  }, [initOfflineDB]);
+
+  // Mark win as claimed in storage
+  const markWinClaimed = useCallback(
+    async (winId) => {
+      try {
+        const db = await initOfflineDB();
+        const transaction = db.transaction(["pendingWins"], "readwrite");
+        const store = transaction.objectStore("pendingWins");
+        const getRequest = store.get(winId);
+
+        getRequest.onsuccess = () => {
+          const win = getRequest.result;
+          if (win) {
+            win.claimed = true;
+            store.put(win);
+          }
+        };
+      } catch (error) {
+        console.error("Failed to mark win as claimed:", error);
+        const stored = localStorage.getItem("pending_bingo_wins");
+        if (stored) {
+          const wins = JSON.parse(stored);
+          const updated = wins.filter((w) => w.id !== winId);
+          localStorage.setItem("pending_bingo_wins", JSON.stringify(updated));
+        }
+      }
+
+      pendingBingoClaimsRef.current = pendingBingoClaimsRef.current.filter(
+        (w) => w.id !== winId,
+      );
+    },
+    [initOfflineDB],
+  );
+
+  // Process pending wins when online
+  const processPendingWins = useCallback(async () => {
     if (isProcessingQueueRef.current) return;
     if (pendingBingoClaimsRef.current.length === 0) return;
     if (!navigator.onLine) return;
+    if (gameState.phase !== "running" && gameState.phase !== "announce") return;
 
     isProcessingQueueRef.current = true;
 
-    while (pendingBingoClaimsRef.current.length > 0) {
-      const claim = pendingBingoClaimsRef.current[0];
-      const card = yourCards.find(
-        (c) => c.cardNumber === claim.cardNumber,
-      )?.card;
+    for (const win of [...pendingBingoClaimsRef.current]) {
+      const isGameStillValid =
+        gameState.gameId === win.gameId || gameState.phase !== "announce";
 
-      if (card && checkBingoPattern(card, calledNumbers)) {
-        const result = claimBingo({ cardNumber: claim.cardNumber });
+      if (isGameStillValid && gameState.phase === "running") {
+        const result = claimBingo({ cardNumber: win.cardNumber });
         if (result) {
-          pendingBingoClaimsRef.current.shift();
+          console.log(`✅ Claimed pending win for Cartella #${win.cardNumber}`);
+          await markWinClaimed(win.id);
           showSuccess(
-            `🎉 Auto-BINGO claimed for Cartella #${claim.cardNumber}!`,
+            `🎉 Your win for Cartella #${win.cardNumber} has been claimed!`,
           );
-          claimedCartellasRef.current.add(claim.cardNumber);
+        } else if (win.retryCount < 3) {
+          win.retryCount++;
+          console.log(
+            `⏳ Retry ${win.retryCount}/3 for Cartella #${win.cardNumber}`,
+          );
         } else {
-          break;
+          await markWinClaimed(win.id);
+          showWarning(
+            `Could not claim win for Cartella #${win.cardNumber}. Please contact support.`,
+          );
         }
       } else if (gameState.phase === "announce") {
         const winners = gameState.winners || [];
         const isWinner = winners.some(
-          (w) => w.cartelaNumber === claim.cardNumber,
+          (w) => w.cartelaNumber === win.cardNumber,
         );
         if (isWinner) {
-          showWarning(
-            `Your win for Cartella #${claim.cardNumber} has been recorded. Please contact support if not credited.`,
+          showSuccess(
+            `🎉 Your win for Cartella #${win.cardNumber} has been recorded!`,
           );
         }
-        pendingBingoClaimsRef.current.shift();
-      } else {
-        pendingBingoClaimsRef.current.shift();
+        await markWinClaimed(win.id);
       }
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -463,78 +483,66 @@ export default function GameLayout({ stake, onNavigate }) {
 
     isProcessingQueueRef.current = false;
   }, [
-    yourCards,
-    calledNumbers,
     claimBingo,
+    gameState.gameId,
+    gameState.phase,
+    gameState.winners,
+    markWinClaimed,
     showSuccess,
     showWarning,
-    gameState.winners,
-    gameState.phase,
   ]);
 
-  // ---------------------------------------------------------------------------
-  // Effects
-  // ---------------------------------------------------------------------------
-
-  // Clear manual marks when auto-mark is enabled
   useEffect(() => {
-    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0) {
+    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
       setManuallyMarkedNumbers({});
-    }
-  }, [isAutoMarkOn]); // intentionally omit manuallyMarkedNumbers to avoid loop
+  }, [isAutoMarkOn]);
 
-  // Connect on mount / stake change
   useEffect(() => {
     if (stake && sessionId) connectToStake(stake);
   }, [stake, sessionId, connectToStake]);
 
-  // Reconnect on tab visibility change
   useEffect(() => {
-    const handler = () => {
-      if (
-        document.visibilityState === "visible" &&
-        stake &&
-        sessionId &&
-        !connected
-      ) {
-        setTimeout(() => connectToStake(stake), 100);
+    const h = () => {
+      if (document.visibilityState === "visible" && stake && sessionId) {
+        setTimeout(() => {
+          if (!connected) connectToStake(stake);
+        }, 100);
       }
     };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
+    document.addEventListener("visibilitychange", h);
+    return () => document.removeEventListener("visibilitychange", h);
   }, [stake, sessionId, connected, connectToStake]);
 
-  // Init audio on first interaction
+  // Audio initialization
   useEffect(() => {
-    const init = async () => {
-      if (audioInitializedRef.current) return;
-      audioInitializedRef.current = true;
-      await initAudio().catch(() => {});
-      await preloadNumberSounds().catch(() => {});
-      document.removeEventListener("click", init);
-      document.removeEventListener("touchstart", init);
+    const initAudioOnInteraction = async () => {
+      if (!audioInitializedRef.current) {
+        audioInitializedRef.current = true;
+        await initAudio().catch(() => {});
+        await preloadNumberSounds().catch(() => {});
+      }
+      document.removeEventListener("click", initAudioOnInteraction);
+      document.removeEventListener("touchstart", initAudioOnInteraction);
     };
-    document.addEventListener("click", init);
-    document.addEventListener("touchstart", init);
+
+    document.addEventListener("click", initAudioOnInteraction);
+    document.addEventListener("touchstart", initAudioOnInteraction);
+
     return () => {
-      document.removeEventListener("click", init);
-      document.removeEventListener("touchstart", init);
+      document.removeEventListener("click", initAudioOnInteraction);
+      document.removeEventListener("touchstart", initAudioOnInteraction);
     };
   }, []);
 
-  // Play number sound
+  // Play sound when number is called - using queue system
   useEffect(() => {
-    if (
-      !isSoundOn ||
-      !currentNumber ||
-      startCountdown > 0 ||
-      gameState.phase !== "running"
-    )
-      return;
-    playNumberSound(currentNumber).catch(() => {});
-  }, [currentNumber, isSoundOn, startCountdown, gameState.phase]);
+    if (!currentNumber) return;
+    if (startCountdown > 0) return;
+    if (gameState.phase !== "running") return;
 
-  // Reset per-game state when game ID changes
+    queueSound(currentNumber);
+  }, [currentNumber, startCountdown, gameState.phase, queueSound]);
+
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
       claimedCartellasRef.current.clear();
@@ -545,125 +553,199 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [currentGameId]);
 
-  // Countdown logic
-  useEffect(() => {
-    if (gameState.phase !== "running") {
-      setStartCountdown(0);
-      return;
-    }
-    if (calledNumbers.length === 0) setStartCountdown(3);
-  }, [gameState.phase, calledNumbers.length, currentGameId]);
+  const handleNumberToggle = useCallback(
+    (cardNumber, number) => {
+      if (isAutoMarkOn) return;
+      setManuallyMarkedNumbers((prev) => {
+        const cardMarks = prev[cardNumber] || new Set();
+        const newCardMarks = new Set(cardMarks);
+        newCardMarks.has(number)
+          ? newCardMarks.delete(number)
+          : newCardMarks.add(number);
+        return { ...prev, [cardNumber]: newCardMarks };
+      });
+    },
+    [isAutoMarkOn],
+  );
 
-  useEffect(() => {
-    if (startCountdown <= 0) return;
-    const t = setTimeout(
-      () => setStartCountdown((prev) => Math.max(0, prev - 1)),
-      1000,
-    );
-    return () => clearTimeout(t);
-  }, [startCountdown]);
+  const handleCartellaBingo = useCallback(
+    async (cardNumber) => {
+      if (!connected || gameState.phase !== "running" || !currentGameId) {
+        showError("Cannot claim BINGO right now");
+        return;
+      }
 
-  // Missed winning pattern tracking (consolidated – was duplicated before)
-  useEffect(() => {
-    if (gameState.phase !== "running") {
-      setMissedPatterns({});
-      return;
-    }
-    if (yourCards.length === 0 || calledNumbers.length === 0) return;
+      if (claimedCartellasRef.current.has(cardNumber)) {
+        showError(`Cartella #${cardNumber} already won`);
+        return;
+      }
 
-    setMissedPatterns((prev) => {
-      let changed = false;
-      const next = { ...prev };
+      const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
+      if (!card) {
+        showError(`Cartella #${cardNumber} not found`);
+        return;
+      }
 
-      for (const { cardNumber, card } of yourCards) {
-        if (claimedCartellasRef.current.has(cardNumber)) {
-          if (next[cardNumber]) {
-            delete next[cardNumber];
-            delete missedPatternsPersistentRef.current[cardNumber];
-            changed = true;
-          }
-          continue;
-        }
-
-        const hasWinNow = checkBingoPattern(card, calledNumbers);
-        const previousCalled = calledNumbers.slice(0, -1);
-        const hadWinBefore =
-          previousCalled.length > 0
-            ? checkBingoPattern(card, previousCalled)
-            : false;
-
-        if (hadWinBefore && !hasWinNow && !next[cardNumber]) {
-          next[cardNumber] = previousCalled;
-          missedPatternsPersistentRef.current[cardNumber] = previousCalled;
-          changed = true;
-        }
-
-        if (hasWinNow && next[cardNumber]) {
-          delete next[cardNumber];
-          delete missedPatternsPersistentRef.current[cardNumber];
-          changed = true;
+      if (!isAutoMarkOn) {
+        const hasWin = checkBingoPattern(card, calledNumbers);
+        if (!hasWin) {
+          showError(`No winning pattern on Cartella #${cardNumber}`);
+          return;
         }
       }
 
-      return changed ? next : prev; // avoid unnecessary re-render
-    });
+      if (claimingStates[cardNumber]) return;
+
+      try {
+        setClaimingStates((prev) => ({ ...prev, [cardNumber]: true }));
+        triggerConfetti();
+
+        const result = claimBingo({ cardNumber });
+
+        if (!result) {
+          showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
+        } else {
+          showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
+          claimedCartellasRef.current.add(cardNumber);
+          setMissedPatterns((prev) => {
+            const newPatterns = { ...prev };
+            delete newPatterns[cardNumber];
+            return newPatterns;
+          });
+          delete missedPatternsPersistentRef.current[cardNumber];
+        }
+      } catch (err) {
+        showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
+      } finally {
+        setClaimingStates((prev) => ({ ...prev, [cardNumber]: false }));
+      }
+    },
+    [
+      claimBingo,
+      connected,
+      currentGameId,
+      gameState.phase,
+      claimingStates,
+      yourCards,
+      calledNumbers,
+      isAutoMarkOn,
+      showError,
+      showSuccess,
+    ],
+  );
+
+  // Track missed winning patterns
+  useEffect(() => {
+    if (gameState.phase !== "running") {
+      setMissedWinningPatterns({});
+      return;
+    }
+    if (yourCards.length === 0) return;
+    if (calledNumbers.length === 0) return;
+
+    const newMissedPatterns = { ...missedWinningPatterns };
+
+    for (const { cardNumber, card } of yourCards) {
+      if (claimedCartellasRef.current.has(cardNumber)) {
+        if (newMissedPatterns[cardNumber]) delete newMissedPatterns[cardNumber];
+        continue;
+      }
+
+      const hasWinNow = checkBingoPattern(card, calledNumbers);
+      const previousCalled = calledNumbers.slice(0, -1);
+      const hadWinBefore =
+        previousCalled.length > 0
+          ? checkBingoPattern(card, previousCalled)
+          : false;
+
+      if (hadWinBefore && !hasWinNow) {
+        if (!newMissedPatterns[cardNumber]) {
+          newMissedPatterns[cardNumber] = previousCalled;
+        }
+      }
+
+      if (hasWinNow && newMissedPatterns[cardNumber]) {
+        delete newMissedPatterns[cardNumber];
+      }
+    }
+
+    setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards]);
 
-  // AUTO-BINGO
+  // AUTO-BINGO with offline support and throttling
   useEffect(() => {
-    if (
-      gameState.phase !== "running" ||
-      !isAutoMarkOn ||
-      yourCards.length === 0
-    )
-      return;
+    if (gameState.phase !== "running") return;
+    if (!isAutoMarkOn) return;
+    if (yourCards.length === 0) return;
+
+    const now = Date.now();
+    if (now - lastAutoCheckRef.current < AUTO_CHECK_DELAY) return;
+    lastAutoCheckRef.current = now;
+
+    const lastCall = calledNumbers[calledNumbers.length - 1];
+    if (!lastCall) return;
 
     for (const { cardNumber, card } of yourCards) {
       if (claimedCartellasRef.current.has(cardNumber)) continue;
-      if (!checkBingoPattern(card, calledNumbers)) continue;
-      if (!isLastCallPartOfWinningPattern(card, calledNumbers)) continue;
-      if (
-        pendingBingoClaimsRef.current.some((c) => c.cardNumber === cardNumber)
-      )
-        continue;
+
+      const hasWin = checkBingoPattern(card, calledNumbers);
+      if (!hasWin) continue;
+
+      let lastCallCompletes = false;
+      for (let i = 0; i < 5; i++) {
+        if (card[i] && card[i].includes(lastCall)) {
+          lastCallCompletes = true;
+          break;
+        }
+      }
+      if (!lastCallCompletes) continue;
 
       claimedCartellasRef.current.add(cardNumber);
       triggerConfetti();
 
       if (!navigator.onLine) {
-        pendingBingoClaimsRef.current.push({
+        console.log(
+          `📱 Device offline, queueing BINGO claim for Cartella #${cardNumber}`,
+        );
+        savePendingWin({
           cardNumber,
-          timestamp: Date.now(),
+          gameId: currentGameId,
+          stake,
           calledNumbersAtWin: [...calledNumbers],
         });
         showWarning(
-          `You're offline! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
+          `🏆 You won Cartella #${cardNumber}! Win will be claimed when connection returns.`,
         );
         offlineWinDetectedRef.current = true;
         continue;
       }
 
       const result = claimBingo({ cardNumber });
+
       if (result) {
         showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
         setMissedPatterns((prev) => {
-          if (!prev[cardNumber]) return prev;
-          const next = { ...prev };
-          delete next[cardNumber];
-          delete missedPatternsPersistentRef.current[cardNumber];
-          return next;
+          const newPatterns = { ...prev };
+          delete newPatterns[cardNumber];
+          return newPatterns;
         });
+        delete missedPatternsPersistentRef.current[cardNumber];
       } else {
-        pendingBingoClaimsRef.current.push({
+        console.log(
+          `⚠️ Network failure, queueing BINGO claim for Cartella #${cardNumber}`,
+        );
+        savePendingWin({
           cardNumber,
-          timestamp: Date.now(),
+          gameId: currentGameId,
+          stake,
           calledNumbersAtWin: [...calledNumbers],
         });
         showWarning(
           `Network issue! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
         );
-        processPendingClaims();
+        processPendingWins();
       }
+
       break;
     }
   }, [
@@ -674,157 +756,189 @@ export default function GameLayout({ stake, onNavigate }) {
     claimBingo,
     showSuccess,
     showWarning,
-    processPendingClaims,
-    triggerConfetti,
-  ]);
-
-  // WebSocket close handler – reload if online + game active
-  useEffect(() => {
-    if (!ws) return;
-    const handleClose = () => {
-      if (currentGameId && navigator.onLine) {
-        if (stake) {
-          sessionStorage.setItem("reconnect_stake", stake);
-          sessionStorage.setItem("reconnect_timestamp", Date.now().toString());
-        }
-        showWarning("Connection lost! Refreshing game...");
-        setTimeout(() => window.location.reload(), 2000);
-      }
-    };
-    ws.addEventListener("close", handleClose);
-    return () => ws.removeEventListener("close", handleClose);
-  }, [ws, currentGameId, stake, showWarning]);
-
-  // Network recovery – periodic check + reload (consolidated into one effect)
-  useEffect(() => {
-    let reloadTimer = null;
-    let countdownInterval = null;
-    let periodicCheck = null;
-
-    const cancelReload = () => {
-      if (reloadTimer) {
-        clearTimeout(reloadTimer);
-        reloadTimer = null;
-      }
-      if (countdownInterval) {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-      }
-    };
-
-    const triggerReload = () => {
-      if (reloadTimer) return;
-      if (stake) {
-        sessionStorage.setItem("reconnect_stake", stake);
-        sessionStorage.setItem("reconnect_timestamp", Date.now().toString());
-      }
-      showWarning("Network recovered! Refreshing game in 3 seconds...");
-      let countdown = 3;
-      countdownInterval = setInterval(() => {
-        showWarning(`Refreshing in ${countdown--}...`);
-        if (countdown < 0) {
-          clearInterval(countdownInterval);
-          countdownInterval = null;
-        }
-      }, 1000);
-      reloadTimer = setTimeout(() => window.location.reload(), 3000);
-    };
-
-    const checkConnection = () => {
-      if (navigator.onLine && connected) {
-        cancelReload();
-        return;
-      }
-      if (
-        navigator.onLine &&
-        !connected &&
-        currentGameId &&
-        !isRefreshing &&
-        !reloadTimer
-      ) {
-        triggerReload();
-      }
-    };
-
-    const handleOnline = () => {
-      setIsOffline(false);
-      setTimeout(checkConnection, 2000);
-      if (offlineWinDetectedRef.current) {
-        showSuccess("Network restored! Claiming your wins...");
-        offlineWinDetectedRef.current = false;
-      }
-      processPendingClaims();
-    };
-    const handleOffline = () => {
-      setIsOffline(true);
-      cancelReload();
-      showWarning("Network lost! Will refresh when connection returns.");
-      if (pendingBingoClaimsRef.current.length > 0)
-        showWarning(
-          "Network disconnected! Your win will be claimed when connection returns.",
-        );
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-    periodicCheck = setInterval(() => {
-      checkConnection();
-      if (pendingBingoClaimsRef.current.length > 0 && navigator.onLine)
-        processPendingClaims();
-    }, 5000);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      clearInterval(periodicCheck);
-      cancelReload();
-    };
-  }, [
-    connected,
     currentGameId,
-    isRefreshing,
     stake,
-    showWarning,
-    showSuccess,
-    processPendingClaims,
+    savePendingWin,
+    processPendingWins,
+    checkBingoPattern,
   ]);
 
-  // Navigate to winner screen
+  // TRACK MISSED WINNING PATTERNS
+  useEffect(() => {
+    if (gameState.phase !== "running") {
+      setMissedPatterns({});
+      return;
+    }
+    if (yourCards.length === 0) return;
+
+    const newMissedPatterns = { ...missedPatterns };
+    let hasChanges = false;
+
+    for (const { cardNumber, card } of yourCards) {
+      if (claimedCartellasRef.current.has(cardNumber)) {
+        if (newMissedPatterns[cardNumber]) {
+          delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
+          hasChanges = true;
+        }
+        continue;
+      }
+
+      const hasWin = checkBingoPattern(card, calledNumbers);
+
+      if (hasWin) {
+        if (
+          newMissedPatterns[cardNumber] ||
+          missedPatternsPersistentRef.current[cardNumber]
+        ) {
+          delete newMissedPatterns[cardNumber];
+          delete missedPatternsPersistentRef.current[cardNumber];
+          hasChanges = true;
+        }
+      }
+    }
+
+    if (hasChanges) {
+      setMissedPatterns(newMissedPatterns);
+    }
+  }, [calledNumbers, gameState.phase, yourCards, missedPatterns]);
+
+  // Recovery
+  useEffect(() => {
+    if (gameState.phase !== "running") return;
+    if (yourCards.length === 0) return;
+
+    for (const { cardNumber, card } of yourCards) {
+      const hasWin = checkBingoPattern(card, calledNumbers);
+      if (hasWin && claimedCartellasRef.current.has(cardNumber)) {
+        claimedCartellasRef.current.delete(cardNumber);
+      }
+    }
+  }, [calledNumbers, gameState.phase, yourCards]);
+
+  useEffect(() => {
+    if (gameState.phase !== "running") {
+      setStartCountdown(0);
+      return;
+    }
+    if (gameState.phase === "running" && calledNumbers.length === 0)
+      setStartCountdown(3);
+  }, [gameState.phase, calledNumbers.length, currentGameId]);
+
+  useEffect(() => {
+    if (startCountdown <= 0) return;
+    const t = setTimeout(
+      () => setStartCountdown((prev) => (prev > 0 ? prev - 1 : 0)),
+      1000,
+    );
+    return () => clearTimeout(t);
+  }, [startCountdown]);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    try {
+      setIsRefreshing(true);
+      await new Promise((r) => setTimeout(r, 100));
+      if (stake && sessionId) {
+        connectToStake(stake);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch {
+      showError("Failed to refresh game state.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Load pending wins on mount
+  useEffect(() => {
+    loadPendingWins();
+  }, [loadPendingWins]);
+
+  // Process pending wins when game state changes
+  useEffect(() => {
+    if (gameState.phase === "running" || gameState.phase === "announce") {
+      processPendingWins();
+    }
+  }, [gameState.phase, processPendingWins]);
+
+  // Clean up sound timeout
+  useEffect(() => {
+    return () => {
+      if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
+    };
+  }, []);
+
+  // Clear pending claims on game end
   useEffect(() => {
     if (gameState.phase === "announce" && !isRefreshing) {
-      pendingBingoClaimsRef.current = [];
+      if (pendingBingoClaimsRef.current.length > 0) {
+        console.log("Game ended with pending claims - clearing queue");
+        pendingBingoClaimsRef.current = [];
+      }
       offlineWinDetectedRef.current = false;
       onNavigate?.("winner");
     }
   }, [gameState.phase, onNavigate, isRefreshing]);
 
-  // Timeout if no game ID
+  // Network status listeners for offline indicator
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("🌐 Network recovered - processing pending claims");
+      setIsOffline(false);
+      if (offlineWinDetectedRef.current) {
+        showSuccess("Network restored! Claiming your wins...");
+        offlineWinDetectedRef.current = false;
+      }
+      processPendingWins();
+      // Also try to recover game state
+      recoverGameStateFromHTTP();
+    };
+
+    const handleOffline = () => {
+      console.log("⚠️ Network disconnected");
+      setIsOffline(true);
+      if (pendingBingoClaimsRef.current.length > 0) {
+        showWarning(
+          "Network disconnected! Your win will be claimed when connection returns.",
+        );
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [processPendingWins, showSuccess, showWarning, recoverGameStateFromHTTP]);
+
   useEffect(() => {
     if (!currentGameId) {
       const t = setTimeout(() => setShowTimeout(true), 5000);
       return () => clearTimeout(t);
-    }
-    setShowTimeout(false);
+    } else setShowTimeout(false);
   }, [currentGameId]);
 
-  // Reset on registration phase
   useEffect(() => {
-    if (gameState.phase !== "registration") return;
-    setShowTimeout(false);
-    setIsRefreshing(false);
-    claimedCartellasRef.current.clear();
-    setClaimingStates({});
-    setMissedPatterns({});
-    missedPatternsPersistentRef.current = {};
-    pendingBingoClaimsRef.current = [];
-    offlineWinDetectedRef.current = false;
+    if (gameState.phase === "registration") {
+      setShowTimeout(false);
+      setIsRefreshing(false);
+      claimedCartellasRef.current.clear();
+      setClaimingStates({});
+      setMissedPatterns({});
+      missedPatternsPersistentRef.current = {};
+      pendingBingoClaimsRef.current = [];
+      offlineWinDetectedRef.current = false;
+    }
   }, [gameState.phase]);
 
-  // Bingo rejected event
   useEffect(() => {
-    const handler = (event) => {
+    const h = (event) => {
       const reason = event?.detail?.reason || "invalid_claim";
       const cardNumber = event?.detail?.cardNumber;
+
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
         setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
@@ -842,15 +956,14 @@ export default function GameLayout({ stake, onNavigate }) {
         }
       }
     };
-    window.addEventListener("bingoRejected", handler);
-    return () => window.removeEventListener("bingoRejected", handler);
+    window.addEventListener("bingoRejected", h);
+    return () => window.removeEventListener("bingoRejected", h);
   }, [calledNumbers]);
 
-  // Alert banner auto-dismiss
   useEffect(() => {
-    const active = new Set(alertBanners);
+    const current = new Set(alertBanners);
     alertTimersRef.current.forEach((timer, msg) => {
-      if (!active.has(msg)) {
+      if (!current.has(msg)) {
         clearTimeout(timer);
         alertTimersRef.current.delete(msg);
       }
@@ -866,167 +979,46 @@ export default function GameLayout({ stake, onNavigate }) {
     });
   }, [alertBanners]);
 
-  useEffect(
-    () => () => {
-      alertTimersRef.current.forEach(clearTimeout);
-      alertTimersRef.current.clear();
-    },
-    [],
-  );
-
-  // Wallet update
   useEffect(() => {
-    const handler = (event) => {
-      if (event.detail?.type !== "wallet_update") return;
-      const { main, bonus } = event.detail.payload;
-      setWallet((prev) => ({
-        main: main !== undefined ? main : prev.main,
-        bonus: bonus !== undefined ? bonus : prev.bonus,
-      }));
+    return () => {
+      alertTimersRef.current.forEach((t) => clearTimeout(t));
+      alertTimersRef.current.clear();
     };
-    window.addEventListener("walletUpdate", handler);
-    return () => window.removeEventListener("walletUpdate", handler);
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Callbacks
-  // ---------------------------------------------------------------------------
+  // Wallet update handler
+  useEffect(() => {
+    const handleWalletUpdate = (event) => {
+      if (event.detail && event.detail.type === "wallet_update") {
+        const { main, bonus } = event.detail.payload;
+        setWallet((prev) => ({
+          ...prev,
+          main: main !== undefined ? main : prev.main,
+          bonus: bonus !== undefined ? bonus : prev.bonus,
+        }));
+      }
+    };
+    window.addEventListener("walletUpdate", handleWalletUpdate);
+    return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
+  }, []);
 
-  const handleNumberToggle = useCallback(
-    (cardNumber, number) => {
-      if (isAutoMarkOn) return;
-      setManuallyMarkedNumbers((prev) => {
-        const existing = prev[cardNumber] ?? new Set();
-        const newCardMarks = new Set(existing);
-        newCardMarks.has(number)
-          ? newCardMarks.delete(number)
-          : newCardMarks.add(number);
-        return { ...prev, [cardNumber]: newCardMarks };
-      });
-    },
-    [isAutoMarkOn],
-  );
-
-  const handleCartellaBingo = useCallback(
-    async (cardNumber) => {
-      if (!connected || gameState.phase !== "running" || !currentGameId) {
-        showError("Cannot claim BINGO right now");
-        return;
-      }
-      if (claimedCartellasRef.current.has(cardNumber)) {
-        showError(`Cartella #${cardNumber} already won`);
-        return;
-      }
-      const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
-      if (!card) {
-        showError(`Cartella #${cardNumber} not found`);
-        return;
-      }
-      if (!isAutoMarkOn && !checkBingoPattern(card, calledNumbers)) {
-        showError(`No winning pattern on Cartella #${cardNumber}`);
-        return;
-      }
-      if (claimingStates[cardNumber]) return;
-
-      try {
-        setClaimingStates((prev) => ({ ...prev, [cardNumber]: true }));
-        triggerConfetti();
-        const result = claimBingo({ cardNumber });
-        if (!result) {
-          showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
-        } else {
-          showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
-          claimedCartellasRef.current.add(cardNumber);
-          setMissedPatterns((prev) => {
-            if (!prev[cardNumber]) return prev;
-            const next = { ...prev };
-            delete next[cardNumber];
-            return next;
-          });
-          delete missedPatternsPersistentRef.current[cardNumber];
-        }
-      } catch {
-        showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
-      } finally {
-        setClaimingStates((prev) => ({ ...prev, [cardNumber]: false }));
-      }
-    },
-    [
-      claimBingo,
-      connected,
-      currentGameId,
-      gameState.phase,
-      claimingStates,
-      yourCards,
-      calledNumbers,
-      isAutoMarkOn,
-      showError,
-      showSuccess,
-      triggerConfetti,
-    ],
-  );
-
-  const handleRefresh = useCallback(async () => {
-    if (isRefreshing) return;
-    try {
-      setIsRefreshing(true);
-      if (stake && sessionId) {
-        connectToStake(stake);
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    } catch {
-      showError("Failed to refresh game state.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [isRefreshing, stake, sessionId, connectToStake, showError]);
-
-  const handleSoundToggle = useCallback(() => {
+  // Updated sound toggle with queue clearing
+  const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
-    localStorage.setItem("lekulu_sound_enabled", String(newState));
-    if (newState && !audioInitializedRef.current) {
+    localStorage.setItem("lekulu_sound_enabled", newState.toString());
+
+    if (!newState) {
+      soundQueueRef.current = [];
+      isPlayingSoundRef.current = false;
+      if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
+    } else if (!audioInitializedRef.current) {
       audioInitializedRef.current = true;
       initAudio().catch(() => {});
       resumeAudio().catch(() => {});
     }
-  }, [isSoundOn]);
+  };
 
-  const handleAutoMarkToggle = useCallback(() => {
-    setIsAutoMarkOn((prev) => {
-      const next = !prev;
-      if (next) {
-        // switching ON: pre-fill manually marked numbers from called list
-        const autoMarks = {};
-        yourCards.forEach(({ cardNumber, card }) => {
-          const marks = new Set();
-          calledNumbers.forEach((num) => {
-            card.forEach((row) => {
-              if (row.includes(num)) marks.add(num);
-            });
-          });
-          if (marks.size > 0) autoMarks[cardNumber] = marks;
-        });
-        setManuallyMarkedNumbers(autoMarks);
-      }
-      return next;
-    });
-  }, [yourCards, calledNumbers]);
-
-  // ---------------------------------------------------------------------------
-  // Derived display values
-  // ---------------------------------------------------------------------------
-  const gamePhaseDisplay =
-    gameState.phase === "running"
-      ? "LIVE"
-      : gameState.phase === "registration"
-        ? "REG"
-        : "WAIT";
-  const isWatchMode = yourCards.length === 0;
-
-  // ---------------------------------------------------------------------------
-  // Early returns
-  // ---------------------------------------------------------------------------
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -1058,9 +1050,63 @@ export default function GameLayout({ stake, onNavigate }) {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
+  const gamePhaseDisplay =
+    gameState.phase === "running"
+      ? "LIVE"
+      : gameState.phase === "registration"
+        ? "REG"
+        : "WAIT";
+  const isWatchMode = yourCards.length === 0;
+
+  // Optimized Number Board component
+  const NumberBoardOptimized = useMemo(
+    () => (
+      <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
+        <div className="grid grid-cols-15 gap-0.5 p-1 max-h-[120px] overflow-y-auto">
+          {Array.from({ length: 75 }, (_, i) => i + 1).map((n) => {
+            const isCalled = memoizedCalledSet.has(n);
+            const isCurrent = currentNumber === n;
+            const letter =
+              n <= 15
+                ? "B"
+                : n <= 30
+                  ? "I"
+                  : n <= 45
+                    ? "N"
+                    : n <= 60
+                      ? "G"
+                      : "O";
+            const colors = {
+              B: "from-blue-500",
+              I: "from-green-500",
+              N: "from-purple-500",
+              G: "from-red-500",
+              O: "from-yellow-500",
+            };
+
+            return (
+              <div
+                key={n}
+                className={`text-center text-[10px] py-0.5 font-bold rounded-sm transition-all duration-150
+                ${
+                  isCurrent
+                    ? "bg-orange-500 text-white scale-105 z-10 shadow-lg"
+                    : isCalled
+                      ? "bg-white/20 text-white"
+                      : "text-white/20"
+                }
+                ${!isCurrent && isCalled ? "bg-gradient-to-br bg-clip-text text-transparent " + colors[letter] : ""}`}
+              >
+                {n}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ),
+    [memoizedCalledSet, currentNumber],
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
       {isOffline && (
@@ -1124,7 +1170,6 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-screen">
-        {/* Header */}
         <header className="px-3 pt-2 pb-1 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -1141,14 +1186,33 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
               <button
                 onClick={handleSoundToggle}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isSoundOn ? "bg-white/20 text-white hover:bg-white/30" : "bg-white/5 text-white/30 hover:bg-white/10"}`}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  isSoundOn
+                    ? "bg-white/20 text-white hover:bg-white/30"
+                    : "bg-white/5 text-white/30 hover:bg-white/10"
+                }`}
                 aria-label={isSoundOn ? "Mute" : "Unmute"}
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
               <button
-                onClick={handleAutoMarkToggle}
-                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? "text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
+                onClick={() => {
+                  if (isAutoMarkOn) {
+                    const autoMarks = {};
+                    yourCards.forEach(({ cardNumber, card }) => {
+                      const marks = new Set();
+                      calledNumbers.forEach((num) => {
+                        card.forEach((row) => {
+                          if (row.includes(num)) marks.add(num);
+                        });
+                      });
+                      if (marks.size > 0) autoMarks[cardNumber] = marks;
+                    });
+                    setManuallyMarkedNumbers(autoMarks);
+                  }
+                  setIsAutoMarkOn(!isAutoMarkOn);
+                }}
+                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
               </button>
@@ -1170,48 +1234,84 @@ export default function GameLayout({ stake, onNavigate }) {
           </div>
         </header>
 
-        {/* Stats bar */}
         <div className="px-3 pb-1 flex-shrink-0">
           <div className="grid grid-cols-3 gap-1.5">
-            {[
-              ["DERASH", currentPrizePool || 0],
-              ["Players", gameState.takenCards?.length || 0],
-              ["Stake", stake || 0],
-              ["Bonus", wallet.bonus?.toLocaleString() || 0],
-              ["Calls", `${calledNumbers.length}/75`],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10"
-              >
-                <p className="text-white/60 text-xs">{label} : </p>
-                <p className="text-white font-bold text-xs">{value}</p>
-              </div>
-            ))}
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/60 text-xs">DERASH : </p>
+              <p className="text-white font-bold text-xs">
+                {currentPrizePool || 0}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/60 text-xs">Players : </p>
+              <p className="text-white font-bold text-xs">
+                {gameState.takenCards?.length || 0}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/60 text-xs">Stake : </p>
+              <p className="text-white font-bold text-xs">{stake || 0}</p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/60 text-xs">Bonus : </p>
+              <p className="text-white font-bold text-xs">
+                {wallet.bonus?.toLocaleString() || 0}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
+              <p className="text-white/60 text-xs">Calls : </p>
+              <p className="text-white font-bold text-xs">
+                {calledNumbers.length}/75
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Recent numbers + bingo board */}
-        {!isWatchMode && (
-          <>
-            {calledNumbers.length > 0 ? (
-              <RecentNumbers
-                calledNumbers={calledNumbers}
-                currentNumber={currentNumber}
-              />
-            ) : (
-              <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-                Starts in {startCountdown > 0 ? startCountdown : "0"} secs
-              </p>
-            )}
-            <BingoBoard
-              calledNumbers={calledNumbers}
-              currentNumber={currentNumber}
-            />
-          </>
+        {/* Previously Called Numbers */}
+        {!isWatchMode && calledNumbers.length > 0 && (
+          <div className="px-3 pb-1 flex-shrink-0 my-1">
+            <div className="flex justify-center gap-1.5 flex-wrap">
+              {calledNumbers
+                .slice(-5)
+                .reverse()
+                .map((n, i) => {
+                  const isCurrent = n === currentNumber;
+                  const letter =
+                    n <= 15
+                      ? "B"
+                      : n <= 30
+                        ? "I"
+                        : n <= 45
+                          ? "N"
+                          : n <= 60
+                            ? "G"
+                            : "O";
+                  const colors = {
+                    B: "bg-blue-500/30",
+                    I: "bg-green-500/30",
+                    N: "bg-purple-500/30",
+                    G: "bg-red-500/30",
+                    O: "bg-yellow-500/30",
+                  };
+                  return (
+                    <div
+                      key={`${n}-${i}`}
+                      className={`rounded-full w-8 h-8 flex items-center justify-center text-[11px] font-extrabold font-mono border ${colors[letter]} ${
+                        isCurrent ? "ring-2 ring-yellow-400 scale-110" : ""
+                      }`}
+                    >
+                      {letter}
+                      {n}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
         )}
 
-        {/* Cards / watch mode */}
+        {/* Optimized Number Board */}
+        {!isWatchMode && NumberBoardOptimized}
+
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
           <div className="flex-1">
             {yourCards.length > 0 ? (
@@ -1220,14 +1320,19 @@ export default function GameLayout({ stake, onNavigate }) {
                   modules={[Navigation, Pagination, Autoplay]}
                   spaceBetween={16}
                   slidesPerView={1}
-                  centeredSlides
-                  loop
+                  centeredSlides={true}
+                  loop={true}
                   autoplay={false}
                   pagination={{
                     type: "fraction",
                     clickable: true,
-                    renderFraction: (currentClass, totalClass) =>
-                      `<span class="${currentClass}" style="color:white;font-weight:bold;font-size:14px;"></span><span style="color:white;opacity:0.5;margin:0 4px;">/</span><span class="${totalClass}" style="color:white;opacity:0.7;font-size:12px;"></span>`,
+                    formatFractionCurrent: (number) => `${number}`,
+                    formatFractionTotal: (number) => `${number}`,
+                    renderFraction: (currentClass, totalClass) => {
+                      return `<span class="${currentClass}" style="color: white; font-weight: bold; font-size: 14px;"></span>
+              <span style="color: white; opacity: 0.5; margin: 0 4px;">/</span>
+              <span class="${totalClass}" style="color: white; opacity: 0.7; font-size: 12px;"></span>`;
+                    },
                   }}
                   navigation={{
                     prevEl: ".swiper-button-prev-custom",
@@ -1245,6 +1350,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       : manuallyMarkedNumbers[cardNumber]
                         ? Array.from(manuallyMarkedNumbers[cardNumber])
                         : [];
+
                     const hasWinningPattern = checkBingoPattern(
                       card,
                       calledNumbers,
@@ -1252,8 +1358,8 @@ export default function GameLayout({ stake, onNavigate }) {
                     const isClaiming = claimingStates[cardNumber];
                     const alreadyClaimed =
                       claimedCartellasRef.current.has(cardNumber);
-                    const hasMissedPattern = !!missedPatterns[cardNumber];
-
+                    const hasMissedPattern =
+                      !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
                         <div className="px-2 pb-8">
@@ -1306,7 +1412,8 @@ export default function GameLayout({ stake, onNavigate }) {
                                       : "🎉 BINGO!"}
                               </button>
                             </div>
-                            <CartellaCard
+
+                            <MemoizedCartellaCard
                               id={cardNumber}
                               card={card}
                               called={
@@ -1333,7 +1440,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   : undefined
                               }
                               missedWinningCalledNumbers={
-                                missedPatterns[cardNumber] || null
+                                missedWinningPatterns[cardNumber] || null
                               }
                               size="small"
                             />
@@ -1375,12 +1482,14 @@ export default function GameLayout({ stake, onNavigate }) {
                       </motion.div>
                     </div>
                   </div>
+
                   <h3 className="text-white text-xl font-black mb-2 tracking-wide">
                     Watch Mode
                   </h3>
                   <p className="text-white/40 text-sm font-bold mb-4">
                     Game currently in progress
                   </p>
+
                   <div className="flex items-center justify-center gap-4 mb-6">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
@@ -1398,6 +1507,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       </span>
                     </div>
                   </div>
+
                   <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
                     <div className="flex items-start gap-3">
                       <span className="text-2xl text-white">
@@ -1414,6 +1524,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       </div>
                     </div>
                   </div>
+
                   <div className="flex justify-center gap-1.5">
                     {[0, 1, 2].map((i) => (
                       <motion.div
@@ -1433,25 +1544,37 @@ export default function GameLayout({ stake, onNavigate }) {
             ) : null}
           </div>
 
-          {/* Confetti */}
           {showConfetti && (
             <div className="confetti-container" ref={confettiRef}>
-              {CONFETTI_PIECES.map(({ id, ...style }) => (
-                <div key={id} className="confetti-piece" style={style} />
-              ))}
-              {CONFETTI_EMOJIS.map((emoji, i) => (
-                <div
-                  key={`star-${i}`}
-                  className="star-particle"
-                  style={{
-                    left: `${10 + Math.random() * 80}%`,
-                    top: `${20 + Math.random() * 40}%`,
-                    animationDelay: `${i * 0.1}s`,
-                  }}
-                >
-                  {emoji}
-                </div>
-              ))}
+              {Array.from({ length: 30 }).map((_, i) => {
+                const colors = [
+                  "#ff6b6b",
+                  "#ffd93d",
+                  "#6bcb77",
+                  "#4d96ff",
+                  "#ff6b9d",
+                ];
+                const left = Math.random() * 100;
+                const delay = Math.random() * 0.5;
+                const size = Math.random() * 8 + 6;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                return (
+                  <div
+                    key={i}
+                    className="confetti-piece"
+                    style={{
+                      left: `${left}%`,
+                      top: `-${Math.random() * 20}px`,
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      backgroundColor: color,
+                      borderRadius: "50%",
+                      animationDelay: `${delay}s`,
+                      animationDuration: `${1 + Math.random()}s`,
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </main>
