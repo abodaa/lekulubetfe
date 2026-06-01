@@ -707,7 +707,6 @@ export function WebSocketProvider({ children }) {
         `${apiBase}/api/games/${currentStake}/status`,
       );
       const data = await response.json();
-
       if (data.success && data.game && data.game.calledNumbers) {
         console.log(
           "🔄 Recovered game state from HTTP:",
