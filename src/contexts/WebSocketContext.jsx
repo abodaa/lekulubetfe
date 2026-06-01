@@ -174,7 +174,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_WS_URL ||
         (window.location.hostname === "localhost"
           ? "ws://localhost:3001"
-          : "wss://prodbe.lekulubingo.com");
+          : "wss://lekulubingoback.onrender.com");
       wsBase = (wsBase || "").replace(/\/+$/, "");
       if (!/\/ws$/i.test(wsBase)) {
         wsBase += "/ws";
@@ -701,7 +701,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_API_URL ||
         (window.location.hostname === "localhost"
           ? "http://localhost:3001"
-          : "https://prodbe.lekulubingo.com");
+          : "https://lekulubingoback.onrender.com");
 
       const response = await fetch(
         `${apiBase}/api/games/${currentStake}/status`,
