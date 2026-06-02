@@ -29,6 +29,8 @@ export function WebSocketProvider({ children }) {
     countdown: 0,
     registrationEndTime: null,
     winners: [],
+    youWon: false,
+    yourPrize: 0,
     walletUpdate: null,
     nextRegistrationStart: null,
     totalCartellas: 200,
@@ -407,6 +409,8 @@ export function WebSocketProvider({ children }) {
                     event.payload.calledNumbers || event.payload.called || [],
                   yourCards: cards,
                   yourSelections: cardNumbers,
+                  youWon: false,
+                  yourPrize: 0,
                 };
                 window.dispatchEvent(
                   new CustomEvent("gameStarted", {
@@ -530,23 +534,34 @@ export function WebSocketProvider({ children }) {
                   event.payload.gameId !== prev.gameId
                 )
                   return prev;
+
+                // Check if current user won
+                const currentUserId = safeSessionId;
+                const userWon = event.payload.winners?.some(
+                  (w) =>
+                    w.userId === currentUserId ||
+                    w.userId?.toString() === currentUserId,
+                );
+                const userPrize =
+                  event.payload.winners?.find(
+                    (w) =>
+                      w.userId === currentUserId ||
+                      w.userId?.toString() === currentUserId,
+                  )?.prize || 0;
+
                 return {
                   ...prev,
                   phase: "announce",
                   gameId: event.payload?.gameId || prev.gameId,
-                  winners:
-                    (event.payload &&
-                      (event.payload.winners || event.payload.winner || [])) ||
-                    prev.winners ||
-                    [],
+                  winners: event.payload.winners || prev.winners || [],
                   calledNumbers:
-                    (event.payload &&
-                      (event.payload.calledNumbers || event.payload.called)) ||
-                    prev.calledNumbers,
+                    event.payload.calledNumbers || prev.calledNumbers,
                   currentNumber: null,
                   yourCards: [],
                   yourSelections: [],
                   nextRegistrationStart: event.payload?.nextStartAt || null,
+                  youWon: userWon,
+                  yourPrize: userPrize,
                 };
               });
               break;
@@ -618,7 +633,7 @@ export function WebSocketProvider({ children }) {
         wsRef.current = null;
       }
     };
-  }, [safeSessionId]);
+  }, [safeSessionId, connected, isConnecting, currentStake]);
 
   const connectToStake = useCallback(
     (stake) => {
@@ -639,6 +654,8 @@ export function WebSocketProvider({ children }) {
           countdown: 0,
           registrationEndTime: null,
           winners: [],
+          youWon: false,
+          yourPrize: 0,
           walletUpdate: null,
           nextRegistrationStart: null,
           totalCartellas: 200,
@@ -651,13 +668,71 @@ export function WebSocketProvider({ children }) {
         try {
           ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
         } catch (e) {}
+      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+        // Wait for connection to open
+        const onOpen = () => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            try {
+              wsRef.current.send(
+                JSON.stringify({ type: "join_room", payload: { stake } }),
+              );
+            } catch (e) {}
+          }
+          ws.removeEventListener("open", onOpen);
+        };
+        ws.addEventListener("open", onOpen);
       }
     },
     [safeSessionId, currentStake],
   );
 
+  // Recover game state from HTTP API
+  const recoverGameStateFromHTTP = useCallback(async () => {
+    if (!currentStake || !safeSessionId) return false;
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://lekulubingoback.onrender.com");
+
+      const response = await fetch(
+        `${apiBase}/api/games/${currentStake}/status`,
+      );
+      const data = await response.json();
+
+      if (data.success && data.game && data.game.calledNumbers) {
+        console.log(
+          "🔄 Recovered game state from HTTP:",
+          data.game.calledNumbers.length,
+          "numbers",
+        );
+
+        setGameState((prev) => ({
+          ...prev,
+          calledNumbers: data.game.calledNumbers || [],
+          currentNumber: data.game.lastCalledNumber || prev.currentNumber,
+          phase: data.game.status === "running" ? "running" : prev.phase,
+          gameId: data.game.gameId || prev.gameId,
+          playersCount: data.game.playersCount || prev.playersCount,
+          prizePool: data.game.totalPrizes || prev.prizePool,
+          registrationEndTime: data.game.registrationEndsAt
+            ? new Date(data.game.registrationEndsAt).getTime()
+            : prev.registrationEndTime,
+        }));
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to recover game state:", error);
+      return false;
+    }
+  }, [currentStake, safeSessionId]);
+
   const forceReconnect = useCallback(
-    (stake) => {
+    async (stake) => {
       console.log("🔄 Force reconnecting...");
       if (wsRef.current) {
         try {
@@ -667,13 +742,18 @@ export function WebSocketProvider({ children }) {
       }
       setConnected(false);
       connectionAttemptRef.current = false;
+
       if (stake) {
         connectToStake(stake);
+        // Wait a bit and try to recover state
+        setTimeout(() => {
+          recoverGameStateFromHTTP();
+        }, 2000);
       } else {
         connectGeneral();
       }
     },
-    [connectToStake, connectGeneral],
+    [connectToStake, connectGeneral, recoverGameStateFromHTTP],
   );
 
   const requestNumberResume = useCallback(() => {
@@ -696,7 +776,7 @@ export function WebSocketProvider({ children }) {
     ) {
       connectGeneral();
     }
-  }, [sessionId, connected, isConnecting]);
+  }, [sessionId, connected, isConnecting, connectGeneral]);
 
   useEffect(() => {
     return () => {
@@ -720,6 +800,9 @@ export function WebSocketProvider({ children }) {
         currentNumber: event.detail.currentNumber || prev.currentNumber,
         gameId: event.detail.gameId || prev.gameId,
         phase: event.detail.phase || prev.phase,
+        winners: event.detail.winners || prev.winners,
+        youWon: event.detail.youWon || false,
+        yourPrize: event.detail.yourPrize || 0,
       }));
     };
 
@@ -760,6 +843,7 @@ export function WebSocketProvider({ children }) {
     ws: wsRef.current,
     forceReconnect,
     requestNumberResume,
+    recoverGameStateFromHTTP,
   };
 
   return (
