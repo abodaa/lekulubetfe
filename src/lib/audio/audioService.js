@@ -48,7 +48,7 @@ class AudioService {
     if (!this.audioContext) return null;
 
     const key = `${letter}${number}`;
-    const url = `/sound/${letter}${number}.MP3`;
+    const url = `/sound/${letter}${number}.mp3`;
 
     if (this.sounds.has(key)) return this.sounds.get(key);
 

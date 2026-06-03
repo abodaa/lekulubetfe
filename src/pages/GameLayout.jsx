@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import CartellaCard from "../components/CartellaCard";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
@@ -28,24 +22,14 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 
 // Memoized CartellaCard to prevent unnecessary re-renders
-const MemoizedCartellaCard = React.memo(
-  CartellaCard,
-  (prevProps, nextProps) => {
-    const calledChanged = prevProps.called?.length !== nextProps.called?.length;
-    const cardChanged = prevProps.card !== nextProps.card;
-    const idChanged = prevProps.id !== nextProps.id;
-    const autoMarkChanged = prevProps.isAutoMarkOn !== nextProps.isAutoMarkOn;
-    const winningPatternChanged =
-      prevProps.showWinningPattern !== nextProps.showWinningPattern;
-    return !(
-      calledChanged ||
-      cardChanged ||
-      idChanged ||
-      autoMarkChanged ||
-      winningPatternChanged
-    );
-  },
-);
+const MemoizedCartellaCard = React.memo(CartellaCard, (prevProps, nextProps) => {
+  const calledChanged = prevProps.called?.length !== nextProps.called?.length;
+  const cardChanged = prevProps.card !== nextProps.card;
+  const idChanged = prevProps.id !== nextProps.id;
+  const autoMarkChanged = prevProps.isAutoMarkOn !== nextProps.isAutoMarkOn;
+  const winningPatternChanged = prevProps.showWinningPattern !== nextProps.showWinningPattern;
+  return !(calledChanged || cardChanged || idChanged || autoMarkChanged || winningPatternChanged);
+});
 
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
@@ -123,83 +107,21 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   }, []);
 
-  const isLastCallPartOfWinningPattern = useCallback((card, calledNumbers) => {
-    if (!card || !calledNumbers || calledNumbers.length === 0) return false;
-
-    const lastCall = calledNumbers[calledNumbers.length - 1];
-    const calledSet = new Set(calledNumbers);
-
-    for (let row = 0; row < 5; row++) {
-      if (!card[row]) continue;
-      if (
-        card[row].every((num) => num === 0 || calledSet.has(num)) &&
-        card[row].includes(lastCall)
-      )
-        return true;
-    }
-    for (let col = 0; col < 5; col++) {
-      let complete = true,
-        hasLast = false;
-      for (let row = 0; row < 5; row++) {
-        const num = card[row][col];
-        if (num !== 0 && !calledSet.has(num)) {
-          complete = false;
-          break;
-        }
-        if (num === lastCall) hasLast = true;
-      }
-      if (complete && hasLast) return true;
-    }
-    let d1 = true,
-      h1 = false;
-    for (let i = 0; i < 5; i++) {
-      const num = card[i][i];
-      if (num !== 0 && !calledSet.has(num)) {
-        d1 = false;
-        break;
-      }
-      if (num === lastCall) h1 = true;
-    }
-    if (d1 && h1) return true;
-
-    let d2 = true,
-      h2 = false;
-    for (let i = 0; i < 5; i++) {
-      const num = card[i][4 - i];
-      if (num !== 0 && !calledSet.has(num)) {
-        d2 = false;
-        break;
-      }
-      if (num === lastCall) h2 = true;
-    }
-    if (d2 && h2) return true;
-
-    const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
-    if (
-      corners.every((num) => num === 0 || calledSet.has(num)) &&
-      corners.includes(lastCall)
-    )
-      return true;
-
-    return false;
-  }, []);
-
-  const { connected, gameState, claimBingo, connectToStake, ws } =
-    useWebSocket();
-
+  const {
+    connected,
+    gameState,
+    claimBingo,
+    connectToStake,
+  } = useWebSocket();
+  
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
   const currentGameId = gameState.gameId;
-  const yourCards = Array.isArray(gameState.yourCards)
-    ? gameState.yourCards
-    : [];
+  const yourCards = Array.isArray(gameState.yourCards) ? gameState.yourCards : [];
 
   // Memoize called numbers set for performance
-  const calledNumbersSet = useMemo(
-    () => new Set(calledNumbers),
-    [calledNumbers],
-  );
+  const calledNumbersSet = useMemo(() => new Set(calledNumbers), [calledNumbers]);
 
   const [isSoundOn, setIsSoundOn] = useState(() => {
     try {
@@ -225,66 +147,52 @@ export default function GameLayout({ stake, onNavigate }) {
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
 
-  // OFFLINE BINGO QUEUE
-  const pendingBingoClaimsRef = useRef([]);
-  const isProcessingQueueRef = useRef(false);
-  const offlineWinDetectedRef = useRef(false);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-
   // ========== NETWORK RECOVERY - Update manual marks for recovered numbers ==========
-  const updateManualMarksForNumbers = useCallback(
-    (numbers) => {
-      if (isAutoMarkOn) return;
-
-      setManuallyMarkedNumbers((prev) => {
-        const newMarks = { ...prev };
-        yourCards.forEach(({ cardNumber, card }) => {
-          numbers.forEach((number) => {
-            let hasNumber = false;
-            if (card && Array.isArray(card)) {
-              card.forEach((row) => {
-                if (row && row.includes(number)) hasNumber = true;
-              });
+  const updateManualMarksForNumbers = useCallback((numbers) => {
+    if (isAutoMarkOn) return;
+    
+    setManuallyMarkedNumbers(prev => {
+      const newMarks = { ...prev };
+      yourCards.forEach(({ cardNumber, card }) => {
+        numbers.forEach((number) => {
+          let hasNumber = false;
+          if (card && Array.isArray(card)) {
+            card.forEach(row => {
+              if (row && row.includes(number)) hasNumber = true;
+            });
+          }
+          
+          if (hasNumber) {
+            const currentMarks = prev[cardNumber] || new Set();
+            const updatedMarks = new Set(currentMarks);
+            if (!updatedMarks.has(number)) {
+              updatedMarks.add(number);
+              newMarks[cardNumber] = updatedMarks;
             }
-
-            if (hasNumber) {
-              const currentMarks = prev[cardNumber] || new Set();
-              const updatedMarks = new Set(currentMarks);
-              if (!updatedMarks.has(number)) {
-                updatedMarks.add(number);
-                newMarks[cardNumber] = updatedMarks;
-              }
-            }
-          });
+          }
         });
-        return newMarks;
       });
-    },
-    [isAutoMarkOn, yourCards],
-  );
+      return newMarks;
+    });
+  }, [isAutoMarkOn, yourCards]);
 
   // ========== NETWORK RECOVERY - Listen for numbers recovered from WebSocket ==========
   useEffect(() => {
     const handleNumbersRecovered = (event) => {
       const { numbers, allNumbers } = event.detail;
-      console.log(
-        `🔁 Network recovery: Restored ${numbers.length} missed numbers`,
-      );
-
-      // Update manual marks if in manual mode
+      console.log(`🔁 Network recovery: Restored ${numbers.length} missed numbers`);
+      
       if (!isAutoMarkOn && numbers.length > 0) {
         updateManualMarksForNumbers(numbers);
       }
-
-      // Show a subtle notification
+      
       if (numbers.length > 0) {
         showSuccess(`Game synced: ${numbers.length} numbers restored`);
       }
     };
-
+    
     window.addEventListener("numbersRecovered", handleNumbersRecovered);
-    return () =>
-      window.removeEventListener("numbersRecovered", handleNumbersRecovered);
+    return () => window.removeEventListener("numbersRecovered", handleNumbersRecovered);
   }, [isAutoMarkOn, updateManualMarksForNumbers, showSuccess]);
 
   useEffect(() => {
@@ -367,6 +275,7 @@ export default function GameLayout({ stake, onNavigate }) {
     [isAutoMarkOn],
   );
 
+  // Manual BINGO claim - user triggered only
   const handleCartellaBingo = useCallback(
     async (cardNumber) => {
       if (!connected || gameState.phase !== "running" || !currentGameId) {
@@ -377,20 +286,6 @@ export default function GameLayout({ stake, onNavigate }) {
       if (claimedCartellasRef.current.has(cardNumber)) {
         showError(`Cartella #${cardNumber} already won`);
         return;
-      }
-
-      const card = yourCards.find((c) => c.cardNumber === cardNumber)?.card;
-      if (!card) {
-        showError(`Cartella #${cardNumber} not found`);
-        return;
-      }
-
-      if (!isAutoMarkOn) {
-        const hasWin = checkBingoPattern(card, calledNumbers);
-        if (!hasWin) {
-          showError(`No winning pattern on Cartella #${cardNumber}`);
-          return;
-        }
       }
 
       if (claimingStates[cardNumber]) return;
@@ -425,76 +320,12 @@ export default function GameLayout({ stake, onNavigate }) {
       currentGameId,
       gameState.phase,
       claimingStates,
-      yourCards,
-      calledNumbers,
-      isAutoMarkOn,
       showError,
       showSuccess,
     ],
   );
 
-  // Process pending claims function
-  const processPendingClaims = useCallback(async () => {
-    if (isProcessingQueueRef.current) return;
-    if (pendingBingoClaimsRef.current.length === 0) return;
-
-    if (!navigator.onLine) {
-      console.log("Still offline, waiting to process claims...");
-      return;
-    }
-
-    isProcessingQueueRef.current = true;
-
-    while (pendingBingoClaimsRef.current.length > 0) {
-      const claim = pendingBingoClaimsRef.current[0];
-
-      const card = yourCards.find(
-        (c) => c.cardNumber === claim.cardNumber,
-      )?.card;
-      if (card && checkBingoPattern(card, calledNumbers)) {
-        const result = claimBingo({ cardNumber: claim.cardNumber });
-        if (result) {
-          pendingBingoClaimsRef.current.shift();
-          showSuccess(
-            `🎉 Auto-BINGO claimed for Cartella #${claim.cardNumber}!`,
-          );
-          claimedCartellasRef.current.add(claim.cardNumber);
-        } else {
-          break;
-        }
-      } else if (gameState.phase === "announce") {
-        const winners = gameState.winners || [];
-        const isWinner = winners.some(
-          (w) => w.cartelaNumber === claim.cardNumber,
-        );
-        if (isWinner) {
-          console.log(
-            `Cartella #${claim.cardNumber} was a winner, but claim failed`,
-          );
-          showWarning(
-            `Your win for Cartella #${claim.cardNumber} has been recorded. Please contact support if not credited.`,
-          );
-        }
-        pendingBingoClaimsRef.current.shift();
-      } else {
-        pendingBingoClaimsRef.current.shift();
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    isProcessingQueueRef.current = false;
-  }, [
-    yourCards,
-    calledNumbers,
-    claimBingo,
-    showSuccess,
-    showWarning,
-    gameState.winners,
-    gameState.phase,
-  ]);
-
-  // Track missed winning patterns
+  // Track missed winning patterns (visual only)
   useEffect(() => {
     if (gameState.phase !== "running") {
       setMissedWinningPatterns({});
@@ -532,146 +363,18 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
-  // AUTO-BINGO with offline support
+  // Show win notification when game finishes (backend already credited)
   useEffect(() => {
-    if (gameState.phase !== "running") return;
-    if (!isAutoMarkOn) return;
-    if (yourCards.length === 0) return;
-
-    for (const { cardNumber, card } of yourCards) {
-      if (claimedCartellasRef.current.has(cardNumber)) continue;
-
-      const hasWin = checkBingoPattern(card, calledNumbers);
-      if (!hasWin) continue;
-
-      const lastNumberInPattern = isLastCallPartOfWinningPattern(
-        card,
-        calledNumbers,
-      );
-      if (!lastNumberInPattern) continue;
-
-      const alreadyPending = pendingBingoClaimsRef.current.some(
-        (c) => c.cardNumber === cardNumber,
-      );
-      if (alreadyPending) continue;
-
-      claimedCartellasRef.current.add(cardNumber);
+    if (gameState.phase === "announce" && gameState.youWon) {
+      showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
+      setWallet((prev) => ({
+        ...prev,
+        main: (prev.main || 0) + (gameState.yourPrize || 0),
+      }));
       triggerConfetti();
-
-      if (!navigator.onLine) {
-        console.log(
-          `📱 Device offline, queueing BINGO claim for Cartella #${cardNumber}`,
-        );
-        pendingBingoClaimsRef.current.push({
-          cardNumber,
-          timestamp: Date.now(),
-          calledNumbersAtWin: [...calledNumbers],
-        });
-        showWarning(
-          `You're offline! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
-        );
-        offlineWinDetectedRef.current = true;
-        continue;
-      }
-
-      const result = claimBingo({ cardNumber });
-
-      if (result) {
-        showSuccess(`🎉 Auto-BINGO! Cartella #${cardNumber} won!`);
-        setMissedPatterns((prev) => {
-          const newPatterns = { ...prev };
-          delete newPatterns[cardNumber];
-          return newPatterns;
-        });
-        delete missedPatternsPersistentRef.current[cardNumber];
-      } else {
-        console.log(
-          `⚠️ Network failure, queueing BINGO claim for Cartella #${cardNumber}`,
-        );
-        pendingBingoClaimsRef.current.push({
-          cardNumber,
-          timestamp: Date.now(),
-          calledNumbersAtWin: [...calledNumbers],
-        });
-        showWarning(
-          `Network issue! Your win for Cartella #${cardNumber} will be claimed when connection returns.`,
-        );
-        processPendingClaims();
-      }
-
-      break;
+      onNavigate?.("winner");
     }
-  }, [
-    calledNumbers,
-    gameState.phase,
-    isAutoMarkOn,
-    yourCards,
-    claimBingo,
-    showSuccess,
-    showWarning,
-    processPendingClaims,
-    isLastCallPartOfWinningPattern,
-    checkBingoPattern,
-  ]);
-
-  // TRACK MISSED WINNING PATTERNS
-  useEffect(() => {
-    if (gameState.phase !== "running") {
-      setMissedPatterns({});
-      return;
-    }
-    if (yourCards.length === 0) return;
-
-    const newMissedPatterns = { ...missedPatterns };
-    let hasChanges = false;
-
-    for (const { cardNumber, card } of yourCards) {
-      if (claimedCartellasRef.current.has(cardNumber)) {
-        if (newMissedPatterns[cardNumber]) {
-          delete newMissedPatterns[cardNumber];
-          delete missedPatternsPersistentRef.current[cardNumber];
-          hasChanges = true;
-        }
-        continue;
-      }
-
-      const hasWin = checkBingoPattern(card, calledNumbers);
-
-      if (hasWin) {
-        if (
-          newMissedPatterns[cardNumber] ||
-          missedPatternsPersistentRef.current[cardNumber]
-        ) {
-          delete newMissedPatterns[cardNumber];
-          delete missedPatternsPersistentRef.current[cardNumber];
-          hasChanges = true;
-        }
-      }
-    }
-
-    if (hasChanges) {
-      setMissedPatterns(newMissedPatterns);
-    }
-  }, [
-    calledNumbers,
-    gameState.phase,
-    yourCards,
-    missedPatterns,
-    checkBingoPattern,
-  ]);
-
-  // Recovery
-  useEffect(() => {
-    if (gameState.phase !== "running") return;
-    if (yourCards.length === 0) return;
-
-    for (const { cardNumber, card } of yourCards) {
-      const hasWin = checkBingoPattern(card, calledNumbers);
-      if (hasWin && claimedCartellasRef.current.has(cardNumber)) {
-        claimedCartellasRef.current.delete(cardNumber);
-      }
-    }
-  }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
+  }, [gameState.phase, gameState.youWon, gameState.yourPrize, showSuccess, onNavigate]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -707,56 +410,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  // Clear pending claims on game end
-  useEffect(() => {
-    if (gameState.phase === "announce" && !isRefreshing) {
-      if (pendingBingoClaimsRef.current.length > 0) {
-        console.log("Game ended with pending claims - clearing queue");
-        pendingBingoClaimsRef.current = [];
-      }
-      offlineWinDetectedRef.current = false;
-      onNavigate?.("winner");
-    }
-  }, [gameState.phase, onNavigate, isRefreshing]);
-
-  // Network status listeners for offline indicator
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log("🌐 Network recovered - processing pending claims");
-      setIsOffline(false);
-      if (offlineWinDetectedRef.current) {
-        showSuccess("Network restored! Claiming your wins...");
-        offlineWinDetectedRef.current = false;
-      }
-      processPendingClaims();
-    };
-
-    const handleOffline = () => {
-      console.log("⚠️ Network disconnected");
-      setIsOffline(true);
-      if (pendingBingoClaimsRef.current.length > 0) {
-        showWarning(
-          "Network disconnected! Your win will be claimed when connection returns.",
-        );
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    const interval = setInterval(() => {
-      if (pendingBingoClaimsRef.current.length > 0 && navigator.onLine) {
-        processPendingClaims();
-      }
-    }, 5000);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      clearInterval(interval);
-    };
-  }, [processPendingClaims, showSuccess, showWarning]);
-
   useEffect(() => {
     if (!currentGameId) {
       const t = setTimeout(() => setShowTimeout(true), 5000);
@@ -772,8 +425,6 @@ export default function GameLayout({ stake, onNavigate }) {
       setClaimingStates({});
       setMissedPatterns({});
       missedPatternsPersistentRef.current = {};
-      pendingBingoClaimsRef.current = [];
-      offlineWinDetectedRef.current = false;
     }
   }, [gameState.phase]);
 
@@ -895,94 +546,49 @@ export default function GameLayout({ stake, onNavigate }) {
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
 
-  // Memoized number board with minimal animation
-  const NumberBoard = useMemo(
-    () => (
-      <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full border-collapse">
-          <tbody>
-            {[
-              {
-                letter: "B",
-                color: "bg-blue-600/70 text-blue-100",
-                start: 1,
-                end: 15,
-              },
-              {
-                letter: "I",
-                color: "bg-green-600/70 text-green-100",
-                start: 16,
-                end: 30,
-              },
-              {
-                letter: "N",
-                color: "bg-purple-600/70 text-purple-100",
-                start: 31,
-                end: 45,
-              },
-              {
-                letter: "G",
-                color: "bg-red-600/70 text-red-100",
-                start: 46,
-                end: 60,
-              },
-              {
-                letter: "O",
-                color: "bg-yellow-600/70 text-yellow-100",
-                start: 61,
-                end: 75,
-              },
-            ].map(({ letter, color, start, end }) => (
-              <tr key={letter}>
-                <td
-                  className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
-                >
-                  {letter}
-                </td>
-                {Array.from(
-                  { length: end - start + 1 },
-                  (_, i) => start + i,
-                ).map((n) => {
-                  const isCalled = calledNumbersSet.has(n);
-                  const isCurrent = currentNumber === n;
-                  return (
-                    <td
-                      key={n}
-                      className={`text-center text-[10px] py-0.5 font-bold transition-colors duration-150 ${
-                        isCurrent
-                          ? "bg-orange-500 text-white scale-105"
-                          : isCalled
-                            ? "bg-white/20 text-white"
-                            : "text-white/20"
-                      }`}
-                    >
-                      {n}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    ),
-    [calledNumbersSet, currentNumber],
-  );
+  // Memoized number board
+  const NumberBoard = useMemo(() => (
+    <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
+      <table className="w-full border-collapse">
+        <tbody>
+          {[
+            { letter: "B", color: "bg-blue-600/70 text-blue-100", start: 1, end: 15 },
+            { letter: "I", color: "bg-green-600/70 text-green-100", start: 16, end: 30 },
+            { letter: "N", color: "bg-purple-600/70 text-purple-100", start: 31, end: 45 },
+            { letter: "G", color: "bg-red-600/70 text-red-100", start: 46, end: 60 },
+            { letter: "O", color: "bg-yellow-600/70 text-yellow-100", start: 61, end: 75 },
+          ].map(({ letter, color, start, end }) => (
+            <tr key={letter}>
+              <td className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}>
+                {letter}
+              </td>
+              {Array.from({ length: end - start + 1 }, (_, i) => start + i).map((n) => {
+                const isCalled = calledNumbersSet.has(n);
+                const isCurrent = currentNumber === n;
+                return (
+                  <td
+                    key={n}
+                    className={`text-center text-[10px] py-0.5 font-bold transition-colors duration-150 ${
+                      isCurrent
+                        ? "bg-orange-500 text-white scale-105"
+                        : isCalled
+                          ? "bg-white/20 text-white"
+                          : "text-white/20"
+                    }`}
+                  >
+                    {n}
+                  </td>
+                );
+              })}
+             </td>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ), [calledNumbersSet, currentNumber]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
-      {isOffline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black text-center py-1 text-xs font-medium">
-          ⚠️ You're offline - wins will be stored and claimed when online
-        </div>
-      )}
-
-      {pendingBingoClaimsRef.current.length > 0 && !isOffline && (
-        <div className="fixed top-12 left-0 right-0 z-50 bg-blue-500 text-white text-center py-1 text-xs font-medium">
-          🔄 Processing {pendingBingoClaimsRef.current.length} pending win(s)...
-        </div>
-      )}
-
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -992,11 +598,7 @@ export default function GameLayout({ stake, onNavigate }) {
               style={{ animationDelay: `${i * 0.1}s` }}
             >
               <div className="alert-icon-wrapper">
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
@@ -1006,24 +608,12 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
               <div className="alert-message-text">{msg}</div>
               <button
-                onClick={() =>
-                  setAlertBanners((prev) => prev.filter((_, j) => j !== i))
-                }
+                onClick={() => setAlertBanners((prev) => prev.filter((_, j) => j !== i))}
                 className="alert-dismiss-btn"
                 aria-label="Dismiss"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
@@ -1100,15 +690,11 @@ export default function GameLayout({ stake, onNavigate }) {
           <div className="grid grid-cols-3 gap-1.5">
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">DERASH : </p>
-              <p className="text-white font-bold text-xs">
-                {currentPrizePool || 0}
-              </p>
+              <p className="text-white font-bold text-xs">{currentPrizePool || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Players : </p>
-              <p className="text-white font-bold text-xs">
-                {gameState.takenCards?.length || 0}
-              </p>
+              <p className="text-white font-bold text-xs">{gameState.takenCards?.length || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Stake : </p>
@@ -1116,59 +702,40 @@ export default function GameLayout({ stake, onNavigate }) {
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Bonus : </p>
-              <p className="text-white font-bold text-xs">
-                {wallet.bonus?.toLocaleString() || 0}
-              </p>
+              <p className="text-white font-bold text-xs">{wallet.bonus?.toLocaleString() || 0}</p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Calls : </p>
-              <p className="text-white font-bold text-xs">
-                {calledNumbers.length}/75
-              </p>
+              <p className="text-white font-bold text-xs">{calledNumbers.length}/75</p>
             </div>
           </div>
         </div>
 
-        {/* Previously Called Numbers - Minimal Animation */}
+        {/* Previously Called Numbers */}
         {!isWatchMode && calledNumbers.length > 0 && (
           <div className="px-3 pb-1 flex-shrink-0 my-2">
             <div className="flex justify-center gap-1.5 flex-wrap">
-              {calledNumbers
-                .slice(-5)
-                .reverse()
-                .map((n, i) => {
-                  const isCurrent = n === currentNumber;
-                  const letter =
-                    n <= 15
-                      ? "B"
-                      : n <= 30
-                        ? "I"
-                        : n <= 45
-                          ? "N"
-                          : n <= 60
-                            ? "G"
-                            : "O";
-                  const colors = {
-                    B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                    I: "bg-green-500/30 text-green-200 border-green-400/40",
-                    N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                    G: "bg-red-500/30 text-red-200 border-red-400/40",
-                    O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
-                  };
-                  return (
-                    <div
-                      key={`${n}-${i}`}
-                      className={`rounded-full w-8 h-8 flex items-center justify-center text-[11px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
-                        isCurrent
-                          ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80"
-                          : ""
-                      }`}
-                    >
-                      {letter}
-                      {n}
-                    </div>
-                  );
-                })}
+              {calledNumbers.slice(-5).reverse().map((n, i) => {
+                const isCurrent = n === currentNumber;
+                const letter = n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
+                const colors = {
+                  B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+                  I: "bg-green-500/30 text-green-200 border-green-400/40",
+                  N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+                  G: "bg-red-500/30 text-red-200 border-red-400/40",
+                  O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                };
+                return (
+                  <div
+                    key={`${n}-${i}`}
+                    className={`rounded-full w-8 h-8 flex items-center justify-center text-[11px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
+                      isCurrent ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80" : ""
+                    }`}
+                  >
+                    {letter}{n}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1209,40 +776,27 @@ export default function GameLayout({ stake, onNavigate }) {
                   {yourCards.map(({ cardNumber, card }) => {
                     const markedNumbers = isAutoMarkOn
                       ? calledNumbers
-                      : manuallyMarkedNumbers[cardNumber]
-                        ? Array.from(manuallyMarkedNumbers[cardNumber])
-                        : [];
+                      : manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : [];
 
-                    const hasWinningPattern = checkBingoPattern(
-                      card,
-                      calledNumbers,
-                    );
+                    const hasWinningPattern = checkBingoPattern(card, calledNumbers);
                     const isClaiming = claimingStates[cardNumber];
-                    const alreadyClaimed =
-                      claimedCartellasRef.current.has(cardNumber);
-                    const hasMissedPattern =
-                      !!missedWinningPatterns[cardNumber];
+                    const alreadyClaimed = claimedCartellasRef.current.has(cardNumber);
+                    const hasMissedPattern = !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
                         <div className="px-2 pb-8">
                           <div
                             className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
-                              hasMissedPattern &&
-                              !alreadyClaimed &&
-                              !isAutoMarkOn
+                              hasMissedPattern && !alreadyClaimed && !isAutoMarkOn
                                 ? "border-red-500/50 bg-red-500/10"
-                                : hasWinningPattern &&
-                                    !alreadyClaimed &&
-                                    !isAutoMarkOn
+                                : hasWinningPattern && !alreadyClaimed && !isAutoMarkOn
                                   ? "border-green-500/50 bg-green-500/10"
                                   : "border-white/10"
                             }`}
                           >
                             <div className="flex justify-between items-center mb-2">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-white/70 text-sm font-bold">
-                                  Cartella #{cardNumber}
-                                </span>
+                                <span className="text-white/70 text-sm font-bold">Cartella #{cardNumber}</span>
                                 {alreadyClaimed && (
                                   <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full">
                                     WON ✓
@@ -1265,45 +819,19 @@ export default function GameLayout({ stake, onNavigate }) {
                                       : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:scale-105"
                                 }`}
                               >
-                                {isClaiming
-                                  ? "..."
-                                  : alreadyClaimed
-                                    ? "✓ WON"
-                                    : isAutoMarkOn
-                                      ? "🤖 AUTO"
-                                      : "🎉 BINGO!"}
+                                {isClaiming ? "..." : alreadyClaimed ? "✓ WON" : isAutoMarkOn ? "🤖 AUTO" : "🎉 BINGO!"}
                               </button>
                             </div>
 
                             <MemoizedCartellaCard
                               id={cardNumber}
                               card={card}
-                              called={
-                                isAutoMarkOn
-                                  ? [
-                                      ...new Set([
-                                        ...calledNumbers,
-                                        ...(manuallyMarkedNumbers[cardNumber]
-                                          ? Array.from(
-                                              manuallyMarkedNumbers[cardNumber],
-                                            )
-                                          : []),
-                                      ]),
-                                    ]
-                                  : markedNumbers
-                              }
+                              called={isAutoMarkOn ? [...new Set([...calledNumbers, ...(manuallyMarkedNumbers[cardNumber] ? Array.from(manuallyMarkedNumbers[cardNumber]) : [])])] : markedNumbers}
                               isPreview={false}
                               showHeader={false}
                               isAutoMarkOn={isAutoMarkOn}
-                              onNumberToggle={
-                                !isAutoMarkOn
-                                  ? (number) =>
-                                      handleNumberToggle(cardNumber, number)
-                                  : undefined
-                              }
-                              missedWinningCalledNumbers={
-                                missedWinningPatterns[cardNumber] || null
-                              }
+                              onNumberToggle={!isAutoMarkOn ? (number) => handleNumberToggle(cardNumber, number) : undefined}
+                              missedWinningCalledNumbers={missedWinningPatterns[cardNumber] || null}
                               size="small"
                             />
                           </div>
@@ -1338,42 +866,25 @@ export default function GameLayout({ stake, onNavigate }) {
                       <div className="text-5xl animate-pulse">👀</div>
                     </div>
                   </div>
-                  <h3 className="text-white text-xl font-black mb-2 tracking-wide">
-                    Watch Mode
-                  </h3>
-                  <p className="text-white/40 text-sm font-bold mb-4">
-                    Game currently in progress
-                  </p>
+                  <h3 className="text-white text-xl font-black mb-2 tracking-wide">Watch Mode</h3>
+                  <p className="text-white/40 text-sm font-bold mb-4">Game currently in progress</p>
                   <div className="flex items-center justify-center gap-4 mb-6">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                      <span className="text-white/30 text-xs font-bold">
-                        Live
-                      </span>
+                      <span className="text-white/30 text-xs font-bold">Live</span>
                     </div>
                     <div className="text-white/10">|</div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-white/30 text-xs font-bold">
-                        Players
-                      </span>
-                      <span className="text-white/50 text-xs font-extrabold">
-                        {gameState.takenCards?.length || 0}
-                      </span>
+                      <span className="text-white/30 text-xs font-bold">Players</span>
+                      <span className="text-white/50 text-xs font-extrabold">{gameState.takenCards?.length || 0}</span>
                     </div>
                   </div>
                   <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
                     <div className="flex items-start gap-3">
-                      <span className="text-2xl text-white">
-                        <BsInfoCircle />
-                      </span>
+                      <span className="text-2xl text-white"><BsInfoCircle /></span>
                       <div className="text-left">
-                        <p className="text-white/60 text-xs font-bold mb-1">
-                          You will automatically join the next available game
-                        </p>
-                        <p className="text-white/30 text-[10px] leading-relaxed">
-                          Stay on this screen. When a new round begins, you'll
-                          be taken to cartella selection.
-                        </p>
+                        <p className="text-white/60 text-xs font-bold mb-1">You will automatically join the next available game</p>
+                        <p className="text-white/30 text-[10px] leading-relaxed">Stay on this screen. When a new round begins, you'll be taken to cartella selection.</p>
                       </div>
                     </div>
                   </div>
@@ -1394,16 +905,7 @@ export default function GameLayout({ stake, onNavigate }) {
           {showConfetti && (
             <div className="confetti-container" ref={confettiRef}>
               {Array.from({ length: 50 }).map((_, i) => {
-                const colors = [
-                  "#ff6b6b",
-                  "#ffd93d",
-                  "#6bcb77",
-                  "#4d96ff",
-                  "#ff6b9d",
-                  "#c44dff",
-                  "#00d2ff",
-                  "#ff9f43",
-                ];
+                const colors = ["#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff", "#ff6b9d", "#c44dff", "#00d2ff", "#ff9f43"];
                 const left = Math.random() * 100;
                 const delay = Math.random() * 0.5;
                 const size = Math.random() * 8 + 6;
@@ -1426,21 +928,19 @@ export default function GameLayout({ stake, onNavigate }) {
                   />
                 );
               })}
-              {["🎉", "🎊", "✨", "🌟", "💫", "🏆", "⭐", "🎯"].map(
-                (emoji, i) => (
-                  <div
-                    key={`star-${i}`}
-                    className="star-particle"
-                    style={{
-                      left: `${10 + Math.random() * 80}%`,
-                      top: `${20 + Math.random() * 40}%`,
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  >
-                    {emoji}
-                  </div>
-                ),
-              )}
+              {["🎉", "🎊", "✨", "🌟", "💫", "🏆", "⭐", "🎯"].map((emoji, i) => (
+                <div
+                  key={`star-${i}`}
+                  className="star-particle"
+                  style={{
+                    left: `${10 + Math.random() * 80}%`,
+                    top: `${20 + Math.random() * 40}%`,
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                >
+                  {emoji}
+                </div>
+              ))}
             </div>
           )}
         </main>
