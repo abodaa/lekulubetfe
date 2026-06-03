@@ -235,6 +235,9 @@ export default function GameLayout({ stake, onNavigate }) {
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
 
+  // Track last known called numbers to detect gaps
+  const lastCalledNumbersRef = useRef([]);
+
   // ========== SOUND QUEUE SYSTEM ==========
   const soundQueueRef = useRef([]);
   const isPlayingSoundRef = useRef(false);
@@ -600,6 +603,28 @@ export default function GameLayout({ stake, onNavigate }) {
     queueSound(currentNumber);
   }, [currentNumber, startCountdown, gameState.phase, queueSound]);
 
+  // Track called numbers to detect gaps
+  useEffect(() => {
+    if (calledNumbers.length === 0) {
+      lastCalledNumbersRef.current = [];
+      return;
+    }
+
+    const prevCount = lastCalledNumbersRef.current.length;
+    const currentCount = calledNumbers.length;
+
+    if (prevCount > 0 && currentCount - prevCount > 1) {
+      console.log(
+        `⚠️ Detected gap in called numbers: was ${prevCount}, now ${currentCount}`,
+      );
+      if (recoverGameStateFromHTTP) {
+        recoverGameStateFromHTTP();
+      }
+    }
+
+    lastCalledNumbersRef.current = [...calledNumbers];
+  }, [calledNumbers, recoverGameStateFromHTTP]);
+
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
       claimedCartellasRef.current.clear();
@@ -613,17 +638,83 @@ export default function GameLayout({ stake, onNavigate }) {
   const handleNumberToggle = useCallback(
     (cardNumber, number) => {
       if (isAutoMarkOn) return;
+
+      if (calledNumbers.includes(number)) {
+        showWarning(`Number ${number} has already been called!`);
+        return;
+      }
+
       setManuallyMarkedNumbers((prev) => {
         const cardMarks = prev[cardNumber] || new Set();
         const newCardMarks = new Set(cardMarks);
-        newCardMarks.has(number)
-          ? newCardMarks.delete(number)
-          : newCardMarks.add(number);
+        if (newCardMarks.has(number)) {
+          newCardMarks.delete(number);
+        } else {
+          newCardMarks.add(number);
+        }
         return { ...prev, [cardNumber]: newCardMarks };
       });
     },
-    [isAutoMarkOn],
+    [isAutoMarkOn, calledNumbers, showWarning],
   );
+
+  // Listen for game state restoration events
+  useEffect(() => {
+    const handleStateRestored = (event) => {
+      const { calledNumbers: restoredCalled, yourCards: restoredCards } =
+        event.detail;
+      console.log("🎯 Game state restored event received:", {
+        calledCount: restoredCalled?.length,
+        cardsCount: restoredCards?.length,
+      });
+
+      if (!isAutoMarkOn && restoredCalled && restoredCalled.length > 0) {
+        const newManualMarks = {};
+        restoredCards?.forEach(({ cardNumber, card }) => {
+          const marks = new Set();
+          restoredCalled.forEach((num) => {
+            card?.forEach((row) => {
+              if (row && row.includes(num)) marks.add(num);
+            });
+          });
+          if (marks.size > 0) newManualMarks[cardNumber] = marks;
+        });
+        setManuallyMarkedNumbers(newManualMarks);
+      }
+
+      setAlertBanners([]);
+    };
+
+    const handleForceSync = (event) => {
+      const { calledNumbers: syncedCalled, yourCards: syncedCards } =
+        event.detail;
+      console.log("🔄 Force sync game state:", {
+        calledCount: syncedCalled?.length,
+      });
+
+      if (!isAutoMarkOn && syncedCalled && syncedCalled.length > 0) {
+        const newManualMarks = {};
+        syncedCards?.forEach(({ cardNumber, card }) => {
+          const marks = new Set();
+          syncedCalled.forEach((num) => {
+            card?.forEach((row) => {
+              if (row && row.includes(num)) marks.add(num);
+            });
+          });
+          if (marks.size > 0) newManualMarks[cardNumber] = marks;
+        });
+        setManuallyMarkedNumbers(newManualMarks);
+      }
+    };
+
+    window.addEventListener("gameStateRestored", handleStateRestored);
+    window.addEventListener("forceSyncGameState", handleForceSync);
+
+    return () => {
+      window.removeEventListener("gameStateRestored", handleStateRestored);
+      window.removeEventListener("forceSyncGameState", handleForceSync);
+    };
+  }, [isAutoMarkOn]);
 
   // Simplified handleCartellaBingo - just for manual mode, backend will verify
   const handleCartellaBingo = useCallback(
@@ -983,6 +1074,17 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
+  const handleSync = async () => {
+    console.log("🔄 Manual sync requested");
+    if (recoverGameStateFromHTTP) {
+      await recoverGameStateFromHTTP();
+      showSuccess("Game state refreshed");
+    }
+    if (stake && sessionId) {
+      connectToStake(stake);
+    }
+  };
+
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -1183,8 +1285,28 @@ export default function GameLayout({ stake, onNavigate }) {
               <button
                 onClick={handleRefresh}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
+                title="Refresh"
               >
                 <BiRefresh />
+              </button>
+              <button
+                onClick={handleSync}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
+                title="Sync game state"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-4 0H4m13-5-4 4 4 4" />
+                </svg>
               </button>
             </div>
             <div className="text-right">

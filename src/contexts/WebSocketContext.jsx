@@ -41,7 +41,7 @@ export function WebSocketProvider({ children }) {
   const [pendingGameStart, setPendingGameStart] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const rejoinScheduledRef = useRef(false);
-  const connectionAttemptRef = useRef(false)
+  const connectionAttemptRef = useRef(false);
 
   const send = useCallback(
     (type, payload) => {
@@ -102,6 +102,51 @@ export function WebSocketProvider({ children }) {
       }
     };
   }, [gameState.phase, gameState.registrationEndTime]);
+
+  // Auto-recover game state after reconnection
+  useEffect(() => {
+    if (!connected) return;
+    if (!currentStake) return;
+
+    const recoveryTimer = setTimeout(() => {
+      if (
+        gameState.phase === "running" &&
+        gameState.yourCards?.length === 0 &&
+        gameState.gameId
+      ) {
+        console.log(
+          "🔄 Detected missing cards after reconnect, recovering from HTTP...",
+        );
+        recoverGameStateFromHTTP();
+      } else if (
+        gameState.phase === "running" &&
+        gameState.calledNumbers.length > 0 &&
+        gameState.yourCards?.length > 0
+      ) {
+        console.log("✅ Game state intact after reconnect:", {
+          calledCount: gameState.calledNumbers.length,
+          cardsCount: gameState.yourCards.length,
+        });
+        window.dispatchEvent(
+          new CustomEvent("forceSyncGameState", {
+            detail: {
+              calledNumbers: gameState.calledNumbers,
+              yourCards: gameState.yourCards,
+            },
+          }),
+        );
+      }
+    }, 1000);
+
+    return () => clearTimeout(recoveryTimer);
+  }, [
+    connected,
+    currentStake,
+    gameState.phase,
+    gameState.yourCards,
+    gameState.calledNumbers,
+    gameState.gameId,
+  ]);
 
   const connectGeneral = useCallback(() => {
     console.log("🔍 WebSocket connectGeneral called:", {
@@ -177,6 +222,26 @@ export function WebSocketProvider({ children }) {
         connectionAttemptRef.current = false;
         retry = 0;
 
+        // Check if we have a saved game to reconnect to
+        const savedGameId = sessionStorage.getItem("reconnect_game_id");
+        const savedStake = sessionStorage.getItem("reconnect_stake");
+        const savedCalledCount = sessionStorage.getItem(
+          "reconnect_called_count",
+        );
+
+        if (savedGameId && savedStake && savedCalledCount) {
+          console.log(
+            `🔄 Attempting to reconnect to saved game: ${savedGameId}`,
+          );
+          sessionStorage.removeItem("reconnect_game_id");
+          sessionStorage.removeItem("reconnect_stake");
+          sessionStorage.removeItem("reconnect_called_count");
+
+          setTimeout(() => {
+            recoverGameStateFromHTTP();
+          }, 1000);
+        }
+
         heartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "ping" }));
@@ -234,22 +299,21 @@ export function WebSocketProvider({ children }) {
                 const snapshotPhase = event.payload.phase || "waiting";
                 const snapshotGameId = event.payload.gameId;
 
-                const isCurrentlyRunning = prev.phase === "running";
-                const hasCards =
-                  Array.isArray(prev.yourCards) && prev.yourCards.length > 0;
-                const isSameGame = prev.gameId === snapshotGameId;
+                // CRITICAL: Preserve called numbers from snapshot
+                const snapshotCalledNumbers =
+                  event.payload.calledNumbers || event.payload.called || [];
 
-                if (isCurrentlyRunning && hasCards && !isSameGame) {
-                  return prev;
-                }
-
-                const phase = snapshotPhase;
-                const gameId = snapshotGameId;
+                // Preserve current game's called numbers if snapshot has more
+                const mergedCalledNumbers =
+                  snapshotCalledNumbers.length > prev.calledNumbers.length
+                    ? snapshotCalledNumbers
+                    : snapshotCalledNumbers.length > 0
+                      ? snapshotCalledNumbers
+                      : prev.calledNumbers;
 
                 const registrationEndTime =
                   event.payload.nextStartAt ||
                   event.payload.registrationEndTime;
-
                 const serverCountdown =
                   event.payload.countdownSeconds != null
                     ? event.payload.countdownSeconds
@@ -261,10 +325,9 @@ export function WebSocketProvider({ children }) {
                       : 0;
 
                 const shouldPreserveCards =
-                  phase === "running" &&
-                  isSameGame &&
-                  hasCards &&
-                  (!event.payload.cards || event.payload.cards.length === 0);
+                  (snapshotPhase === "running" || prev.phase === "running") &&
+                  snapshotGameId === prev.gameId &&
+                  prev.yourCards?.length > 0;
 
                 const snapshotCards = event.payload.cards;
                 const snapshotSelections = event.payload.yourSelections;
@@ -272,47 +335,64 @@ export function WebSocketProvider({ children }) {
                 let finalCards = prev.yourCards || [];
                 let finalSelections = prev.yourSelections || [];
 
-                if (phase === "running") {
+                if (snapshotPhase === "running") {
                   if (snapshotCards && snapshotCards.length > 0) {
                     finalCards = snapshotCards;
+                    finalSelections = snapshotCards
+                      .map((c) => c.cardNumber || c)
+                      .filter(Boolean);
                   } else if (shouldPreserveCards) {
                     finalCards = prev.yourCards || [];
-                  } else {
-                    finalCards = [];
-                  }
-                  if (snapshotSelections && snapshotSelections.length > 0) {
-                    finalSelections = snapshotSelections;
-                  } else if (shouldPreserveCards) {
                     finalSelections = prev.yourSelections || [];
                   }
+                } else if (snapshotPhase === "registration") {
+                  finalCards = [];
+                  finalSelections = [];
                 }
+
+                console.log("📸 Snapshot update:", {
+                  phase: snapshotPhase,
+                  gameId: snapshotGameId,
+                  calledNumbersCount: mergedCalledNumbers.length,
+                  yourCardsCount: finalCards.length,
+                  preserveCards: shouldPreserveCards,
+                });
 
                 const newState = {
                   ...prev,
+                  phase: snapshotPhase,
+                  gameId: snapshotGameId,
                   playersCount:
                     event.payload.playersCount ?? prev.playersCount ?? 0,
                   prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
                   takenCards: event.payload.takenCards || prev.takenCards || [],
                   availableCards:
                     event.payload.availableCards || prev.availableCards || [],
-                  phase,
-                  gameId,
-                  calledNumbers:
-                    event.payload.calledNumbers ||
-                    event.payload.called ||
-                    prev.calledNumbers ||
-                    [],
+                  calledNumbers: mergedCalledNumbers,
                   countdown: serverCountdown,
                   registrationEndTime,
-                  yourCards: phase === "registration" ? [] : finalCards,
-                  yourSelections:
-                    phase === "registration" ? [] : finalSelections,
+                  yourCards: finalCards,
+                  yourSelections: finalSelections,
                   totalCartellas:
                     event.payload.totalCartellas || prev.totalCartellas || 200,
-                  ...(phase === "registration"
+                  ...(snapshotPhase === "registration"
                     ? { currentNumber: null, winners: [] }
                     : {}),
                 };
+
+                // Dispatch event to notify components about restored state
+                if (mergedCalledNumbers.length > 0 && finalCards.length > 0) {
+                  window.dispatchEvent(
+                    new CustomEvent("gameStateRestored", {
+                      detail: {
+                        gameId: snapshotGameId,
+                        calledNumbers: mergedCalledNumbers,
+                        yourCards: finalCards,
+                        phase: snapshotPhase,
+                      },
+                    }),
+                  );
+                }
 
                 return newState;
               });
@@ -535,7 +615,6 @@ export function WebSocketProvider({ children }) {
                 )
                   return prev;
 
-                // Check if current user won
                 const currentUserId = safeSessionId;
                 const userWon = event.payload.winners?.some(
                   (w) =>
@@ -573,6 +652,7 @@ export function WebSocketProvider({ children }) {
                   main: event.payload.main,
                   play: event.payload.play,
                   coins: event.payload.coins,
+                  bonus: event.payload.bonus,
                   source: event.payload.source,
                 },
               }));
@@ -590,11 +670,24 @@ export function WebSocketProvider({ children }) {
       };
 
       ws.onclose = (event) => {
-        console.log("General WebSocket closed:", event.code, event.reason);
+        console.log(
+          `🔌 WebSocket closed: ${event.code} - ${event.reason || "No reason"}`,
+        );
         setConnected(false);
         setIsConnecting(false);
         connecting = false;
         connectionAttemptRef.current = false;
+
+        // Store current game state before reconnect
+        if (currentStake && gameState.gameId && gameState.phase === "running") {
+          sessionStorage.setItem("reconnect_game_id", gameState.gameId);
+          sessionStorage.setItem("reconnect_stake", currentStake.toString());
+          sessionStorage.setItem(
+            "reconnect_called_count",
+            gameState.calledNumbers.length.toString(),
+          );
+          console.log("💾 Saved game state before reconnection");
+        }
 
         if (heartbeat) {
           clearInterval(heartbeat);
@@ -604,7 +697,7 @@ export function WebSocketProvider({ children }) {
         if (!stopped && retry < 5) {
           const delay = Math.min(1000 * Math.pow(2, retry), 30000);
           console.log(
-            `Reconnecting general WebSocket in ${delay}ms (attempt ${retry + 1})`,
+            `🔄 Reconnecting WebSocket in ${delay}ms (attempt ${retry + 1})`,
           );
           setTimeout(() => {
             retry++;
@@ -633,7 +726,7 @@ export function WebSocketProvider({ children }) {
         wsRef.current = null;
       }
     };
-  }, [safeSessionId, connected, isConnecting, currentStake]);
+  }, [safeSessionId, connected, isConnecting, currentStake, gameState]);
 
   const connectToStake = useCallback(
     (stake) => {
@@ -669,7 +762,6 @@ export function WebSocketProvider({ children }) {
           ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
         } catch (e) {}
       } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-        // Wait for connection to open
         const onOpen = () => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
             try {
@@ -703,11 +795,10 @@ export function WebSocketProvider({ children }) {
       const data = await response.json();
 
       if (data.success && data.game && data.game.calledNumbers) {
-        console.log(
-          "🔄 Recovered game state from HTTP:",
-          data.game.calledNumbers.length,
-          "numbers",
-        );
+        console.log("🔄 Recovered game state from HTTP:", {
+          calledCount: data.game.calledNumbers.length,
+          status: data.game.status,
+        });
 
         setGameState((prev) => ({
           ...prev,
@@ -745,7 +836,6 @@ export function WebSocketProvider({ children }) {
 
       if (stake) {
         connectToStake(stake);
-        // Wait a bit and try to recover state
         setTimeout(() => {
           recoverGameStateFromHTTP();
         }, 2000);
