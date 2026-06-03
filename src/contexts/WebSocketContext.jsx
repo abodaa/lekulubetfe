@@ -41,7 +41,7 @@ export function WebSocketProvider({ children }) {
   const [pendingGameStart, setPendingGameStart] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const rejoinScheduledRef = useRef(false);
-  const connectionAttemptRef = useRef(false);
+  const connectionAttemptRef = useRef(false)
 
   const send = useCallback(
     (type, payload) => {
