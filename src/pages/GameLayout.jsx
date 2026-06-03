@@ -34,13 +34,32 @@ import "swiper/css/pagination";
 const MemoizedCartellaCard = React.memo(
   CartellaCard,
   (prevProps, nextProps) => {
-    return (
-      prevProps.id === nextProps.id &&
-      prevProps.card === nextProps.card &&
-      prevProps.called?.length === nextProps.called?.length &&
-      prevProps.isPreview === nextProps.isPreview &&
-      prevProps.showWinningPattern === nextProps.showWinningPattern &&
-      prevProps.isAutoMarkOn === nextProps.isAutoMarkOn
+    // Only re-render if these specific props change
+    const calledChanged = prevProps.called?.length !== nextProps.called?.length;
+    const cardChanged = prevProps.card !== nextProps.card;
+    const idChanged = prevProps.id !== nextProps.id;
+    const autoMarkChanged = prevProps.isAutoMarkOn !== nextProps.isAutoMarkOn;
+    const winningPatternChanged =
+      prevProps.showWinningPattern !== nextProps.showWinningPattern;
+
+    // If only called numbers increased by 1, don't re-render the whole card
+    if (
+      !cardChanged &&
+      !idChanged &&
+      !autoMarkChanged &&
+      !winningPatternChanged
+    ) {
+      if (prevProps.called?.length === nextProps.called?.length - 1) {
+        return true; // Skip re-render
+      }
+    }
+
+    return !(
+      calledChanged ||
+      cardChanged ||
+      idChanged ||
+      autoMarkChanged ||
+      winningPatternChanged
     );
   },
 );
@@ -50,8 +69,10 @@ export default function GameLayout({ stake, onNavigate }) {
   const { showSuccess, showError, showWarning } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
+  const [recentlyAddedNumber, setRecentlyAddedNumber] = useState(null);
 
   const triggerConfetti = () => {
     setShowConfetti(true);
@@ -117,67 +138,6 @@ export default function GameLayout({ stake, onNavigate }) {
       return calledSet.has(num);
     });
     if (cornersComplete) return true;
-
-    return false;
-  }, []);
-
-  const isLastCallPartOfWinningPattern = useCallback((card, calledNumbers) => {
-    if (!card || !calledNumbers || calledNumbers.length === 0) return false;
-
-    const lastCall = calledNumbers[calledNumbers.length - 1];
-    const calledSet = new Set(calledNumbers);
-
-    for (let row = 0; row < 5; row++) {
-      if (!card[row]) continue;
-      if (
-        card[row].every((num) => num === 0 || calledSet.has(num)) &&
-        card[row].includes(lastCall)
-      )
-        return true;
-    }
-    for (let col = 0; col < 5; col++) {
-      let complete = true,
-        hasLast = false;
-      for (let row = 0; row < 5; row++) {
-        const num = card[row][col];
-        if (num !== 0 && !calledSet.has(num)) {
-          complete = false;
-          break;
-        }
-        if (num === lastCall) hasLast = true;
-      }
-      if (complete && hasLast) return true;
-    }
-    let d1 = true,
-      h1 = false;
-    for (let i = 0; i < 5; i++) {
-      const num = card[i][i];
-      if (num !== 0 && !calledSet.has(num)) {
-        d1 = false;
-        break;
-      }
-      if (num === lastCall) h1 = true;
-    }
-    if (d1 && h1) return true;
-
-    let d2 = true,
-      h2 = false;
-    for (let i = 0; i < 5; i++) {
-      const num = card[i][4 - i];
-      if (num !== 0 && !calledSet.has(num)) {
-        d2 = false;
-        break;
-      }
-      if (num === lastCall) h2 = true;
-    }
-    if (d2 && h2) return true;
-
-    const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
-    if (
-      corners.every((num) => num === 0 || calledSet.has(num)) &&
-      corners.includes(lastCall)
-    )
-      return true;
 
     return false;
   }, []);
@@ -314,6 +274,15 @@ export default function GameLayout({ stake, onNavigate }) {
     },
     [isSoundOn, startCountdown, processSoundQueue],
   );
+
+  // Track recently added number for animation
+  useEffect(() => {
+    if (currentNumber) {
+      setRecentlyAddedNumber(currentNumber);
+      const timer = setTimeout(() => setRecentlyAddedNumber(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentNumber]);
 
   // ========== OFFLINE BINGO QUEUE WITH PERSISTENCE ==========
   const pendingBingoClaimsRef = useRef([]);
@@ -538,6 +507,102 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   }, [stake, sessionId, showSuccess]);
 
+  // ========== SEAMLESS SYNC FUNCTION ==========
+  const updateManualMarksForNumber = useCallback(
+    (number) => {
+      if (isAutoMarkOn) return;
+
+      setManuallyMarkedNumbers((prev) => {
+        const newMarks = { ...prev };
+        yourCards.forEach(({ cardNumber, card }) => {
+          let hasNumber = false;
+          if (card && Array.isArray(card)) {
+            card.forEach((row) => {
+              if (row && row.includes(number)) hasNumber = true;
+            });
+          }
+
+          if (hasNumber) {
+            const currentMarks = prev[cardNumber] || new Set();
+            const updatedMarks = new Set(currentMarks);
+            if (!updatedMarks.has(number)) {
+              updatedMarks.add(number);
+              newMarks[cardNumber] = updatedMarks;
+            }
+          }
+        });
+        return newMarks;
+      });
+    },
+    [isAutoMarkOn, yourCards],
+  );
+
+  const handleSync = useCallback(async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+
+    console.log("🔄 Seamless sync requested - will only fetch missing numbers");
+
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://lekulubingoback.onrender.com");
+
+      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
+      const data = await response.json();
+
+      if (data.success && data.game && data.game.calledNumbers) {
+        const serverCalledNumbers = data.game.calledNumbers || [];
+        const localCalledNumbers = calledNumbers;
+
+        // Find only the numbers we're missing
+        const missedNumbers = serverCalledNumbers.filter(
+          (num) => !localCalledNumbers.includes(num),
+        );
+
+        if (missedNumbers.length > 0) {
+          console.log(
+            `📡 Found ${missedNumbers.length} missed numbers, adding silently`,
+          );
+
+          // Add missed numbers one by one silently
+          for (const number of missedNumbers) {
+            // Update marks if in manual mode
+            if (!isAutoMarkOn) {
+              updateManualMarksForNumber(number);
+            }
+
+            // Trigger animation for each number
+            setRecentlyAddedNumber(number);
+            setTimeout(() => setRecentlyAddedNumber(null), 500);
+
+            // Small delay between numbers for smoothness
+            await new Promise((r) => setTimeout(r, 150));
+          }
+
+          showSuccess(`Synced ${missedNumbers.length} missed numbers`);
+        } else {
+          showSuccess("Game state is up to date");
+        }
+      }
+    } catch (error) {
+      console.error("Sync failed:", error);
+      showError("Failed to sync game state");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [
+    stake,
+    calledNumbers,
+    isAutoMarkOn,
+    updateManualMarksForNumber,
+    showSuccess,
+    showError,
+    isSyncing,
+  ]);
+
   // ========== EFFECTS ==========
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
@@ -617,13 +682,10 @@ export default function GameLayout({ stake, onNavigate }) {
       console.log(
         `⚠️ Detected gap in called numbers: was ${prevCount}, now ${currentCount}`,
       );
-      if (recoverGameStateFromHTTP) {
-        recoverGameStateFromHTTP();
-      }
     }
 
     lastCalledNumbersRef.current = [...calledNumbers];
-  }, [calledNumbers, recoverGameStateFromHTTP]);
+  }, [calledNumbers]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
@@ -657,6 +719,30 @@ export default function GameLayout({ stake, onNavigate }) {
     },
     [isAutoMarkOn, calledNumbers, showWarning],
   );
+
+  // Listen for silent number sync events
+  useEffect(() => {
+    const handleSilentNumberSync = (event) => {
+      const { number, allCalledNumbers, isHistorical } = event.detail;
+
+      if (!calledNumbers.includes(number)) {
+        console.log(`🔇 Silently adding number ${number}`);
+
+        // Update marks if in manual mode
+        if (!isAutoMarkOn) {
+          updateManualMarksForNumber(number);
+        }
+
+        // Trigger animation
+        setRecentlyAddedNumber(number);
+        setTimeout(() => setRecentlyAddedNumber(null), 500);
+      }
+    };
+
+    window.addEventListener("silentNumberSync", handleSilentNumberSync);
+    return () =>
+      window.removeEventListener("silentNumberSync", handleSilentNumberSync);
+  }, [calledNumbers, isAutoMarkOn, updateManualMarksForNumber]);
 
   // Listen for game state restoration events
   useEffect(() => {
@@ -1074,17 +1160,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  const handleSync = async () => {
-    console.log("🔄 Manual sync requested");
-    if (recoverGameStateFromHTTP) {
-      await recoverGameStateFromHTTP();
-      showSuccess("Game state refreshed");
-    }
-    if (stake && sessionId) {
-      connectToStake(stake);
-    }
-  };
-
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -1124,7 +1199,7 @@ export default function GameLayout({ stake, onNavigate }) {
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
 
-  // Optimized Number Board component
+  // Optimized Number Board component with animation support
   const NumberBoardOptimized = useMemo(
     () => (
       <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
@@ -1132,6 +1207,7 @@ export default function GameLayout({ stake, onNavigate }) {
           {Array.from({ length: 75 }, (_, i) => i + 1).map((n) => {
             const isCalled = memoizedCalledSet.has(n);
             const isCurrent = currentNumber === n;
+            const wasJustAdded = recentlyAddedNumber === n;
             const letter =
               n <= 15
                 ? "B"
@@ -1153,15 +1229,12 @@ export default function GameLayout({ stake, onNavigate }) {
             return (
               <div
                 key={n}
-                className={`text-center text-[10px] py-0.5 font-bold rounded-sm transition-all duration-150
-                ${
-                  isCurrent
-                    ? "bg-orange-500 text-white scale-105 z-10 shadow-lg"
-                    : isCalled
-                      ? "bg-white/20 text-white"
-                      : "text-white/20"
-                }
-                ${!isCurrent && isCalled ? "bg-gradient-to-br bg-clip-text text-transparent " + colors[letter] : ""}`}
+                className={`number-board-cell text-center text-[10px] py-0.5 font-bold rounded-sm transition-all duration-150
+                  ${isCurrent ? "bg-orange-500 text-white scale-105 z-10 shadow-lg" : ""}
+                  ${isCalled && !isCurrent ? "bg-white/20 text-white" : ""}
+                  ${!isCurrent && !isCalled ? "text-white/20" : ""}
+                  ${wasJustAdded ? "new-number" : ""}
+                  ${!isCurrent && isCalled ? "bg-gradient-to-br bg-clip-text text-transparent " + colors[letter] : ""}`}
               >
                 {n}
               </div>
@@ -1170,7 +1243,7 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
       </div>
     ),
-    [memoizedCalledSet, currentNumber],
+    [memoizedCalledSet, currentNumber, recentlyAddedNumber],
   );
 
   return (
@@ -1284,29 +1357,38 @@ export default function GameLayout({ stake, onNavigate }) {
               </button>
               <button
                 onClick={handleRefresh}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold hover:bg-white/30 active:scale-95 transition-all"
                 title="Refresh"
               >
                 <BiRefresh />
               </button>
               <button
                 onClick={handleSync}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
-                title="Sync game state"
+                disabled={isSyncing}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-base transition-all ${
+                  isSyncing
+                    ? "bg-white/10 text-white/30 cursor-not-allowed"
+                    : "bg-white/20 text-white/70 hover:bg-white/30 active:scale-95"
+                }`}
+                title="Sync missed numbers"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-4 0H4m13-5-4 4 4 4" />
-                </svg>
+                {isSyncing ? (
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-4 0H4m13-5-4 4 4 4" />
+                  </svg>
+                )}
               </button>
             </div>
             <div className="text-right">

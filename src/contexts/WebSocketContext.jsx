@@ -661,6 +661,27 @@ export function WebSocketProvider({ children }) {
               );
               break;
 
+            case "silent_number_sync":
+              setGameState((prev) => {
+                const newNumber = event.payload.number;
+                const allNumbers = event.payload.allCalledNumbers || [
+                  ...prev.calledNumbers,
+                ];
+
+                if (
+                  !allNumbers.includes(newNumber) &&
+                  !prev.calledNumbers.includes(newNumber)
+                ) {
+                  const updatedNumbers = [...prev.calledNumbers, newNumber];
+                  return {
+                    ...prev,
+                    calledNumbers: updatedNumbers,
+                    currentNumber: newNumber,
+                  };
+                }
+                return prev;
+              });
+              break;
             default:
               console.log("Unhandled WS event:", event.type);
           }
@@ -795,14 +816,51 @@ export function WebSocketProvider({ children }) {
       const data = await response.json();
 
       if (data.success && data.game && data.game.calledNumbers) {
-        console.log("🔄 Recovered game state from HTTP:", {
-          calledCount: data.game.calledNumbers.length,
-          status: data.game.status,
+        const newCalledNumbers = data.game.calledNumbers || [];
+        const currentCalledNumbers = gameState.calledNumbers;
+
+        // Only update if we actually have new numbers
+        const hasNewNumbers =
+          newCalledNumbers.length > currentCalledNumbers.length;
+
+        console.log("🔄 Syncing game state from HTTP:", {
+          oldCount: currentCalledNumbers.length,
+          newCount: newCalledNumbers.length,
+          hasNewNumbers,
         });
 
+        // Silent update - don't trigger UI re-renders for the whole component
+        if (hasNewNumbers) {
+          // Add only the new numbers that we missed
+          const missedNumbers = newCalledNumbers.slice(
+            currentCalledNumbers.length,
+          );
+          if (missedNumbers.length > 0) {
+            console.log(
+              `📢 Adding ${missedNumbers.length} missed numbers silently`,
+            );
+
+            // Dispatch individual number_called events for missed numbers
+            missedNumbers.forEach((number, index) => {
+              setTimeout(() => {
+                window.dispatchEvent(
+                  new CustomEvent("silentNumberSync", {
+                    detail: {
+                      number,
+                      allCalledNumbers: newCalledNumbers,
+                      isHistorical: true,
+                    },
+                  }),
+                );
+              }, index * 100); // Stagger to avoid overwhelming
+            });
+          }
+        }
+
+        // Update state without triggering full component re-renders
         setGameState((prev) => ({
           ...prev,
-          calledNumbers: data.game.calledNumbers || [],
+          calledNumbers: newCalledNumbers,
           currentNumber: data.game.lastCalledNumber || prev.currentNumber,
           phase: data.game.status === "running" ? "running" : prev.phase,
           gameId: data.game.gameId || prev.gameId,
@@ -820,7 +878,7 @@ export function WebSocketProvider({ children }) {
       console.error("Failed to recover game state:", error);
       return false;
     }
-  }, [currentStake, safeSessionId]);
+  }, [currentStake, safeSessionId, gameState.calledNumbers]);
 
   const forceReconnect = useCallback(
     async (stake) => {

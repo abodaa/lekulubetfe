@@ -376,6 +376,71 @@ body {
   }
 }
 
+/* Smooth transitions for number board updates */
+.number-board-cell {
+  transition:
+    background-color 0.2s ease-in-out,
+    transform 0.1s ease;
+}
+
+.number-board-cell.new-number {
+  animation: gentlePulse 0.4s ease-out;
+}
+
+@keyframes gentlePulse {
+  0% {
+    transform: scale(1);
+    background-color: rgba(249, 115, 22, 0.8);
+  }
+  50% {
+    transform: scale(1.05);
+    background-color: rgba(249, 115, 22, 1);
+  }
+  100% {
+    transform: scale(1);
+    background-color: inherit;
+  }
+}
+
+/* Cartella card cell smooth updates */
+.cartella-cell {
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.cartella-cell.new-mark {
+  animation: cellMarkPulse 0.3s ease-out;
+}
+
+@keyframes cellMarkPulse {
+  0% {
+    transform: scale(1);
+    background-color: #22c55e;
+  }
+  50% {
+    transform: scale(1.08);
+    background-color: #4ade80;
+  }
+  100% {
+    transform: scale(1);
+    background-color: inherit;
+  }
+}
+
+/* Prevent layout shift during sync */
+.game-container {
+  contain: layout style paint;
+}
+
+.number-board-container {
+  contain: layout style;
+}
+
+.cartella-swiper-container {
+  contain: layout style;
+}
+
 /* Desktop and up */
 @media (min-width: 1024px) {
   .admin-container {
