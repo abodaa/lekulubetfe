@@ -14,6 +14,12 @@ export function WebSocketProvider({ children }) {
   const { sessionId } = useAuth();
   const wsRef = useRef(null);
   const [connected, setConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const connectionAttemptRef = useRef(false);
+  const reconnectTimeoutRef = useRef(null);
+  const heartbeatIntervalRef = useRef(null);
+  const gameEndedRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -38,723 +44,458 @@ export function WebSocketProvider({ children }) {
   const [lastEvent, setLastEvent] = useState(null);
   const [currentStake, setCurrentStake] = useState(null);
   const [messageCount, setMessageCount] = useState(0);
-  const [pendingGameStart, setPendingGameStart] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const rejoinScheduledRef = useRef(false);
-  const connectionAttemptRef = useRef(false);
 
-  const send = useCallback(
-    (type, payload) => {
-      const ws = wsRef.current;
-      const message = JSON.stringify({ type, payload });
-      console.log("WebSocket send:", {
-        type,
-        payload,
-        connected,
-        readyState: ws?.readyState,
-      });
+  const send = useCallback((type, payload) => {
+    const ws = wsRef.current;
+    const message = JSON.stringify({ type, payload });
+    console.log(`📤 WebSocket send: ${type}`, { readyState: ws?.readyState });
 
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(message);
-          console.log("Message sent successfully:", { type, payload });
-          return true;
-        } catch (error) {
-          console.error("Error sending message:", error);
-          return false;
-        }
-      } else {
-        console.warn("WebSocket not ready, message not sent:", {
-          type,
-          payload,
-          readyState: ws?.readyState,
-        });
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(message);
+        console.log(`✅ Message sent: ${type}`);
+        return true;
+      } catch (error) {
+        console.error(`❌ Error sending ${type}:`, error);
         return false;
       }
-    },
-    [connected],
-  );
-
-  // Countdown timer effect
-  useEffect(() => {
-    let intervalId = null;
-
-    if (gameState.phase === "registration" && gameState.registrationEndTime) {
-      intervalId = setInterval(() => {
-        const now = Date.now();
-        const endTime = gameState.registrationEndTime;
-        const remainingSeconds = Math.max(0, Math.ceil((endTime - now) / 1000));
-
-        setGameState((prev) => ({
-          ...prev,
-          countdown: remainingSeconds,
-        }));
-
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalId);
-        }
-      }, 1000);
+    } else {
+      console.warn(`⚠️ WebSocket not ready for: ${type}`);
+      return false;
     }
+  }, []);
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [gameState.phase, gameState.registrationEndTime]);
+  // Resume game after network recovery
+  const resumeGameAfterReconnect = useCallback(async () => {
+    if (!currentStake || !safeSessionId || gameEndedRef.current) return false;
 
-  // Auto-recover game state after reconnection
-  useEffect(() => {
-    if (!connected) return;
-    if (!currentStake) return;
+    console.log("🔄 Resuming game after network recovery...");
 
-    const recoveryTimer = setTimeout(() => {
+    try {
+      const apiBase =
+        import.meta.env.VITE_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "https://lekulubingoback.onrender.com");
+
+      const response = await fetch(
+        `${apiBase}/api/games/${currentStake}/status`,
+      );
+      const data = await response.json();
+
       if (
-        gameState.phase === "running" &&
-        gameState.yourCards?.length === 0 &&
-        gameState.gameId
+        data.success &&
+        data.game &&
+        data.game.status === "running" &&
+        isMountedRef.current
       ) {
-        console.log(
-          "🔄 Detected missing cards after reconnect, recovering from HTTP...",
-        );
-        recoverGameStateFromHTTP();
-      } else if (
-        gameState.phase === "running" &&
-        gameState.calledNumbers.length > 0 &&
-        gameState.yourCards?.length > 0
-      ) {
-        console.log("✅ Game state intact after reconnect:", {
-          calledCount: gameState.calledNumbers.length,
-          cardsCount: gameState.yourCards.length,
-        });
-        window.dispatchEvent(
-          new CustomEvent("forceSyncGameState", {
-            detail: {
-              calledNumbers: gameState.calledNumbers,
-              yourCards: gameState.yourCards,
-            },
-          }),
-        );
-      }
-    }, 1000);
+        const serverCalledNumbers = data.game.calledNumbers || [];
+        const localCalledNumbers = gameState.calledNumbers || [];
 
-    return () => clearTimeout(recoveryTimer);
-  }, [
-    connected,
-    currentStake,
-    gameState.phase,
-    gameState.yourCards,
-    gameState.calledNumbers,
-    gameState.gameId,
-  ]);
+        if (serverCalledNumbers.length > localCalledNumbers.length) {
+          const missedNumbers = serverCalledNumbers.slice(
+            localCalledNumbers.length,
+          );
+          console.log(`📢 Recovering ${missedNumbers.length} missed numbers`);
+
+          // Update state with all server numbers at once (no flash)
+          setGameState((prev) => ({
+            ...prev,
+            calledNumbers: serverCalledNumbers,
+            currentNumber: data.game.lastCalledNumber || prev.currentNumber,
+            phase: "running",
+            gameId: data.game.gameId || prev.gameId,
+            playersCount: data.game.playersCount || prev.playersCount,
+            prizePool: data.game.totalPrizes || prev.prizePool,
+          }));
+
+          // Dispatch event for UI to update marks
+          window.dispatchEvent(
+            new CustomEvent("numbersRecovered", {
+              detail: {
+                numbers: missedNumbers,
+                allNumbers: serverCalledNumbers,
+              },
+            }),
+          );
+        }
+
+        // Re-join room to continue receiving draws
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "join_room",
+              payload: { stake: currentStake },
+            }),
+          );
+        }
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to resume game:", error);
+      return false;
+    }
+  }, [currentStake, safeSessionId, gameState.calledNumbers]);
+
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
 
   const connectGeneral = useCallback(() => {
-    console.log("🔍 WebSocket connectGeneral called:", {
-      safeSessionId: safeSessionId ? "PRESENT" : "MISSING",
-      sessionIdLength: safeSessionId?.length || 0,
-      timestamp: new Date().toISOString(),
-    });
-
     if (!safeSessionId) {
-      console.log(
-        "❌ WebSocket general connection skipped - missing sessionId",
-      );
+      console.log("❌ No sessionId, skipping connection");
       return;
     }
 
     if (connected && wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log("Already connected to general WebSocket");
+      console.log("✅ Already connected");
       return;
     }
 
     if (isConnecting || connectionAttemptRef.current) {
-      console.log("General connection already in progress, skipping");
+      console.log("⚠️ Connection already in progress");
       return;
     }
 
     connectionAttemptRef.current = true;
+    setIsConnecting(true);
+    cleanup();
 
-    if (wsRef.current) {
-      console.log("Closing existing connection for general connection");
-      wsRef.current.close();
-      wsRef.current = null;
-      setConnected(false);
+    let wsBase =
+      import.meta.env.VITE_WS_URL ||
+      (window.location.hostname === "localhost"
+        ? "ws://localhost:3001"
+        : "wss://lekulubingoback.onrender.com");
+    wsBase = (wsBase || "").replace(/\/+$/, "");
+    if (!/\/ws$/i.test(wsBase)) {
+      wsBase += "/ws";
     }
+    const wsUrl = `${wsBase}?token=${safeSessionId}`;
+    console.log("🔌 Connecting to WebSocket");
 
-    console.log("Connecting to general WebSocket");
-
-    let stopped = false;
-    let connecting = false;
-    let retry = 0;
-    let heartbeat = null;
+    let connectionTimeout = null;
+    let retryCount = 0;
+    const maxRetries = 3;
 
     const connect = () => {
-      if (connecting || stopped) {
-        console.log(
-          "General WebSocket connection skipped - already connecting or stopped",
-        );
-        return;
-      }
-
-      connecting = true;
-      setIsConnecting(true);
-
-      let wsBase =
-        import.meta.env.VITE_WS_URL ||
-        (window.location.hostname === "localhost"
-          ? "ws://localhost:3001"
-          : "wss://lekulubingoback.onrender.com");
-      wsBase = (wsBase || "").replace(/\/+$/, "");
-      if (!/\/ws$/i.test(wsBase)) {
-        wsBase += "/ws";
-      }
-      const wsUrl = `${wsBase}?token=${safeSessionId}`;
-      console.log("Connecting to general WebSocket:", wsUrl);
+      if (connectionTimeout) clearTimeout(connectionTimeout);
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
+      connectionTimeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.error("❌ WebSocket connection timeout");
+          ws.close();
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(connect, 2000);
+          } else {
+            setIsConnecting(false);
+            connectionAttemptRef.current = false;
+            setConnected(false);
+          }
+        }
+      }, 10000);
+
       ws.onopen = () => {
-        console.log("✅ General WebSocket connected successfully");
+        console.log("✅ WebSocket connected");
+        clearTimeout(connectionTimeout);
         setConnected(true);
         setIsConnecting(false);
-        connecting = false;
         connectionAttemptRef.current = false;
-        retry = 0;
+        retryCount = 0;
+        gameEndedRef.current = false;
 
-        // Check if we have a saved game to reconnect to
-        const savedGameId = sessionStorage.getItem("reconnect_game_id");
-        const savedStake = sessionStorage.getItem("reconnect_stake");
-        const savedCalledCount = sessionStorage.getItem(
-          "reconnect_called_count",
-        );
+        // Resume game after reconnect
+        setTimeout(() => {
+          if (currentStake && !gameEndedRef.current) {
+            resumeGameAfterReconnect();
+          }
+        }, 500);
 
-        if (savedGameId && savedStake && savedCalledCount) {
-          console.log(
-            `🔄 Attempting to reconnect to saved game: ${savedGameId}`,
-          );
-          sessionStorage.removeItem("reconnect_game_id");
-          sessionStorage.removeItem("reconnect_stake");
-          sessionStorage.removeItem("reconnect_called_count");
-
-          setTimeout(() => {
-            recoverGameStateFromHTTP();
-          }, 1000);
-        }
-
-        heartbeat = setInterval(() => {
+        heartbeatIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "ping" }));
           }
         }, 30000);
 
-        if (currentStake) {
-          try {
-            console.log("Joining room after connect:", { stake: currentStake });
-            ws.send(
-              JSON.stringify({
-                type: "join_room",
-                payload: { stake: currentStake },
-              }),
-            );
-          } catch (e) {
-            console.warn("Failed to send join_room on open", e);
-          }
+        if (currentStake && !gameEndedRef.current) {
+          ws.send(
+            JSON.stringify({
+              type: "join_room",
+              payload: { stake: currentStake },
+            }),
+          );
         }
       };
 
       ws.onmessage = (e) => {
         try {
           setMessageCount((prev) => prev + 1);
-          console.log("WS message received:", e.data);
           const event = JSON.parse(e.data);
           setLastEvent(event);
-
-          if (
-            ["game_finished", "registration_open", "game_started"].includes(
-              event.type,
-            )
-          ) {
-            console.log(`🔥 CRITICAL EVENT: ${event.type}`, {
-              phase: event.payload?.phase || "unknown",
-              gameId: event.payload?.gameId,
-              playersCount: event.payload?.playersCount,
-              timestamp: new Date().toISOString(),
-            });
-          }
-
-          switch (event.type) {
-            case "pong":
-              break;
-
-            case "general_update":
-              setGameState((prev) => ({
-                ...prev,
-                ...event.payload,
-              }));
-              break;
-
-            case "snapshot": {
-              setGameState((prev) => {
-                const snapshotPhase = event.payload.phase || "waiting";
-                const snapshotGameId = event.payload.gameId;
-
-                // CRITICAL: Preserve called numbers from snapshot
-                const snapshotCalledNumbers =
-                  event.payload.calledNumbers || event.payload.called || [];
-
-                // Preserve current game's called numbers if snapshot has more
-                const mergedCalledNumbers =
-                  snapshotCalledNumbers.length > prev.calledNumbers.length
-                    ? snapshotCalledNumbers
-                    : snapshotCalledNumbers.length > 0
-                      ? snapshotCalledNumbers
-                      : prev.calledNumbers;
-
-                const registrationEndTime =
-                  event.payload.nextStartAt ||
-                  event.payload.registrationEndTime;
-                const serverCountdown =
-                  event.payload.countdownSeconds != null
-                    ? event.payload.countdownSeconds
-                    : registrationEndTime
-                      ? Math.max(
-                          0,
-                          Math.ceil((registrationEndTime - Date.now()) / 1000),
-                        )
-                      : 0;
-
-                const shouldPreserveCards =
-                  (snapshotPhase === "running" || prev.phase === "running") &&
-                  snapshotGameId === prev.gameId &&
-                  prev.yourCards?.length > 0;
-
-                const snapshotCards = event.payload.cards;
-                const snapshotSelections = event.payload.yourSelections;
-
-                let finalCards = prev.yourCards || [];
-                let finalSelections = prev.yourSelections || [];
-
-                if (snapshotPhase === "running") {
-                  if (snapshotCards && snapshotCards.length > 0) {
-                    finalCards = snapshotCards;
-                    finalSelections = snapshotCards
-                      .map((c) => c.cardNumber || c)
-                      .filter(Boolean);
-                  } else if (shouldPreserveCards) {
-                    finalCards = prev.yourCards || [];
-                    finalSelections = prev.yourSelections || [];
-                  }
-                } else if (snapshotPhase === "registration") {
-                  finalCards = [];
-                  finalSelections = [];
-                }
-
-                console.log("📸 Snapshot update:", {
-                  phase: snapshotPhase,
-                  gameId: snapshotGameId,
-                  calledNumbersCount: mergedCalledNumbers.length,
-                  yourCardsCount: finalCards.length,
-                  preserveCards: shouldPreserveCards,
-                });
-
-                const newState = {
-                  ...prev,
-                  phase: snapshotPhase,
-                  gameId: snapshotGameId,
-                  playersCount:
-                    event.payload.playersCount ?? prev.playersCount ?? 0,
-                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
-                  takenCards: event.payload.takenCards || prev.takenCards || [],
-                  availableCards:
-                    event.payload.availableCards || prev.availableCards || [],
-                  calledNumbers: mergedCalledNumbers,
-                  countdown: serverCountdown,
-                  registrationEndTime,
-                  yourCards: finalCards,
-                  yourSelections: finalSelections,
-                  totalCartellas:
-                    event.payload.totalCartellas || prev.totalCartellas || 200,
-                  ...(snapshotPhase === "registration"
-                    ? { currentNumber: null, winners: [] }
-                    : {}),
-                };
-
-                // Dispatch event to notify components about restored state
-                if (mergedCalledNumbers.length > 0 && finalCards.length > 0) {
-                  window.dispatchEvent(
-                    new CustomEvent("gameStateRestored", {
-                      detail: {
-                        gameId: snapshotGameId,
-                        calledNumbers: mergedCalledNumbers,
-                        yourCards: finalCards,
-                        phase: snapshotPhase,
-                      },
-                    }),
-                  );
-                }
-
-                return newState;
-              });
-              break;
-            }
-
-            case "registration_open": {
-              const registrationEndTime = event.payload.endsAt;
-              const serverCountdown =
-                event.payload.countdownSeconds != null
-                  ? event.payload.countdownSeconds
-                  : registrationEndTime
-                    ? Math.max(
-                        0,
-                        Math.ceil((registrationEndTime - Date.now()) / 1000),
-                      )
-                    : 0;
-              setGameState((prev) => ({
-                ...prev,
-                phase: "registration",
-                gameId: event.payload.gameId,
-                playersCount: event.payload.playersCount || 0,
-                countdown: serverCountdown,
-                registrationEndTime,
-                yourCards: [],
-                yourSelections: [],
-                calledNumbers: [],
-                currentNumber: null,
-                winners: [],
-                takenCards: event.payload.takenCards || [],
-                availableCards: event.payload.availableCards || [],
-                prizePool: 0,
-                totalCartellas: event.payload.totalCartellas || 200,
-              }));
-              break;
-            }
-
-            case "registration_extended": {
-              const registrationEndTime = event.payload.endsAt;
-              const serverCountdown =
-                event.payload.countdownSeconds != null
-                  ? event.payload.countdownSeconds
-                  : registrationEndTime
-                    ? Math.max(
-                        0,
-                        Math.ceil((registrationEndTime - Date.now()) / 1000),
-                      )
-                    : 0;
-              setGameState((prev) => ({
-                ...prev,
-                phase: "registration",
-                gameId: event.payload.gameId || prev.gameId,
-                playersCount:
-                  event.payload.playersCount ?? prev.playersCount ?? 0,
-                countdown: serverCountdown,
-                registrationEndTime,
-                takenCards: event.payload.takenCards || prev.takenCards || [],
-                prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
-              }));
-              break;
-            }
-
-            case "registration_closed": {
-              setGameState((prev) => ({
-                ...prev,
-                phase: "starting",
-                gameId: event.payload?.gameId || prev.gameId,
-                countdown: 0,
-              }));
-              break;
-            }
-
-            case "game_started":
-              setGameState((prev) => {
-                if (
-                  prev.phase === "running" &&
-                  Array.isArray(prev.yourCards) &&
-                  prev.yourCards.length > 0 &&
-                  prev.gameId !== event.payload.gameId
-                ) {
-                  return prev;
-                }
-                const cards = event.payload.cards || [];
-                const cardNumbers = cards
-                  .map((card) => card.cardNumber || card)
-                  .filter((num) => num != null);
-                const newState = {
-                  ...prev,
-                  phase: "running",
-                  gameId: event.payload.gameId,
-                  playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
-                  calledNumbers:
-                    event.payload.calledNumbers || event.payload.called || [],
-                  yourCards: cards,
-                  yourSelections: cardNumbers,
-                  youWon: false,
-                  yourPrize: 0,
-                };
-                window.dispatchEvent(
-                  new CustomEvent("gameStarted", {
-                    detail: {
-                      gameId: newState.gameId,
-                      phase: newState.phase,
-                      playersCount: newState.playersCount,
-                      hasCards: newState.yourCards?.length > 0,
-                    },
-                  }),
-                );
-                return newState;
-              });
-              setPendingGameStart(null);
-              break;
-
-            case "number_called":
-              setGameState((prev) => {
-                if (
-                  event.payload.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
-                  return prev;
-                return {
-                  ...prev,
-                  currentNumber: event.payload.number,
-                  calledNumbers:
-                    event.payload.calledNumbers || event.payload.called || [],
-                };
-              });
-              break;
-
-            case "players_update":
-              setGameState((prev) => {
-                if (
-                  event.payload?.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
-                  return prev;
-                return {
-                  ...prev,
-                  playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
-                };
-              });
-              break;
-
-            case "registration_update":
-              setGameState((prev) => {
-                if (
-                  event.payload?.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
-                  return prev;
-                return {
-                  ...prev,
-                  takenCards: event.payload.takenCards || [],
-                  prizePool: event.payload.prizePool,
-                };
-              });
-              break;
-
-            case "selection_confirmed":
-              setGameState((prev) => {
-                if (
-                  event.payload?.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
-                  return prev;
-                return {
-                  ...prev,
-                  yourSelections:
-                    event.payload.selections || prev.yourSelections || [],
-                  playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
-                };
-              });
-              break;
-
-            case "card_selected":
-            case "select_card":
-              setGameState((prev) => ({
-                ...prev,
-                yourSelections:
-                  event.payload.selections || prev.yourSelections || [],
-                takenCards: event.payload.takenCards || prev.takenCards,
-                playersCount: event.payload.playersCount || prev.playersCount,
-              }));
-              break;
-
-            case "selection_cleared":
-              setGameState((prev) => ({
-                ...prev,
-                yourSelections: event.payload.selections || [],
-                playersCount: event.payload.playersCount ?? prev.playersCount,
-                prizePool: event.payload.prizePool ?? prev.prizePool,
-              }));
-              break;
-
-            case "bingo_accepted":
-              setGameState((prev) => ({
-                ...prev,
-                winners: event.payload.winners || prev.winners || [],
-              }));
-              break;
-
-            case "bingo_rejected":
-              window.dispatchEvent(
-                new CustomEvent("bingoRejected", {
-                  detail: event.payload || {},
-                }),
-              );
-              break;
-
-            case "game_finished":
-            case "game_ended":
-              setGameState((prev) => {
-                if (
-                  event.payload?.gameId &&
-                  prev.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
-                  return prev;
-
-                const currentUserId = safeSessionId;
-                const userWon = event.payload.winners?.some(
-                  (w) =>
-                    w.userId === currentUserId ||
-                    w.userId?.toString() === currentUserId,
-                );
-                const userPrize =
-                  event.payload.winners?.find(
-                    (w) =>
-                      w.userId === currentUserId ||
-                      w.userId?.toString() === currentUserId,
-                  )?.prize || 0;
-
-                return {
-                  ...prev,
-                  phase: "announce",
-                  gameId: event.payload?.gameId || prev.gameId,
-                  winners: event.payload.winners || prev.winners || [],
-                  calledNumbers:
-                    event.payload.calledNumbers || prev.calledNumbers,
-                  currentNumber: null,
-                  yourCards: [],
-                  yourSelections: [],
-                  nextRegistrationStart: event.payload?.nextStartAt || null,
-                  youWon: userWon,
-                  yourPrize: userPrize,
-                };
-              });
-              break;
-
-            case "wallet_update":
-              setGameState((prev) => ({
-                ...prev,
-                walletUpdate: {
-                  main: event.payload.main,
-                  play: event.payload.play,
-                  coins: event.payload.coins,
-                  bonus: event.payload.bonus,
-                  source: event.payload.source,
-                },
-              }));
-              window.dispatchEvent(
-                new CustomEvent("walletUpdate", { detail: event }),
-              );
-              break;
-
-            case "silent_number_sync":
-              setGameState((prev) => {
-                const newNumber = event.payload.number;
-                const allNumbers = event.payload.allCalledNumbers || [
-                  ...prev.calledNumbers,
-                ];
-
-                if (
-                  !allNumbers.includes(newNumber) &&
-                  !prev.calledNumbers.includes(newNumber)
-                ) {
-                  const updatedNumbers = [...prev.calledNumbers, newNumber];
-                  return {
-                    ...prev,
-                    calledNumbers: updatedNumbers,
-                    currentNumber: newNumber,
-                  };
-                }
-                return prev;
-              });
-              break;
-            default:
-              console.log("Unhandled WS event:", event.type);
-          }
+          handleWebSocketMessage(event);
         } catch (error) {
-          console.error("Error parsing WebSocket message:", error);
+          console.error("❌ Error parsing message:", error);
         }
       };
 
       ws.onclose = (event) => {
-        console.log(
-          `🔌 WebSocket closed: ${event.code} - ${event.reason || "No reason"}`,
-        );
+        console.log(`🔌 WebSocket closed: ${event.code}`);
+        clearTimeout(connectionTimeout);
         setConnected(false);
-        setIsConnecting(false);
-        connecting = false;
-        connectionAttemptRef.current = false;
 
-        // Store current game state before reconnect
-        if (currentStake && gameState.gameId && gameState.phase === "running") {
-          sessionStorage.setItem("reconnect_game_id", gameState.gameId);
-          sessionStorage.setItem("reconnect_stake", currentStake.toString());
-          sessionStorage.setItem(
-            "reconnect_called_count",
-            gameState.calledNumbers.length.toString(),
-          );
-          console.log("💾 Saved game state before reconnection");
+        if (event.code === 1008) {
+          console.error("❌ Auth failed");
+          connectionAttemptRef.current = false;
+          setIsConnecting(false);
+          return;
         }
 
-        if (heartbeat) {
-          clearInterval(heartbeat);
-          heartbeat = null;
-        }
-
-        if (!stopped && retry < 5) {
-          const delay = Math.min(1000 * Math.pow(2, retry), 30000);
+        if (!gameEndedRef.current && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           console.log(
-            `🔄 Reconnecting WebSocket in ${delay}ms (attempt ${retry + 1})`,
+            `🔄 Reconnecting in ${delay}ms (${retryCount}/${maxRetries})`,
           );
-          setTimeout(() => {
-            retry++;
-            connectionAttemptRef.current = false;
-            connect();
-          }, delay);
+          reconnectTimeoutRef.current = setTimeout(connect, delay);
+        } else {
+          connectionAttemptRef.current = false;
+          setIsConnecting(false);
         }
       };
 
       ws.onerror = (error) => {
-        console.error("❌ General WebSocket error:", error);
-        setIsConnecting(false);
-        connecting = false;
-        connectionAttemptRef.current = false;
+        console.error("❌ WebSocket error:", error);
+        clearTimeout(connectionTimeout);
       };
     };
 
     connect();
 
     return () => {
-      stopped = true;
-      connectionAttemptRef.current = false;
-      if (heartbeat) clearInterval(heartbeat);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      if (connectionTimeout) clearTimeout(connectionTimeout);
     };
-  }, [safeSessionId, connected, isConnecting, currentStake, gameState]);
+  }, [
+    safeSessionId,
+    connected,
+    isConnecting,
+    currentStake,
+    cleanup,
+    resumeGameAfterReconnect,
+  ]);
+
+  const handleWebSocketMessage = useCallback(
+    (event) => {
+      const { type, payload } = event;
+
+      switch (type) {
+        case "pong":
+          break;
+
+        case "snapshot":
+          setGameState((prev) => ({
+            ...prev,
+            phase: payload.phase || "waiting",
+            gameId: payload.gameId,
+            playersCount: payload.playersCount ?? prev.playersCount ?? 0,
+            prizePool: payload.prizePool ?? prev.prizePool ?? 0,
+            calledNumbers:
+              payload.calledNumbers ||
+              payload.called ||
+              prev.calledNumbers ||
+              [],
+            takenCards: payload.takenCards || prev.takenCards || [],
+            yourSelections: payload.yourSelections || prev.yourSelections || [],
+            yourCards: payload.cards || prev.yourCards || [],
+            countdown: payload.countdownSeconds || 0,
+            registrationEndTime:
+              payload.nextStartAt || payload.registrationEndTime || null,
+            totalCartellas: payload.totalCartellas || 200,
+          }));
+          break;
+
+        case "registration_open":
+          gameEndedRef.current = false;
+          setGameState((prev) => ({
+            ...prev,
+            phase: "registration",
+            gameId: payload.gameId,
+            playersCount: payload.playersCount || 0,
+            countdown: payload.countdownSeconds || 30,
+            registrationEndTime: payload.endsAt,
+            takenCards: payload.takenCards || [],
+            yourCards: [],
+            yourSelections: [],
+            calledNumbers: [],
+            currentNumber: null,
+            winners: [],
+            prizePool: 0,
+          }));
+          break;
+
+        case "registration_closed":
+          setGameState((prev) => ({
+            ...prev,
+            phase: "starting",
+            countdown: 0,
+          }));
+          break;
+
+        case "game_started":
+          setGameState((prev) => {
+            const cards = payload.cards || [];
+            return {
+              ...prev,
+              phase: "running",
+              gameId: payload.gameId,
+              playersCount: payload.playersCount,
+              prizePool: payload.prizePool,
+              calledNumbers: payload.calledNumbers || [],
+              yourCards: cards,
+              yourSelections: cards
+                .map((c) => c.cardNumber || c)
+                .filter(Boolean),
+              youWon: false,
+              yourPrize: 0,
+              currentNumber: null,
+            };
+          });
+          break;
+
+        case "number_called":
+          setGameState((prev) => {
+            if (payload.gameId && prev.gameId && payload.gameId !== prev.gameId)
+              return prev;
+            const newNumbers = [...prev.calledNumbers];
+            if (!newNumbers.includes(payload.number)) {
+              newNumbers.push(payload.number);
+            }
+            return {
+              ...prev,
+              currentNumber: payload.number,
+              calledNumbers: payload.calledNumbers || newNumbers,
+            };
+          });
+          break;
+
+        case "players_update":
+          setGameState((prev) => ({
+            ...prev,
+            playersCount: payload.playersCount,
+            prizePool: payload.prizePool,
+          }));
+          break;
+
+        case "registration_update":
+          setGameState((prev) => ({
+            ...prev,
+            takenCards: payload.takenCards || [],
+            prizePool: payload.prizePool,
+          }));
+          break;
+
+        case "selection_confirmed":
+          setGameState((prev) => ({
+            ...prev,
+            yourSelections: payload.selections || prev.yourSelections || [],
+            playersCount: payload.playersCount,
+            prizePool: payload.prizePool,
+          }));
+          break;
+
+        case "selection_cleared":
+          setGameState((prev) => ({
+            ...prev,
+            yourSelections: payload.selections || [],
+            playersCount: payload.playersCount ?? prev.playersCount,
+            prizePool: payload.prizePool ?? prev.prizePool,
+          }));
+          break;
+
+        case "bingo_accepted":
+          setGameState((prev) => ({
+            ...prev,
+            winners: payload.winners || prev.winners || [],
+          }));
+          break;
+
+        case "bingo_rejected":
+          window.dispatchEvent(
+            new CustomEvent("bingoRejected", { detail: payload }),
+          );
+          break;
+
+        case "game_finished":
+        case "game_ended":
+          gameEndedRef.current = true;
+          setGameState((prev) => {
+            const userWon = payload.winners?.some(
+              (w) =>
+                w.userId === safeSessionId ||
+                w.userId?.toString() === safeSessionId,
+            );
+            const userPrize =
+              payload.winners?.find(
+                (w) =>
+                  w.userId === safeSessionId ||
+                  w.userId?.toString() === safeSessionId,
+              )?.prize || 0;
+
+            return {
+              ...prev,
+              phase: "announce",
+              winners: payload.winners || [],
+              calledNumbers: payload.calledNumbers || prev.calledNumbers,
+              yourCards: [],
+              yourSelections: [],
+              nextRegistrationStart: payload.nextStartAt || null,
+              youWon: userWon,
+              yourPrize: userPrize,
+            };
+          });
+          break;
+
+        case "wallet_update":
+          setGameState((prev) => ({
+            ...prev,
+            walletUpdate: {
+              main: payload.main,
+              play: payload.play,
+              coins: payload.coins,
+              bonus: payload.bonus,
+              source: payload.source,
+            },
+          }));
+          window.dispatchEvent(
+            new CustomEvent("walletUpdate", { detail: event }),
+          );
+          break;
+
+        default:
+          console.log("Unhandled event:", type);
+      }
+    },
+    [safeSessionId],
+  );
 
   const connectToStake = useCallback(
     (stake) => {
       if (!safeSessionId || !stake) return;
-      const isSameStake = currentStake === stake;
 
-      if (!isSameStake) {
+      if (currentStake !== stake) {
+        gameEndedRef.current = false;
         setGameState({
           phase: "waiting",
           gameId: null,
@@ -779,186 +520,40 @@ export function WebSocketProvider({ children }) {
 
       const ws = wsRef.current;
       if (ws && ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
-        } catch (e) {}
-      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
-        const onOpen = () => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            try {
-              wsRef.current.send(
-                JSON.stringify({ type: "join_room", payload: { stake } }),
-              );
-            } catch (e) {}
-          }
-          ws.removeEventListener("open", onOpen);
-        };
-        ws.addEventListener("open", onOpen);
-      }
-    },
-    [safeSessionId, currentStake],
-  );
-
-  // Recover game state from HTTP API
-  const recoverGameStateFromHTTP = useCallback(async () => {
-    if (!currentStake || !safeSessionId) return false;
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      const response = await fetch(
-        `${apiBase}/api/games/${currentStake}/status`,
-      );
-      const data = await response.json();
-
-      if (data.success && data.game && data.game.calledNumbers) {
-        const newCalledNumbers = data.game.calledNumbers || [];
-        const currentCalledNumbers = gameState.calledNumbers;
-
-        // Only update if we actually have new numbers
-        const hasNewNumbers =
-          newCalledNumbers.length > currentCalledNumbers.length;
-
-        console.log("🔄 Syncing game state from HTTP:", {
-          oldCount: currentCalledNumbers.length,
-          newCount: newCalledNumbers.length,
-          hasNewNumbers,
-        });
-
-        // Silent update - don't trigger UI re-renders for the whole component
-        if (hasNewNumbers) {
-          // Add only the new numbers that we missed
-          const missedNumbers = newCalledNumbers.slice(
-            currentCalledNumbers.length,
-          );
-          if (missedNumbers.length > 0) {
-            console.log(
-              `📢 Adding ${missedNumbers.length} missed numbers silently`,
-            );
-
-            // Dispatch individual number_called events for missed numbers
-            missedNumbers.forEach((number, index) => {
-              setTimeout(() => {
-                window.dispatchEvent(
-                  new CustomEvent("silentNumberSync", {
-                    detail: {
-                      number,
-                      allCalledNumbers: newCalledNumbers,
-                      isHistorical: true,
-                    },
-                  }),
-                );
-              }, index * 100); // Stagger to avoid overwhelming
-            });
-          }
-        }
-
-        // Update state without triggering full component re-renders
-        setGameState((prev) => ({
-          ...prev,
-          calledNumbers: newCalledNumbers,
-          currentNumber: data.game.lastCalledNumber || prev.currentNumber,
-          phase: data.game.status === "running" ? "running" : prev.phase,
-          gameId: data.game.gameId || prev.gameId,
-          playersCount: data.game.playersCount || prev.playersCount,
-          prizePool: data.game.totalPrizes || prev.prizePool,
-          registrationEndTime: data.game.registrationEndsAt
-            ? new Date(data.game.registrationEndsAt).getTime()
-            : prev.registrationEndTime,
-        }));
-
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to recover game state:", error);
-      return false;
-    }
-  }, [currentStake, safeSessionId, gameState.calledNumbers]);
-
-  const forceReconnect = useCallback(
-    async (stake) => {
-      console.log("🔄 Force reconnecting...");
-      if (wsRef.current) {
-        try {
-          wsRef.current.close();
-        } catch (e) {}
-        wsRef.current = null;
-      }
-      setConnected(false);
-      connectionAttemptRef.current = false;
-
-      if (stake) {
-        connectToStake(stake);
-        setTimeout(() => {
-          recoverGameStateFromHTTP();
-        }, 2000);
-      } else {
+        ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
+      } else if (!connected && !isConnecting) {
         connectGeneral();
       }
     },
-    [connectToStake, connectGeneral, recoverGameStateFromHTTP],
+    [safeSessionId, currentStake, connected, isConnecting, connectGeneral],
   );
 
-  const requestNumberResume = useCallback(() => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN && currentStake) {
-      console.log("🎯 Requesting number drawing to resume...");
-      ws.send(
-        JSON.stringify({ type: "join_room", payload: { stake: currentStake } }),
-      );
-      ws.send(JSON.stringify({ type: "ping" }));
-    }
-  }, [currentStake]);
-
+  // Auto-connect when sessionId becomes available
   useEffect(() => {
+    isMountedRef.current = true;
     if (
-      sessionId &&
+      safeSessionId &&
       !connected &&
       !isConnecting &&
       !connectionAttemptRef.current
     ) {
       connectGeneral();
     }
-  }, [sessionId, connected, isConnecting, connectGeneral]);
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [safeSessionId, connected, isConnecting, connectGeneral]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      cleanup();
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, []);
-
-  // Listen for forced game state updates from HTTP API
-  useEffect(() => {
-    const handleForceUpdate = (event) => {
-      if (!event.detail) return;
-
-      console.log("📡 WebSocket context received forced update:", event.detail);
-
-      setGameState((prev) => ({
-        ...prev,
-        calledNumbers: event.detail.calledNumbers || prev.calledNumbers,
-        currentNumber: event.detail.currentNumber || prev.currentNumber,
-        gameId: event.detail.gameId || prev.gameId,
-        phase: event.detail.phase || prev.phase,
-        winners: event.detail.winners || prev.winners,
-        youWon: event.detail.youWon || false,
-        yourPrize: event.detail.yourPrize || 0,
-      }));
-    };
-
-    window.addEventListener("forceGameStateUpdate", handleForceUpdate);
-    return () => {
-      window.removeEventListener("forceGameStateUpdate", handleForceUpdate);
-    };
-  }, []);
+  }, [cleanup]);
 
   const selectCartella = useCallback(
     (cardNumber) => send("select_card", { cardNumber }),
@@ -969,7 +564,7 @@ export function WebSocketProvider({ children }) {
     [send],
   );
   const claimBingo = useCallback(
-    (payload = {}) => send("bingo_claim", payload || {}),
+    (payload = {}) => send("bingo_claim", payload),
     [send],
   );
 
@@ -989,9 +584,7 @@ export function WebSocketProvider({ children }) {
       isConnecting || wsRef.current?.readyState === WebSocket.CONNECTING,
     messageCount,
     ws: wsRef.current,
-    forceReconnect,
-    requestNumberResume,
-    recoverGameStateFromHTTP,
+    forceReconnect: connectGeneral,
   };
 
   return (

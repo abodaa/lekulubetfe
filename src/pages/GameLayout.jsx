@@ -18,14 +18,13 @@ import {
 } from "../lib/audio/numberSounds";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
-import { motion, AnimatePresence } from "framer-motion";
-import { CgLivePhoto } from "react-icons/cg";
+import { motion } from "framer-motion";
 import { BiRefresh } from "react-icons/bi";
 import { LiaToggleOffSolid, LiaToggleOnSolid } from "react-icons/lia";
 import { BsInfoCircle } from "react-icons/bs";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination, Autoplay } from "swiper/modules";
+import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -42,19 +41,7 @@ const MemoizedCartellaCard = React.memo(
     const winningPatternChanged =
       prevProps.showWinningPattern !== nextProps.showWinningPattern;
 
-    // If only called numbers increased by 1, don't re-render the whole card
-    if (
-      !cardChanged &&
-      !idChanged &&
-      !autoMarkChanged &&
-      !winningPatternChanged
-    ) {
-      if (prevProps.called?.length === nextProps.called?.length - 1) {
-        return true; // Skip re-render
-      }
-    }
-
-    return !(
+    return (
       calledChanged ||
       cardChanged ||
       idChanged ||
@@ -69,10 +56,12 @@ export default function GameLayout({ stake, onNavigate }) {
   const { showSuccess, showError, showWarning } = useToast();
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
   const [recentlyAddedNumber, setRecentlyAddedNumber] = useState(null);
+  const gameEndedRef = useRef(false);
+  const navigationInProgressRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const triggerConfetti = () => {
     setShowConfetti(true);
@@ -142,15 +131,8 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   }, []);
 
-  const {
-    connected,
-    gameState,
-    claimBingo,
-    connectToStake,
-    ws,
-    forceReconnect,
-    recoverGameStateFromHTTP,
-  } = useWebSocket();
+  const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
+
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
   const currentNumber = gameState.currentNumber;
@@ -160,11 +142,9 @@ export default function GameLayout({ stake, onNavigate }) {
     : [];
 
   // ========== PERFORMANCE OPTIMIZATIONS ==========
-  const memoizedCalledNumbers = useMemo(() => calledNumbers, [calledNumbers]);
-  const memoizedYourCards = useMemo(() => yourCards, [yourCards]);
   const memoizedCalledSet = useMemo(
-    () => new Set(memoizedCalledNumbers),
-    [memoizedCalledNumbers],
+    () => new Set(calledNumbers),
+    [calledNumbers],
   );
 
   // Throttle auto-bingo checks
@@ -186,17 +166,11 @@ export default function GameLayout({ stake, onNavigate }) {
   const [showConfetti, setShowConfetti] = useState(false);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
-  const confettiRef = useRef(null);
 
   const swiperRef = useRef(null);
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
-  const missedPatternsPersistentRef = useRef({});
-  const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
-
-  // Track last known called numbers to detect gaps
-  const lastCalledNumbersRef = useRef([]);
 
   // ========== SOUND QUEUE SYSTEM ==========
   const soundQueueRef = useRef([]);
@@ -276,260 +250,39 @@ export default function GameLayout({ stake, onNavigate }) {
   );
 
   // Track recently added number for animation
-  // useEffect(() => {
-  //   if (currentNumber) {
-  //     setRecentlyAddedNumber(currentNumber);
-  //     const timer = setTimeout(() => setRecentlyAddedNumber(null), 500);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [currentNumber]);
-
-  // ========== OFFLINE BINGO QUEUE WITH PERSISTENCE ==========
-  const pendingBingoClaimsRef = useRef([]);
-  const isProcessingQueueRef = useRef(false);
-  const offlineWinDetectedRef = useRef(false);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const dbRef = useRef(null);
-
-  // Initialize IndexedDB for persistent storage
-  const initOfflineDB = useCallback(() => {
-    return new Promise((resolve, reject) => {
-      if (dbRef.current) {
-        resolve(dbRef.current);
-        return;
-      }
-
-      const request = indexedDB.open("BingoOfflineDB", 1);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        dbRef.current = request.result;
-        resolve(dbRef.current);
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains("pendingWins")) {
-          const store = db.createObjectStore("pendingWins", {
-            keyPath: "id",
-            autoIncrement: true,
-          });
-          store.createIndex("gameId", "gameId");
-          store.createIndex("timestamp", "timestamp");
-          store.createIndex("claimed", "claimed");
-        }
-      };
-    });
-  }, []);
-
-  // Save pending win to IndexedDB
-  const savePendingWin = useCallback(
-    async (winData) => {
-      try {
-        const db = await initOfflineDB();
-        const transaction = db.transaction(["pendingWins"], "readwrite");
-        const store = transaction.objectStore("pendingWins");
-
-        const pendingWin = {
-          ...winData,
-          timestamp: Date.now(),
-          claimed: false,
-          retryCount: 0,
-        };
-
-        await store.add(pendingWin);
-        pendingBingoClaimsRef.current.push(pendingWin);
-        console.log(
-          "💾 Saved pending win to offline storage:",
-          winData.cardNumber,
-        );
-      } catch (error) {
-        console.error("Failed to save pending win:", error);
-        const existing = JSON.parse(
-          localStorage.getItem("pending_bingo_wins") || "[]",
-        );
-        existing.push(winData);
-        localStorage.setItem("pending_bingo_wins", JSON.stringify(existing));
-      }
-    },
-    [initOfflineDB],
-  );
-
-  // Load pending wins from storage on mount
-  const loadPendingWins = useCallback(async () => {
-    try {
-      const db = await initOfflineDB();
-      const transaction = db.transaction(["pendingWins"], "readonly");
-      const store = transaction.objectStore("pendingWins");
-      const index = store.index("claimed");
-      const request = index.getAll(IDBKeyRange.only(false));
-
-      request.onsuccess = () => {
-        const pending = request.result;
-        pendingBingoClaimsRef.current = pending;
-        console.log(`📦 Loaded ${pending.length} pending wins from storage`);
-
-        if (navigator.onLine && pending.length > 0) {
-          setTimeout(() => processPendingWins(), 1000);
-        }
-      };
-    } catch (error) {
-      console.error("Failed to load pending wins:", error);
-      const stored = localStorage.getItem("pending_bingo_wins");
-      if (stored) {
-        pendingBingoClaimsRef.current = JSON.parse(stored);
-        if (navigator.onLine && pendingBingoClaimsRef.current.length > 0) {
-          setTimeout(() => processPendingWins(), 1000);
-        }
-      }
+  useEffect(() => {
+    if (currentNumber) {
+      setRecentlyAddedNumber(currentNumber);
+      const timer = setTimeout(() => setRecentlyAddedNumber(null), 500);
+      return () => clearTimeout(timer);
     }
-  }, [initOfflineDB]);
+  }, [currentNumber]);
 
-  // Mark win as claimed in storage
-  const markWinClaimed = useCallback(
-    async (winId) => {
-      try {
-        const db = await initOfflineDB();
-        const transaction = db.transaction(["pendingWins"], "readwrite");
-        const store = transaction.objectStore("pendingWins");
-        const getRequest = store.get(winId);
-
-        getRequest.onsuccess = () => {
-          const win = getRequest.result;
-          if (win) {
-            win.claimed = true;
-            store.put(win);
-          }
-        };
-      } catch (error) {
-        console.error("Failed to mark win as claimed:", error);
-        const stored = localStorage.getItem("pending_bingo_wins");
-        if (stored) {
-          const wins = JSON.parse(stored);
-          const updated = wins.filter((w) => w.id !== winId);
-          localStorage.setItem("pending_bingo_wins", JSON.stringify(updated));
-        }
-      }
-
-      pendingBingoClaimsRef.current = pendingBingoClaimsRef.current.filter(
-        (w) => w.id !== winId,
-      );
-    },
-    [initOfflineDB],
-  );
-
-  // Process pending wins when online
-  const processPendingWins = useCallback(async () => {
-    if (isProcessingQueueRef.current) return;
-    if (pendingBingoClaimsRef.current.length === 0) return;
-    if (!navigator.onLine) return;
-    if (gameState.phase !== "running" && gameState.phase !== "announce") return;
-
-    isProcessingQueueRef.current = true;
-
-    for (const win of [...pendingBingoClaimsRef.current]) {
-      const isGameStillValid =
-        gameState.gameId === win.gameId || gameState.phase !== "announce";
-
-      if (isGameStillValid && gameState.phase === "running") {
-        const result = claimBingo({ cardNumber: win.cardNumber });
-        if (result) {
-          console.log(`✅ Claimed pending win for Cartella #${win.cardNumber}`);
-          await markWinClaimed(win.id);
-          showSuccess(
-            `🎉 Your win for Cartella #${win.cardNumber} has been claimed!`,
-          );
-        } else if (win.retryCount < 3) {
-          win.retryCount++;
-          console.log(
-            `⏳ Retry ${win.retryCount}/3 for Cartella #${win.cardNumber}`,
-          );
-        } else {
-          await markWinClaimed(win.id);
-          showWarning(
-            `Could not claim win for Cartella #${win.cardNumber}. Please contact support.`,
-          );
-        }
-      } else if (gameState.phase === "announce") {
-        const winners = gameState.winners || [];
-        const isWinner = winners.some(
-          (w) => w.cartelaNumber === win.cardNumber,
-        );
-        if (isWinner) {
-          showSuccess(
-            `🎉 Your win for Cartella #${win.cardNumber} has been recorded!`,
-          );
-        }
-        await markWinClaimed(win.id);
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    isProcessingQueueRef.current = false;
-  }, [
-    claimBingo,
-    gameState.gameId,
-    gameState.phase,
-    gameState.winners,
-    markWinClaimed,
-    showSuccess,
-    showWarning,
-  ]);
-
-  // ========== CHECK FOR WINS ON APP RESUME ==========
-  const checkForWinsOnResume = useCallback(async () => {
-    if (!stake || !sessionId) return;
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      const response = await fetch(
-        `${apiBase}/api/games/${stake}/winner-status?userId=${sessionId}`,
-      );
-      const data = await response.json();
-
-      if (data.success && data.hasUnclaimedWins) {
-        for (const win of data.wins) {
-          showSuccess(`🎉 You won ${win.prize} ETB in game ${win.gameId}!`);
-          setWallet((prev) => ({
-            ...prev,
-            main: (prev.main || 0) + win.prize,
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Failed to check for wins:", error);
-    }
-  }, [stake, sessionId, showSuccess]);
-
-  // ========== SEAMLESS SYNC FUNCTION ==========
-  const updateManualMarksForNumber = useCallback(
-    (number) => {
+  // Handle numbers recovered after network restore
+  const updateManualMarksForNumbers = useCallback(
+    (numbers) => {
       if (isAutoMarkOn) return;
 
       setManuallyMarkedNumbers((prev) => {
         const newMarks = { ...prev };
         yourCards.forEach(({ cardNumber, card }) => {
-          let hasNumber = false;
-          if (card && Array.isArray(card)) {
-            card.forEach((row) => {
-              if (row && row.includes(number)) hasNumber = true;
-            });
-          }
-
-          if (hasNumber) {
-            const currentMarks = prev[cardNumber] || new Set();
-            const updatedMarks = new Set(currentMarks);
-            if (!updatedMarks.has(number)) {
-              updatedMarks.add(number);
-              newMarks[cardNumber] = updatedMarks;
+          numbers.forEach((number) => {
+            let hasNumber = false;
+            if (card && Array.isArray(card)) {
+              card.forEach((row) => {
+                if (row && row.includes(number)) hasNumber = true;
+              });
             }
-          }
+
+            if (hasNumber) {
+              const currentMarks = prev[cardNumber] || new Set();
+              const updatedMarks = new Set(currentMarks);
+              if (!updatedMarks.has(number)) {
+                updatedMarks.add(number);
+                newMarks[cardNumber] = updatedMarks;
+              }
+            }
+          });
         });
         return newMarks;
       });
@@ -537,85 +290,64 @@ export default function GameLayout({ stake, onNavigate }) {
     [isAutoMarkOn, yourCards],
   );
 
-  const handleSync = useCallback(async () => {
-    if (isSyncing) return;
-    setIsSyncing(true);
+  // Listen for numbers recovered event
+  useEffect(() => {
+    const handleNumbersRecovered = (event) => {
+      const { numbers, allNumbers } = event.detail;
+      console.log(
+        `🔁 Recovered ${numbers.length} numbers after network restore`,
+      );
 
-    console.log("🔄 Seamless sync requested - will only fetch missing numbers");
-
-    try {
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001"
-          : "https://lekulubingoback.onrender.com");
-
-      const response = await fetch(`${apiBase}/api/games/${stake}/status`);
-      const data = await response.json();
-
-      if (data.success && data.game && data.game.calledNumbers) {
-        const serverCalledNumbers = data.game.calledNumbers || [];
-        const localCalledNumbers = calledNumbers;
-
-        // Find only the numbers we're missing
-        const missedNumbers = serverCalledNumbers.filter(
-          (num) => !localCalledNumbers.includes(num),
-        );
-
-        if (missedNumbers.length > 0) {
-          console.log(
-            `📡 Found ${missedNumbers.length} missed numbers, adding silently`,
-          );
-
-          // Add missed numbers one by one silently
-          for (const number of missedNumbers) {
-            // Update marks if in manual mode
-            if (!isAutoMarkOn) {
-              updateManualMarksForNumber(number);
-            }
-
-            // Trigger animation for each number
-            setRecentlyAddedNumber(number);
-            setTimeout(() => setRecentlyAddedNumber(null), 500);
-
-            // Small delay between numbers for smoothness
-            await new Promise((r) => setTimeout(r, 150));
-          }
-
-          showSuccess(`Synced ${missedNumbers.length} missed numbers`);
-        } else {
-          showSuccess("Game state is up to date");
-        }
+      // Update manual marks if in manual mode
+      if (!isAutoMarkOn && numbers.length > 0) {
+        updateManualMarksForNumbers(numbers);
       }
-    } catch (error) {
-      console.error("Sync failed:", error);
-      showError("Failed to sync game state");
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [
-    stake,
-    calledNumbers,
-    isAutoMarkOn,
-    updateManualMarksForNumber,
-    showSuccess,
-    showError,
-    isSyncing,
-  ]);
+
+      // Show a subtle notification
+      if (numbers.length > 0 && isMountedRef.current) {
+        showSuccess(`Game synced: ${numbers.length} numbers restored`);
+      }
+    };
+
+    window.addEventListener("numbersRecovered", handleNumbersRecovered);
+    return () =>
+      window.removeEventListener("numbersRecovered", handleNumbersRecovered);
+  }, [isAutoMarkOn, updateManualMarksForNumbers, showSuccess]);
 
   // ========== EFFECTS ==========
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
       setManuallyMarkedNumbers({});
   }, [isAutoMarkOn]);
 
   useEffect(() => {
-    if (stake && sessionId) connectToStake(stake);
+    if (stake && sessionId && !gameEndedRef.current) {
+      connectToStake(stake);
+    }
   }, [stake, sessionId, connectToStake]);
+
+  // Reset game ended flag when new game starts
+  useEffect(() => {
+    if (gameState.phase === "running" && gameState.gameId) {
+      gameEndedRef.current = false;
+    }
+  }, [gameState.phase, gameState.gameId]);
 
   useEffect(() => {
     const h = () => {
-      if (document.visibilityState === "visible" && stake && sessionId) {
+      if (
+        document.visibilityState === "visible" &&
+        stake &&
+        sessionId &&
+        !gameEndedRef.current
+      ) {
         setTimeout(() => {
           if (!connected) connectToStake(stake);
         }, 100);
@@ -668,32 +400,12 @@ export default function GameLayout({ stake, onNavigate }) {
     queueSound(currentNumber);
   }, [currentNumber, startCountdown, gameState.phase, queueSound]);
 
-  // Track called numbers to detect gaps
-  useEffect(() => {
-    if (calledNumbers.length === 0) {
-      lastCalledNumbersRef.current = [];
-      return;
-    }
-
-    const prevCount = lastCalledNumbersRef.current.length;
-    const currentCount = calledNumbers.length;
-
-    if (prevCount > 0 && currentCount - prevCount > 1) {
-      console.log(
-        `⚠️ Detected gap in called numbers: was ${prevCount}, now ${currentCount}`,
-      );
-    }
-
-    lastCalledNumbersRef.current = [...calledNumbers];
-  }, [calledNumbers]);
-
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
       claimedCartellasRef.current.clear();
       lastGameIdRef.current = currentGameId;
       setClaimingStates({});
-      setMissedPatterns({});
-      missedPatternsPersistentRef.current = {};
+      setMissedWinningPatterns({});
     }
   }, [currentGameId]);
 
@@ -720,89 +432,6 @@ export default function GameLayout({ stake, onNavigate }) {
     [isAutoMarkOn, calledNumbers, showWarning],
   );
 
-  // Listen for silent number sync events
-  useEffect(() => {
-    const handleSilentNumberSync = (event) => {
-      const { number, allCalledNumbers, isHistorical } = event.detail;
-
-      if (!calledNumbers.includes(number)) {
-        console.log(`🔇 Silently adding number ${number}`);
-
-        // Update marks if in manual mode
-        if (!isAutoMarkOn) {
-          updateManualMarksForNumber(number);
-        }
-
-        // Trigger animation
-        setRecentlyAddedNumber(number);
-        setTimeout(() => setRecentlyAddedNumber(null), 500);
-      }
-    };
-
-    window.addEventListener("silentNumberSync", handleSilentNumberSync);
-    return () =>
-      window.removeEventListener("silentNumberSync", handleSilentNumberSync);
-  }, [calledNumbers, isAutoMarkOn, updateManualMarksForNumber]);
-
-  // Listen for game state restoration events
-  useEffect(() => {
-    const handleStateRestored = (event) => {
-      const { calledNumbers: restoredCalled, yourCards: restoredCards } =
-        event.detail;
-      console.log("🎯 Game state restored event received:", {
-        calledCount: restoredCalled?.length,
-        cardsCount: restoredCards?.length,
-      });
-
-      if (!isAutoMarkOn && restoredCalled && restoredCalled.length > 0) {
-        const newManualMarks = {};
-        restoredCards?.forEach(({ cardNumber, card }) => {
-          const marks = new Set();
-          restoredCalled.forEach((num) => {
-            card?.forEach((row) => {
-              if (row && row.includes(num)) marks.add(num);
-            });
-          });
-          if (marks.size > 0) newManualMarks[cardNumber] = marks;
-        });
-        setManuallyMarkedNumbers(newManualMarks);
-      }
-
-      setAlertBanners([]);
-    };
-
-    const handleForceSync = (event) => {
-      const { calledNumbers: syncedCalled, yourCards: syncedCards } =
-        event.detail;
-      console.log("🔄 Force sync game state:", {
-        calledCount: syncedCalled?.length,
-      });
-
-      if (!isAutoMarkOn && syncedCalled && syncedCalled.length > 0) {
-        const newManualMarks = {};
-        syncedCards?.forEach(({ cardNumber, card }) => {
-          const marks = new Set();
-          syncedCalled.forEach((num) => {
-            card?.forEach((row) => {
-              if (row && row.includes(num)) marks.add(num);
-            });
-          });
-          if (marks.size > 0) newManualMarks[cardNumber] = marks;
-        });
-        setManuallyMarkedNumbers(newManualMarks);
-      }
-    };
-
-    window.addEventListener("gameStateRestored", handleStateRestored);
-    window.addEventListener("forceSyncGameState", handleForceSync);
-
-    return () => {
-      window.removeEventListener("gameStateRestored", handleStateRestored);
-      window.removeEventListener("forceSyncGameState", handleForceSync);
-    };
-  }, [isAutoMarkOn]);
-
-  // Simplified handleCartellaBingo - just for manual mode, backend will verify
   const handleCartellaBingo = useCallback(
     async (cardNumber) => {
       if (!connected || gameState.phase !== "running" || !currentGameId) {
@@ -842,12 +471,6 @@ export default function GameLayout({ stake, onNavigate }) {
         } else {
           showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
           claimedCartellasRef.current.add(cardNumber);
-          setMissedPatterns((prev) => {
-            const newPatterns = { ...prev };
-            delete newPatterns[cardNumber];
-            return newPatterns;
-          });
-          delete missedPatternsPersistentRef.current[cardNumber];
         }
       } catch (err) {
         showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
@@ -952,33 +575,45 @@ export default function GameLayout({ stake, onNavigate }) {
 
   // Show win notification when game finishes
   useEffect(() => {
-    if (gameState.phase === "announce" && gameState.youWon) {
-      showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
-      setWallet((prev) => ({
-        ...prev,
-        main: (prev.main || 0) + (gameState.yourPrize || 0),
-      }));
+    if (gameState.phase === "announce" && !gameEndedRef.current) {
+      gameEndedRef.current = true;
+
+      if (gameState.youWon && isMountedRef.current) {
+        showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
+        setWallet((prev) => ({
+          ...prev,
+          main: (prev.main || 0) + (gameState.yourPrize || 0),
+        }));
+      }
+
+      // Navigate to winner page only once
+      if (!navigationInProgressRef.current && onNavigate) {
+        navigationInProgressRef.current = true;
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            onNavigate?.("winner");
+          }
+          setTimeout(() => {
+            navigationInProgressRef.current = false;
+          }, 1000);
+        }, 2000);
+      }
     }
-  }, [gameState.phase, gameState.youWon, gameState.yourPrize, showSuccess]);
+  }, [
+    gameState.phase,
+    gameState.youWon,
+    gameState.yourPrize,
+    showSuccess,
+    onNavigate,
+  ]);
 
-  // Check for wins on app resume
+  // Reset navigation flag when registration starts
   useEffect(() => {
-    checkForWinsOnResume();
-    window.addEventListener("online", checkForWinsOnResume);
-    return () => window.removeEventListener("online", checkForWinsOnResume);
-  }, [checkForWinsOnResume]);
-
-  // Load pending wins on mount
-  useEffect(() => {
-    loadPendingWins();
-  }, [loadPendingWins]);
-
-  // Process pending wins when game state changes
-  useEffect(() => {
-    if (gameState.phase === "running" || gameState.phase === "announce") {
-      processPendingWins();
+    if (gameState.phase === "registration") {
+      navigationInProgressRef.current = false;
+      gameEndedRef.current = false;
     }
-  }, [gameState.phase, processPendingWins]);
+  }, [gameState.phase]);
 
   // Clean up sound timeout
   useEffect(() => {
@@ -987,102 +622,12 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // Clear pending claims on game end
-  useEffect(() => {
-    if (gameState.phase === "announce" && !isRefreshing) {
-      if (pendingBingoClaimsRef.current.length > 0) {
-        console.log("Game ended with pending claims - clearing queue");
-        pendingBingoClaimsRef.current = [];
-      }
-      offlineWinDetectedRef.current = false;
-      onNavigate?.("winner");
-    }
-  }, [gameState.phase, onNavigate, isRefreshing]);
-
-  // Network status listeners for offline indicator
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log("🌐 Network recovered - processing pending claims");
-      setIsOffline(false);
-      if (offlineWinDetectedRef.current) {
-        showSuccess("Network restored! Claiming your wins...");
-        offlineWinDetectedRef.current = false;
-      }
-      processPendingWins();
-      checkForWinsOnResume();
-      if (recoverGameStateFromHTTP) recoverGameStateFromHTTP();
-    };
-
-    const handleOffline = () => {
-      console.log("⚠️ Network disconnected");
-      setIsOffline(true);
-      if (pendingBingoClaimsRef.current.length > 0) {
-        showWarning(
-          "Network disconnected! Your win will be claimed when connection returns.",
-        );
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, [
-    processPendingWins,
-    checkForWinsOnResume,
-    recoverGameStateFromHTTP,
-    showSuccess,
-    showWarning,
-  ]);
-
   useEffect(() => {
     if (!currentGameId) {
       const t = setTimeout(() => setShowTimeout(true), 5000);
       return () => clearTimeout(t);
     } else setShowTimeout(false);
   }, [currentGameId]);
-
-  useEffect(() => {
-    if (gameState.phase === "registration") {
-      setShowTimeout(false);
-      setIsRefreshing(false);
-      claimedCartellasRef.current.clear();
-      setClaimingStates({});
-      setMissedPatterns({});
-      missedPatternsPersistentRef.current = {};
-      pendingBingoClaimsRef.current = [];
-      offlineWinDetectedRef.current = false;
-    }
-  }, [gameState.phase]);
-
-  useEffect(() => {
-    const h = (event) => {
-      const reason = event?.detail?.reason || "invalid_claim";
-      const cardNumber = event?.detail?.cardNumber;
-
-      if (reason === "invalid_claim") {
-        setManuallyMarkedNumbers({});
-        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
-      } else if (reason === "stale_claim") {
-        setAlertBanners((prev) => [
-          ...prev,
-          "You missed that winning pattern. Keep playing for the next one!",
-        ]);
-        if (cardNumber) {
-          setMissedPatterns((prev) => ({
-            ...prev,
-            [cardNumber]: [...calledNumbers],
-          }));
-          missedPatternsPersistentRef.current[cardNumber] = [...calledNumbers];
-        }
-      }
-    };
-    window.addEventListener("bingoRejected", h);
-    return () => window.removeEventListener("bingoRejected", h);
-  }, [calledNumbers]);
 
   useEffect(() => {
     const current = new Set(alertBanners);
@@ -1107,6 +652,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => {
       alertTimersRef.current.forEach((t) => clearTimeout(t));
       alertTimersRef.current.clear();
+      if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
     };
   }, []);
 
@@ -1126,7 +672,7 @@ export default function GameLayout({ stake, onNavigate }) {
     return () => window.removeEventListener("walletUpdate", handleWalletUpdate);
   }, []);
 
-  // Updated sound toggle with queue clearing
+  // Sound toggle
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
@@ -1171,7 +717,7 @@ export default function GameLayout({ stake, onNavigate }) {
     );
   }
 
-  if (!currentGameId && !connected && !isRefreshing) {
+  if (!currentGameId && !connected && !isRefreshing && !gameEndedRef.current) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
@@ -1197,7 +743,7 @@ export default function GameLayout({ stake, onNavigate }) {
       : gameState.phase === "registration"
         ? "REG"
         : "WAIT";
-  const isWatchMode = yourCards.length === 0;
+  const isWatchMode = yourCards.length === 0 && gameState.phase === "running";
 
   // Optimized Number Board component with animation support
   const NumberBoardOptimized = useMemo(
@@ -1248,18 +794,6 @@ export default function GameLayout({ stake, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
-      {isOffline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-black text-center py-1 text-xs font-medium">
-          ⚠️ You're offline - wins will be stored and claimed when online
-        </div>
-      )}
-
-      {pendingBingoClaimsRef.current.length > 0 && !isOffline && (
-        <div className="fixed top-12 left-0 right-0 z-50 bg-blue-500 text-white text-center py-1 text-xs font-medium">
-          🔄 Processing {pendingBingoClaimsRef.current.length} pending win(s)...
-        </div>
-      )}
-
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -1335,22 +869,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
               <button
-                onClick={() => {
-                  if (isAutoMarkOn) {
-                    const autoMarks = {};
-                    yourCards.forEach(({ cardNumber, card }) => {
-                      const marks = new Set();
-                      calledNumbers.forEach((num) => {
-                        card.forEach((row) => {
-                          if (row.includes(num)) marks.add(num);
-                        });
-                      });
-                      if (marks.size > 0) autoMarks[cardNumber] = marks;
-                    });
-                    setManuallyMarkedNumbers(autoMarks);
-                  }
-                  setIsAutoMarkOn(!isAutoMarkOn);
-                }}
+                onClick={() => setIsAutoMarkOn(!isAutoMarkOn)}
                 className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
@@ -1361,34 +880,6 @@ export default function GameLayout({ stake, onNavigate }) {
                 title="Refresh"
               >
                 <BiRefresh />
-              </button>
-              <button
-                onClick={handleSync}
-                disabled={isSyncing}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-base transition-all ${
-                  isSyncing
-                    ? "bg-white/10 text-white/30 cursor-not-allowed"
-                    : "bg-white/20 text-white/70 hover:bg-white/30 active:scale-95"
-                }`}
-                title="Sync missed numbers"
-              >
-                {isSyncing ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-4 0H4m13-5-4 4 4 4" />
-                  </svg>
-                )}
               </button>
             </div>
             <div className="text-right">
@@ -1413,7 +904,7 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Players : </p>
               <p className="text-white font-bold text-xs">
-                {gameState.takenCards?.length || 0}
+                {gameState.playersCount || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -1485,12 +976,11 @@ export default function GameLayout({ stake, onNavigate }) {
             {yourCards.length > 0 ? (
               <div className="relative h-full">
                 <Swiper
-                  modules={[Navigation, Pagination, Autoplay]}
+                  modules={[Navigation, Pagination]}
                   spaceBetween={16}
                   slidesPerView={1}
                   centeredSlides={true}
                   loop={true}
-                  autoplay={false}
                   pagination={{
                     type: "fraction",
                     clickable: true,
@@ -1576,7 +1066,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   : alreadyClaimed
                                     ? "✓ WON"
                                     : isAutoMarkOn
-                                      ? "🤖 AUTO BINGO"
+                                      ? "🤖 AUTO"
                                       : "🎉 BINGO!"}
                               </button>
                             </div>
@@ -1671,7 +1161,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         Players
                       </span>
                       <span className="text-white/50 text-xs font-extrabold">
-                        {gameState.takenCards?.length || 0}
+                        {gameState.playersCount || 0}
                       </span>
                     </div>
                   </div>
