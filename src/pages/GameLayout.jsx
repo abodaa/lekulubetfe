@@ -276,13 +276,13 @@ export default function GameLayout({ stake, onNavigate }) {
   );
 
   // Track recently added number for animation
-  useEffect(() => {
-    if (currentNumber) {
-      setRecentlyAddedNumber(currentNumber);
-      const timer = setTimeout(() => setRecentlyAddedNumber(null), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [currentNumber]);
+  // useEffect(() => {
+  //   if (currentNumber) {
+  //     setRecentlyAddedNumber(currentNumber);
+  //     const timer = setTimeout(() => setRecentlyAddedNumber(null), 500);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [currentNumber]);
 
   // ========== OFFLINE BINGO QUEUE WITH PERSISTENCE ==========
   const pendingBingoClaimsRef = useRef([]);
