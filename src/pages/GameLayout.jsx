@@ -33,7 +33,6 @@ import "swiper/css/pagination";
 const MemoizedCartellaCard = React.memo(
   CartellaCard,
   (prevProps, nextProps) => {
-    // Only re-render if these specific props change
     const calledChanged = prevProps.called?.length !== nextProps.called?.length;
     const cardChanged = prevProps.card !== nextProps.card;
     const idChanged = prevProps.id !== nextProps.id;
@@ -322,10 +321,12 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
+  // Auto-mark mode: clear manual marks when auto is on
   useEffect(() => {
-    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0)
+    if (isAutoMarkOn && Object.keys(manuallyMarkedNumbers).length > 0) {
       setManuallyMarkedNumbers({});
-  }, [isAutoMarkOn]);
+    }
+  }, [isAutoMarkOn, manuallyMarkedNumbers]);
 
   useEffect(() => {
     if (stake && sessionId && !gameEndedRef.current) {
@@ -471,6 +472,12 @@ export default function GameLayout({ stake, onNavigate }) {
         } else {
           showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
           claimedCartellasRef.current.add(cardNumber);
+          setMissedPatterns((prev) => {
+            const newPatterns = { ...prev };
+            delete newPatterns[cardNumber];
+            return newPatterns;
+          });
+          delete missedPatternsPersistentRef.current[cardNumber];
         }
       } catch (err) {
         showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
@@ -628,6 +635,32 @@ export default function GameLayout({ stake, onNavigate }) {
       return () => clearTimeout(t);
     } else setShowTimeout(false);
   }, [currentGameId]);
+
+  useEffect(() => {
+    const h = (event) => {
+      const reason = event?.detail?.reason || "invalid_claim";
+      const cardNumber = event?.detail?.cardNumber;
+
+      if (reason === "invalid_claim") {
+        setManuallyMarkedNumbers({});
+        setAlertBanners((prev) => [...prev, "Invalid BINGO! Marks cleared."]);
+      } else if (reason === "stale_claim") {
+        setAlertBanners((prev) => [
+          ...prev,
+          "You missed that winning pattern. Keep playing for the next one!",
+        ]);
+        if (cardNumber) {
+          setMissedPatterns((prev) => ({
+            ...prev,
+            [cardNumber]: [...calledNumbers],
+          }));
+          missedPatternsPersistentRef.current[cardNumber] = [...calledNumbers];
+        }
+      }
+    };
+    window.addEventListener("bingoRejected", h);
+    return () => window.removeEventListener("bingoRejected", h);
+  }, [calledNumbers]);
 
   useEffect(() => {
     const current = new Set(alertBanners);
@@ -869,7 +902,22 @@ export default function GameLayout({ stake, onNavigate }) {
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
               <button
-                onClick={() => setIsAutoMarkOn(!isAutoMarkOn)}
+                onClick={() => {
+                  if (isAutoMarkOn) {
+                    const autoMarks = {};
+                    yourCards.forEach(({ cardNumber, card }) => {
+                      const marks = new Set();
+                      calledNumbers.forEach((num) => {
+                        card.forEach((row) => {
+                          if (row.includes(num)) marks.add(num);
+                        });
+                      });
+                      if (marks.size > 0) autoMarks[cardNumber] = marks;
+                    });
+                    setManuallyMarkedNumbers(autoMarks);
+                  }
+                  setIsAutoMarkOn(!isAutoMarkOn);
+                }}
                 className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}

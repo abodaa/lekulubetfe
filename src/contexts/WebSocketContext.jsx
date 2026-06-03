@@ -44,6 +44,7 @@ export function WebSocketProvider({ children }) {
   const [lastEvent, setLastEvent] = useState(null);
   const [currentStake, setCurrentStake] = useState(null);
   const [messageCount, setMessageCount] = useState(0);
+  const [pendingGameStart, setPendingGameStart] = useState(null);
 
   const send = useCallback((type, payload) => {
     const ws = wsRef.current;
@@ -64,6 +65,34 @@ export function WebSocketProvider({ children }) {
       return false;
     }
   }, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    let intervalId = null;
+
+    if (gameState.phase === "registration" && gameState.registrationEndTime) {
+      intervalId = setInterval(() => {
+        const now = Date.now();
+        const endTime = gameState.registrationEndTime;
+        const remainingSeconds = Math.max(0, Math.ceil((endTime - now) / 1000));
+
+        setGameState((prev) => ({
+          ...prev,
+          countdown: remainingSeconds,
+        }));
+
+        if (remainingSeconds <= 0) {
+          clearInterval(intervalId);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [gameState.phase, gameState.registrationEndTime]);
 
   // Resume game after network recovery
   const resumeGameAfterReconnect = useCallback(async () => {
@@ -98,7 +127,7 @@ export function WebSocketProvider({ children }) {
           );
           console.log(`📢 Recovering ${missedNumbers.length} missed numbers`);
 
-          // Update state with all server numbers at once (no flash)
+          // Update state with all server numbers at once
           setGameState((prev) => ({
             ...prev,
             calledNumbers: serverCalledNumbers,
@@ -185,7 +214,7 @@ export function WebSocketProvider({ children }) {
 
     let connectionTimeout = null;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
 
     const connect = () => {
       if (connectionTimeout) clearTimeout(connectionTimeout);
@@ -199,7 +228,7 @@ export function WebSocketProvider({ children }) {
           ws.close();
           if (retryCount < maxRetries) {
             retryCount++;
-            setTimeout(connect, 2000);
+            setTimeout(connect, 2000 * retryCount);
           } else {
             setIsConnecting(false);
             connectionAttemptRef.current = false;
@@ -215,7 +244,6 @@ export function WebSocketProvider({ children }) {
         setIsConnecting(false);
         connectionAttemptRef.current = false;
         retryCount = 0;
-        gameEndedRef.current = false;
 
         // Resume game after reconnect
         setTimeout(() => {
@@ -265,7 +293,7 @@ export function WebSocketProvider({ children }) {
 
         if (!gameEndedRef.current && retryCount < maxRetries) {
           retryCount++;
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
           console.log(
             `🔄 Reconnecting in ${delay}ms (${retryCount}/${maxRetries})`,
           );
@@ -305,43 +333,116 @@ export function WebSocketProvider({ children }) {
           break;
 
         case "snapshot":
-          setGameState((prev) => ({
-            ...prev,
-            phase: payload.phase || "waiting",
-            gameId: payload.gameId,
-            playersCount: payload.playersCount ?? prev.playersCount ?? 0,
-            prizePool: payload.prizePool ?? prev.prizePool ?? 0,
-            calledNumbers:
-              payload.calledNumbers ||
-              payload.called ||
-              prev.calledNumbers ||
-              [],
-            takenCards: payload.takenCards || prev.takenCards || [],
-            yourSelections: payload.yourSelections || prev.yourSelections || [],
-            yourCards: payload.cards || prev.yourCards || [],
-            countdown: payload.countdownSeconds || 0,
-            registrationEndTime:
-              payload.nextStartAt || payload.registrationEndTime || null,
-            totalCartellas: payload.totalCartellas || 200,
-          }));
+          setGameState((prev) => {
+            const snapshotPhase = payload.phase || "waiting";
+            const snapshotGameId = payload.gameId;
+            const registrationEndTime =
+              payload.nextStartAt || payload.registrationEndTime;
+            const serverCountdown =
+              payload.countdownSeconds != null
+                ? payload.countdownSeconds
+                : registrationEndTime
+                  ? Math.max(
+                      0,
+                      Math.ceil((registrationEndTime - Date.now()) / 1000),
+                    )
+                  : 0;
+
+            const shouldPreserveCards =
+              prev.phase === "running" &&
+              prev.gameId === snapshotGameId &&
+              prev.yourCards?.length > 0;
+
+            let finalCards = prev.yourCards || [];
+            let finalSelections = prev.yourSelections || [];
+
+            if (snapshotPhase === "running") {
+              if (payload.cards && payload.cards.length > 0) {
+                finalCards = payload.cards;
+                finalSelections = payload.cards
+                  .map((c) => c.cardNumber || c)
+                  .filter(Boolean);
+              } else if (shouldPreserveCards) {
+                finalCards = prev.yourCards || [];
+                finalSelections = prev.yourSelections || [];
+              }
+            } else if (snapshotPhase === "registration") {
+              finalCards = [];
+              finalSelections = [];
+            }
+
+            return {
+              ...prev,
+              phase: snapshotPhase,
+              gameId: snapshotGameId,
+              playersCount: payload.playersCount ?? prev.playersCount ?? 0,
+              prizePool: payload.prizePool ?? prev.prizePool ?? 0,
+              takenCards: payload.takenCards || prev.takenCards || [],
+              calledNumbers:
+                payload.calledNumbers ||
+                payload.called ||
+                prev.calledNumbers ||
+                [],
+              countdown: serverCountdown,
+              registrationEndTime,
+              yourCards: finalCards,
+              yourSelections: finalSelections,
+              totalCartellas:
+                payload.totalCartellas || prev.totalCartellas || 200,
+              ...(snapshotPhase === "registration"
+                ? { currentNumber: null, winners: [] }
+                : {}),
+            };
+          });
           break;
 
         case "registration_open":
           gameEndedRef.current = false;
+          const registrationEndTime = payload.endsAt;
+          const serverCountdown =
+            payload.countdownSeconds != null
+              ? payload.countdownSeconds
+              : registrationEndTime
+                ? Math.max(
+                    0,
+                    Math.ceil((registrationEndTime - Date.now()) / 1000),
+                  )
+                : 0;
           setGameState((prev) => ({
             ...prev,
             phase: "registration",
             gameId: payload.gameId,
             playersCount: payload.playersCount || 0,
-            countdown: payload.countdownSeconds || 30,
-            registrationEndTime: payload.endsAt,
-            takenCards: payload.takenCards || [],
+            countdown: serverCountdown,
+            registrationEndTime,
             yourCards: [],
             yourSelections: [],
             calledNumbers: [],
             currentNumber: null,
             winners: [],
+            takenCards: payload.takenCards || [],
             prizePool: 0,
+            totalCartellas: payload.totalCartellas || 200,
+          }));
+          break;
+
+        case "registration_extended":
+          const extEndTime = payload.endsAt;
+          const extCountdown =
+            payload.countdownSeconds != null
+              ? payload.countdownSeconds
+              : extEndTime
+                ? Math.max(0, Math.ceil((extEndTime - Date.now()) / 1000))
+                : 0;
+          setGameState((prev) => ({
+            ...prev,
+            phase: "registration",
+            gameId: payload.gameId || prev.gameId,
+            playersCount: payload.playersCount ?? prev.playersCount ?? 0,
+            countdown: extCountdown,
+            registrationEndTime: extEndTime,
+            takenCards: payload.takenCards || prev.takenCards || [],
+            prizePool: payload.prizePool ?? prev.prizePool ?? 0,
           }));
           break;
 
@@ -349,29 +450,49 @@ export function WebSocketProvider({ children }) {
           setGameState((prev) => ({
             ...prev,
             phase: "starting",
+            gameId: payload?.gameId || prev.gameId,
             countdown: 0,
           }));
           break;
 
         case "game_started":
           setGameState((prev) => {
+            if (
+              prev.phase === "running" &&
+              prev.yourCards?.length > 0 &&
+              prev.gameId !== payload.gameId
+            ) {
+              return prev;
+            }
             const cards = payload.cards || [];
-            return {
+            const cardNumbers = cards
+              .map((card) => card.cardNumber || card)
+              .filter((num) => num != null);
+            const newState = {
               ...prev,
               phase: "running",
               gameId: payload.gameId,
               playersCount: payload.playersCount,
               prizePool: payload.prizePool,
-              calledNumbers: payload.calledNumbers || [],
+              calledNumbers: payload.calledNumbers || payload.called || [],
               yourCards: cards,
-              yourSelections: cards
-                .map((c) => c.cardNumber || c)
-                .filter(Boolean),
+              yourSelections: cardNumbers,
               youWon: false,
               yourPrize: 0,
-              currentNumber: null,
             };
+            window.dispatchEvent(
+              new CustomEvent("gameStarted", {
+                detail: {
+                  gameId: newState.gameId,
+                  phase: newState.phase,
+                  playersCount: newState.playersCount,
+                  hasCards: newState.yourCards?.length > 0,
+                },
+              }),
+            );
+            return newState;
           });
+          setPendingGameStart(null);
           break;
 
         case "number_called":
@@ -441,26 +562,29 @@ export function WebSocketProvider({ children }) {
         case "game_ended":
           gameEndedRef.current = true;
           setGameState((prev) => {
+            const currentUserId = safeSessionId;
             const userWon = payload.winners?.some(
               (w) =>
-                w.userId === safeSessionId ||
-                w.userId?.toString() === safeSessionId,
+                w.userId === currentUserId ||
+                w.userId?.toString() === currentUserId,
             );
             const userPrize =
               payload.winners?.find(
                 (w) =>
-                  w.userId === safeSessionId ||
-                  w.userId?.toString() === safeSessionId,
+                  w.userId === currentUserId ||
+                  w.userId?.toString() === currentUserId,
               )?.prize || 0;
 
             return {
               ...prev,
               phase: "announce",
-              winners: payload.winners || [],
+              gameId: payload?.gameId || prev.gameId,
+              winners: payload.winners || prev.winners || [],
               calledNumbers: payload.calledNumbers || prev.calledNumbers,
+              currentNumber: null,
               yourCards: [],
               yourSelections: [],
-              nextRegistrationStart: payload.nextStartAt || null,
+              nextRegistrationStart: payload?.nextStartAt || null,
               youWon: userWon,
               yourPrize: userPrize,
             };
@@ -494,8 +618,9 @@ export function WebSocketProvider({ children }) {
     (stake) => {
       if (!safeSessionId || !stake) return;
 
-      if (currentStake !== stake) {
-        gameEndedRef.current = false;
+      const isSameStake = currentStake === stake;
+
+      if (!isSameStake) {
         setGameState({
           phase: "waiting",
           gameId: null,
@@ -516,11 +641,22 @@ export function WebSocketProvider({ children }) {
           totalCartellas: 200,
         });
         setCurrentStake(stake);
+        gameEndedRef.current = false;
       }
 
       const ws = wsRef.current;
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "join_room", payload: { stake } }));
+      } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+        const onOpen = () => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+              JSON.stringify({ type: "join_room", payload: { stake } }),
+            );
+          }
+          ws.removeEventListener("open", onOpen);
+        };
+        ws.addEventListener("open", onOpen);
       } else if (!connected && !isConnecting) {
         connectGeneral();
       }
