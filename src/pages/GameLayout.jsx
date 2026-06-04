@@ -382,14 +382,24 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
   // Navigate to winner page when game finishes - for ALL winners
+  // Navigate to winner page when game finishes - for ALL winners
   useEffect(() => {
     if (
       gameState.phase === "announce" &&
       gameState.winners &&
       gameState.winners.length > 0
     ) {
-      // Navigate to winner page for all winners
-      onNavigate?.("winner");
+      console.log(
+        "🏆 Game finished, navigating to winner page. Winners:",
+        gameState.winners.length,
+      );
+
+      // Small delay to ensure all winner data is fully populated
+      const timer = setTimeout(() => {
+        onNavigate?.("winner");
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [gameState.phase, gameState.winners, onNavigate]);
 
