@@ -62,27 +62,27 @@ export default function GameLayout({ stake, onNavigate }) {
 
     const calledSet = new Set(calledNumbers);
 
+    // 1. Check rows
     for (let i = 0; i < 5; i++) {
       if (!cartella[i] || !Array.isArray(cartella[i])) continue;
-      const rowComplete = cartella[i].every((num) => {
-        if (num === 0) return true;
-        return calledSet.has(num);
-      });
-      if (rowComplete) return true;
+      if (cartella[i].every((num) => num === 0 || calledSet.has(num)))
+        return true;
     }
 
+    // 2. Check columns
     for (let j = 0; j < 5; j++) {
-      let colComplete = true;
+      let complete = true;
       for (let i = 0; i < 5; i++) {
         const num = cartella[i][j];
         if (num !== 0 && !calledSet.has(num)) {
-          colComplete = false;
+          complete = false;
           break;
         }
       }
-      if (colComplete) return true;
+      if (complete) return true;
     }
 
+    // 3. Check main diagonal (top-left to bottom-right)
     let diag1Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][i];
@@ -93,6 +93,7 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag1Complete) return true;
 
+    // 4. Check anti-diagonal (top-right to bottom-left)
     let diag2Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][4 - i];
@@ -103,11 +104,12 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag2Complete) return true;
 
+    // 5. Check four corners
     const corners = [
-      cartella[0][0],
-      cartella[0][4],
-      cartella[4][0],
-      cartella[4][4],
+      cartella[0]?.[0],
+      cartella[0]?.[4],
+      cartella[4]?.[0],
+      cartella[4]?.[4],
     ];
     const cornersComplete = corners.every((num) => {
       if (num === 0) return true;
