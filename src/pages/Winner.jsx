@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import CartellaCard from "../components/CartellaCard";
-import { motion, AnimatePresence } from "framer-motion";
 import { FaTrophy, FaCrown, FaUsers, FaClock } from "react-icons/fa";
 import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
 
@@ -55,24 +54,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
   const { sessionId } = useAuth();
   const [countdown, setCountdown] = useState(0);
-  // const { gameState } = useWebSocket();
-  // const { sessionId } = useAuth();
-  const { yourCards } = gameState;
 
-  // If user has no cards (watch mode) AND game is finished, redirect to cartela selection
-  // const hasCards = yourCards?.length > 0;
-
-  // useEffect(() => {
-  //   // Only redirect if user has NO cards AND game is finished
-  //   if (
-  //     !hasCards &&
-  //     gameState.phase === "announce" &&
-  //     gameState.winners?.length > 0
-  //   ) {
-  //     console.log("Watch mode user - redirecting to cartela selection");
-  //     onNavigate?.("cartela-selection");
-  //   }
-  // }, [hasCards, gameState.phase, gameState.winners, onNavigate]);
+  useEffect(() => {
+    console.log("🏆 Winners received:", gameState.winners);
+  }, [gameState.winners]);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -140,11 +125,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
   if (!hasWinners) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-sm"
-        >
+        <div className="w-full max-w-sm">
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 text-center mb-4">
             <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-yellow-500/20 flex items-center justify-center">
               <GiTrophyCup className="text-yellow-400" size={28} />
@@ -167,7 +148,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
               {countdown > 0 ? `Starting in ${countdown}s` : "Preparing..."}
             </p>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -176,23 +157,11 @@ export default function Winner({ onNavigate, onResetToGame }) {
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       <div className="max-w-md mx-auto px-4 py-6 pb-24">
         {/* Winner Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur border border-yellow-500/30 rounded-2xl p-5 text-center mb-4"
-        >
+        <div className="bg-white/5 backdrop-blur border border-yellow-500/30 rounded-2xl p-5 text-center mb-4">
           <div className="flex justify-center gap-2 mb-3">
-            {["🎉", "🏆", "🎊"].map((emoji, i) => (
-              <motion.span
-                key={i}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: i * 0.1, type: "spring" }}
-                className="text-2xl"
-              >
-                {emoji}
-              </motion.span>
-            ))}
+            <span className="text-2xl">🎉</span>
+            <span className="text-2xl">🏆</span>
+            <span className="text-2xl">🎊</span>
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-3">
@@ -202,9 +171,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
             </h1>
           </div>
 
-          {/* Winner names */}
+          {/* Winner names - Show ALL winners */}
           <div className="space-y-2">
-            {winnerNames.slice(0, 3).map((name, idx) => (
+            {winnerNames.slice(0, 5).map((name, idx) => (
               <div
                 key={`${name}-${idx}`}
                 className="flex items-center justify-center gap-2 flex-wrap"
@@ -218,16 +187,13 @@ export default function Winner({ onNavigate, onResetToGame }) {
                   )}
                   {name}
                 </div>
-                {idx === 0 && winnerNames.length === 1 && (
-                  <span className="text-white/50 text-xs">won the game!</span>
-                )}
-                {idx === 0 && winnerNames.length > 1 && (
-                  <span className="text-amber-400/80 text-xs font-medium flex items-center gap-1">
-                    <FaUsers size={10} /> +{winnerNames.length - 1} more
-                  </span>
-                )}
               </div>
             ))}
+            {winnerNames.length > 5 && (
+              <p className="text-white/40 text-xs">
+                +{winnerNames.length - 5} more winners
+              </p>
+            )}
           </div>
 
           {/* Current user won badge */}
@@ -237,28 +203,27 @@ export default function Winner({ onNavigate, onResetToGame }) {
               <span className="text-green-400 text-xs font-bold">You won!</span>
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Winning Cards */}
         {displayWinners.length > 0 && (
           <div
-            className={`space-y-3 mb-4 ${isMultiCartelas ? "max-h-[50vh] overflow-y-auto" : ""}`}
+            className={`space-y-3 mb-4 ${
+              displayWinners.length > 2 ? "max-h-[50vh] overflow-y-auto" : ""
+            }`}
           >
-            {displayWinners.map((w, idx) => {
+            {displayWinners.slice(0, 4).map((w, idx) => {
               const cardData = cardDataFromWinner(w);
               const calledNumbers = calledNumbersForWinner(w, gameCalled);
               const boardNumber = w.cartelaNumber || w.cardId || "N/A";
               const label = getWinnerDisplayName(w);
 
               return (
-                <motion.div
+                <div
                   key={`${String(w.userId)}-${boardNumber}-${idx}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
                   className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-3"
                 >
-                  {isMultiCartelas && (
+                  {displayWinners.length > 1 && (
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <span className="text-white/50 text-[10px] font-medium">
                         Winner
@@ -279,8 +244,8 @@ export default function Winner({ onNavigate, onResetToGame }) {
                         called={calledNumbers}
                         isPreview={false}
                         showWinningPattern={true}
-                        showHeader={!isMultiCartelas}
-                        size={isMultiCartelas ? "small" : "normal"}
+                        showHeader={displayWinners.length === 1}
+                        size={displayWinners.length > 1 ? "small" : "normal"}
                       />
                     ) : (
                       <div className="bg-white/5 rounded-xl p-4 text-center w-full max-w-xs">
@@ -291,23 +256,24 @@ export default function Winner({ onNavigate, onResetToGame }) {
                       </div>
                     )}
                   </div>
-                  {!isMultiCartelas && (
+                  {displayWinners.length === 1 && (
                     <p className="text-center text-white/30 text-[10px] mt-2">
                       Cartella #{boardNumber}
                     </p>
                   )}
-                </motion.div>
+                </div>
               );
             })}
+            {displayWinners.length > 4 && (
+              <div className="text-center text-white/40 text-xs">
+                +{displayWinners.length - 4} more winning cartellas
+              </div>
+            )}
           </div>
         )}
 
         {/* Countdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur border border-white/10 rounded-xl py-4 px-4 text-center"
-        >
+        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl py-4 px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <FaClock className="text-white/30" size={12} />
             <p className="text-white/40 text-[10px] uppercase tracking-wider">
@@ -322,7 +288,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
               ? `Starting in ${countdown} seconds`
               : "Preparing next game..."}
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

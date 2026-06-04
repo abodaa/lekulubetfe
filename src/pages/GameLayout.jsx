@@ -55,11 +55,6 @@ export default function GameLayout({ stake, onNavigate }) {
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
 
-  const triggerConfetti = () => {
-    setShowConfetti(true);
-    setTimeout(() => setShowConfetti(false), 2000);
-  };
-
   const checkBingoPattern = useCallback((cartella, calledNumbers) => {
     if (!cartella || !Array.isArray(cartella) || cartella.length !== 5)
       return false;
@@ -151,10 +146,8 @@ export default function GameLayout({ stake, onNavigate }) {
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
   const [startCountdown, setStartCountdown] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [missedWinningPatterns, setMissedWinningPatterns] = useState({});
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
-  const confettiRef = useRef(null);
 
   const swiperRef = useRef(null);
   const claimedCartellasRef = useRef(new Set());
@@ -314,7 +307,6 @@ export default function GameLayout({ stake, onNavigate }) {
 
       try {
         setClaimingStates((prev) => ({ ...prev, [cardNumber]: true }));
-        triggerConfetti();
 
         const result = claimBingo({ cardNumber });
 
@@ -331,7 +323,9 @@ export default function GameLayout({ stake, onNavigate }) {
           delete missedPatternsPersistentRef.current[cardNumber];
         }
       } catch (err) {
-        showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
+        showError(
+          `Failed to claim BINGO for Cartella #${cardNumber} error: ${err.message || err}`,
+        );
       } finally {
         setClaimingStates((prev) => ({ ...prev, [cardNumber]: false }));
       }
@@ -385,24 +379,17 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
-  // Show win notification when game finishes (backend already credited)
+  // Navigate to winner page when game finishes - for ALL winners
   useEffect(() => {
-    if (gameState.phase === "announce" && gameState.youWon) {
-      showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
-      setWallet((prev) => ({
-        ...prev,
-        main: (prev.main || 0) + (gameState.yourPrize || 0),
-      }));
-      triggerConfetti();
+    if (
+      gameState.phase === "announce" &&
+      gameState.winners &&
+      gameState.winners.length > 0
+    ) {
+      // Navigate to winner page for all winners
       onNavigate?.("winner");
     }
-  }, [
-    gameState.phase,
-    gameState.youWon,
-    gameState.yourPrize,
-    showSuccess,
-    onNavigate,
-  ]);
+  }, [gameState.phase, gameState.winners, onNavigate]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -1057,59 +1044,6 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
             ) : null}
           </div>
-
-          {showConfetti && (
-            <div className="confetti-container" ref={confettiRef}>
-              {Array.from({ length: 50 }).map((_, i) => {
-                const colors = [
-                  "#ff6b6b",
-                  "#ffd93d",
-                  "#6bcb77",
-                  "#4d96ff",
-                  "#ff6b9d",
-                  "#c44dff",
-                  "#00d2ff",
-                  "#ff9f43",
-                ];
-                const left = Math.random() * 100;
-                const delay = Math.random() * 0.5;
-                const size = Math.random() * 8 + 6;
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                const shape = Math.random() > 0.5 ? "50%" : "2px";
-                return (
-                  <div
-                    key={i}
-                    className="confetti-piece"
-                    style={{
-                      left: `${left}%`,
-                      top: `-${Math.random() * 20}px`,
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      backgroundColor: color,
-                      borderRadius: shape,
-                      animationDelay: `${delay}s`,
-                      animationDuration: `${1 + Math.random()}s`,
-                    }}
-                  />
-                );
-              })}
-              {["🎉", "🎊", "✨", "🌟", "💫", "🏆", "⭐", "🎯"].map(
-                (emoji, i) => (
-                  <div
-                    key={`star-${i}`}
-                    className="star-particle"
-                    style={{
-                      left: `${10 + Math.random() * 80}%`,
-                      top: `${20 + Math.random() * 40}%`,
-                      animationDelay: `${i * 0.1}s`,
-                    }}
-                  >
-                    {emoji}
-                  </div>
-                ),
-              )}
-            </div>
-          )}
         </main>
       </div>
     </div>
