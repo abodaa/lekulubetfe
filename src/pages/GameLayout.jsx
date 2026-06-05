@@ -382,8 +382,13 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
   // Navigate to winner page when game finishes - for ALL winners
-  // Navigate to winner page when game finishes - for ALL winners
   useEffect(() => {
+    console.log("🔍 Checking game state for winner navigation:", {
+      phase: gameState.phase,
+      winnersCount: gameState.winners?.length,
+      winners: gameState.winners,
+    });
+
     if (
       gameState.phase === "announce" &&
       gameState.winners &&
@@ -394,10 +399,10 @@ export default function GameLayout({ stake, onNavigate }) {
         gameState.winners.length,
       );
 
-      // Small delay to ensure all winner data is fully populated
+      // Small delay to ensure Winner component mounts with complete data
       const timer = setTimeout(() => {
         onNavigate?.("winner");
-      }, 500);
+      }, 300);
 
       return () => clearTimeout(timer);
     }
