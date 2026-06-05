@@ -607,6 +607,12 @@ export function WebSocketProvider({ children }) {
 
             case "game_finished":
             case "game_ended":
+              console.log("🏁 WebSocket - Game finished event received:", {
+                gameId: event.payload?.gameId,
+                winnersCount: event.payload.winners?.length,
+                winners: event.payload.winners,
+              });
+
               setGameState((prev) => {
                 if (
                   event.payload?.gameId &&
@@ -627,6 +633,12 @@ export function WebSocketProvider({ children }) {
                       w.userId === currentUserId ||
                       w.userId?.toString() === currentUserId,
                   )?.prize || 0;
+
+                console.log("🏆 WebSocket - Updating gameState with winners:", {
+                  winnersCount: event.payload.winners?.length,
+                  userWon,
+                  userPrize,
+                });
 
                 return {
                   ...prev,

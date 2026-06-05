@@ -157,6 +157,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const missedPatternsPersistentRef = useRef({});
   const [missedPatterns, setMissedPatterns] = useState({});
   const audioInitializedRef = useRef(false);
+  const hasNavigatedToWinnerRef = useRef(false);
 
   // ========== NETWORK RECOVERY - Update manual marks for recovered numbers ==========
   const updateManualMarksForNumbers = useCallback(
@@ -382,31 +383,60 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
   // Navigate to winner page when game finishes - for ALL winners
+  // Listen for game_finished event via phase change
   useEffect(() => {
-    console.log("🔍 Checking game state for winner navigation:", {
+    console.log("🔍 GameLayout - Checking winner navigation:", {
       phase: gameState.phase,
       winnersCount: gameState.winners?.length,
-      winners: gameState.winners,
+      youWon: gameState.youWon,
+      hasNavigated: hasNavigatedToWinnerRef.current,
     });
 
+    // Navigate when phase becomes "announce" AND there are winners
     if (
       gameState.phase === "announce" &&
       gameState.winners &&
-      gameState.winners.length > 0
+      gameState.winners.length > 0 &&
+      !hasNavigatedToWinnerRef.current
     ) {
+      hasNavigatedToWinnerRef.current = true;
       console.log(
-        "🏆 Game finished, navigating to winner page. Winners:",
+        "🏆 GameLayout - Navigating to winner page. Winners:",
         gameState.winners.length,
       );
 
-      // Small delay to ensure Winner component mounts with complete data
-      const timer = setTimeout(() => {
+      // Small delay to ensure all data is ready
+      setTimeout(() => {
         onNavigate?.("winner");
-      }, 300);
-
-      return () => clearTimeout(timer);
+      }, 500);
     }
-  }, [gameState.phase, gameState.winners, onNavigate]);
+
+    // Reset navigation flag when a new game starts
+    if (gameState.phase === "registration") {
+      hasNavigatedToWinnerRef.current = false;
+    }
+  }, [gameState.phase, gameState.winners, gameState.youWon, onNavigate]);
+
+  // Also listen for when user wins (backward compatibility)
+  useEffect(() => {
+    if (
+      gameState.youWon &&
+      gameState.yourPrize > 0 &&
+      !hasNavigatedToWinnerRef.current
+    ) {
+      console.log("🏆 GameLayout - User won! Prize:", gameState.yourPrize);
+      showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
+      setWallet((prev) => ({
+        ...prev,
+        main: (prev.main || 0) + (gameState.yourPrize || 0),
+      }));
+
+      hasNavigatedToWinnerRef.current = true;
+      setTimeout(() => {
+        onNavigate?.("winner");
+      }, 500);
+    }
+  }, [gameState.youWon, gameState.yourPrize, showSuccess, onNavigate]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
