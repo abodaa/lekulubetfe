@@ -62,14 +62,12 @@ export default function GameLayout({ stake, onNavigate }) {
 
     const calledSet = new Set(calledNumbers);
 
-    // 1. Check rows
     for (let i = 0; i < 5; i++) {
       if (!cartella[i] || !Array.isArray(cartella[i])) continue;
       if (cartella[i].every((num) => num === 0 || calledSet.has(num)))
         return true;
     }
 
-    // 2. Check columns
     for (let j = 0; j < 5; j++) {
       let complete = true;
       for (let i = 0; i < 5; i++) {
@@ -82,7 +80,6 @@ export default function GameLayout({ stake, onNavigate }) {
       if (complete) return true;
     }
 
-    // 3. Check main diagonal (top-left to bottom-right)
     let diag1Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][i];
@@ -93,7 +90,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag1Complete) return true;
 
-    // 4. Check anti-diagonal (top-right to bottom-left)
     let diag2Complete = true;
     for (let i = 0; i < 5; i++) {
       const num = cartella[i][4 - i];
@@ -104,7 +100,6 @@ export default function GameLayout({ stake, onNavigate }) {
     }
     if (diag2Complete) return true;
 
-    // 5. Check four corners
     const corners = [
       cartella[0]?.[0],
       cartella[0]?.[4],
@@ -275,6 +270,7 @@ export default function GameLayout({ stake, onNavigate }) {
       setClaimingStates({});
       setMissedPatterns({});
       missedPatternsPersistentRef.current = {};
+      hasNavigatedToWinnerRef.current = false;
     }
   }, [currentGameId]);
 
@@ -382,61 +378,37 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
-  // Navigate to winner page when game finishes - for ALL winners
-  // Listen for game_finished event via phase change
+  // ========== WINNER PAGE NAVIGATION ==========
   useEffect(() => {
-    console.log("🔍 GameLayout - Checking winner navigation:", {
-      phase: gameState.phase,
-      winnersCount: gameState.winners?.length,
-      youWon: gameState.youWon,
-      hasNavigated: hasNavigatedToWinnerRef.current,
-    });
-
-    // Navigate when phase becomes "announce" AND there are winners
-    if (
-      gameState.phase === "announce" &&
-      gameState.winners &&
-      gameState.winners.length > 0 &&
-      !hasNavigatedToWinnerRef.current
-    ) {
+    if (gameState.phase === "announce" && !hasNavigatedToWinnerRef.current) {
       hasNavigatedToWinnerRef.current = true;
-      console.log(
-        "🏆 GameLayout - Navigating to winner page. Winners:",
-        gameState.winners.length,
-      );
+      console.log("🏆 Game finished - navigating to winner page");
 
-      // Small delay to ensure all data is ready
+      if (gameState.youWon) {
+        showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
+        setWallet((prev) => ({
+          ...prev,
+          main: (prev.main || 0) + (gameState.yourPrize || 0),
+        }));
+      }
+
       setTimeout(() => {
         onNavigate?.("winner");
       }, 500);
     }
+  }, [
+    gameState.phase,
+    gameState.youWon,
+    gameState.yourPrize,
+    showSuccess,
+    onNavigate,
+  ]);
 
-    // Reset navigation flag when a new game starts
+  useEffect(() => {
     if (gameState.phase === "registration") {
       hasNavigatedToWinnerRef.current = false;
     }
-  }, [gameState.phase, gameState.winners, gameState.youWon, onNavigate]);
-
-  // Also listen for when user wins (backward compatibility)
-  useEffect(() => {
-    if (
-      gameState.youWon &&
-      gameState.yourPrize > 0 &&
-      !hasNavigatedToWinnerRef.current
-    ) {
-      console.log("🏆 GameLayout - User won! Prize:", gameState.yourPrize);
-      showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
-      setWallet((prev) => ({
-        ...prev,
-        main: (prev.main || 0) + (gameState.yourPrize || 0),
-      }));
-
-      hasNavigatedToWinnerRef.current = true;
-      setTimeout(() => {
-        onNavigate?.("winner");
-      }, 500);
-    }
-  }, [gameState.youWon, gameState.yourPrize, showSuccess, onNavigate]);
+  }, [gameState.phase]);
 
   useEffect(() => {
     if (gameState.phase !== "running") {
@@ -569,46 +541,7 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  if (isRefreshing) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
-          <p className="text-white/80 text-lg font-bold">Refreshing...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentGameId && !connected && !isRefreshing) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-2xl mb-4">🎮</div>
-          <div className="text-white text-lg font-bold mb-2">Connecting...</div>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
-          {showTimeout && (
-            <button
-              onClick={() => onNavigate?.("cartela-selection")}
-              className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold"
-            >
-              Back
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const gamePhaseDisplay =
-    gameState.phase === "running"
-      ? "LIVE"
-      : gameState.phase === "registration"
-        ? "REG"
-        : "WAIT";
-  const isWatchMode = yourCards.length === 0;
-
-  // Memoized number board
+  // Memoized number board - MOVED BEFORE CONDITIONAL RETURNS
   const NumberBoard = useMemo(
     () => (
       <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
@@ -681,6 +614,46 @@ export default function GameLayout({ stake, onNavigate }) {
     ),
     [calledNumbersSet, currentNumber],
   );
+
+  // Conditional returns - MUST be after all Hooks
+  if (isRefreshing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
+          <p className="text-white/80 text-lg font-bold">Refreshing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentGameId && !connected && !isRefreshing) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl mb-4">🎮</div>
+          <div className="text-white text-lg font-bold mb-2">Connecting...</div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
+          {showTimeout && (
+            <button
+              onClick={() => onNavigate?.("cartela-selection")}
+              className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold"
+            >
+              Back
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const gamePhaseDisplay =
+    gameState.phase === "running"
+      ? "LIVE"
+      : gameState.phase === "registration"
+        ? "REG"
+        : "WAIT";
+  const isWatchMode = yourCards.length === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
@@ -808,7 +781,7 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
               <p className="text-white/60 text-xs">Players : </p>
               <p className="text-white font-bold text-xs">
-                {gameState.takenCards?.length || 0}
+                {gameState.playersCount || 0}
               </p>
             </div>
             <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
@@ -1058,7 +1031,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         Players
                       </span>
                       <span className="text-white/50 text-xs font-extrabold">
-                        {gameState.takenCards?.length || 0}
+                        {gameState.playersCount || 0}
                       </span>
                     </div>
                   </div>
