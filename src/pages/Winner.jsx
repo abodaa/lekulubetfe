@@ -8,7 +8,7 @@ import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
 export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
   const { sessionId } = useAuth();
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(0)
 
   useEffect(() => {
     console.log("🎯 Winner component - Full gameState:", {
