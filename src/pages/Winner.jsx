@@ -2,53 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import CartellaCard from "../components/CartellaCard";
-import { FaTrophy, FaCrown, FaUsers, FaClock } from "react-icons/fa";
+import { FaTrophy, FaCrown, FaClock } from "react-icons/fa";
 import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
-
-function cardDataFromWinner(winner) {
-  if (!winner) return null;
-  try {
-    if (winner.card && Array.isArray(winner.card) && winner.card.length === 5) {
-      return winner.card;
-    }
-    if (
-      winner.cardNumbers &&
-      Array.isArray(winner.cardNumbers) &&
-      winner.cardNumbers.length === 25
-    ) {
-      return [
-        winner.cardNumbers.slice(0, 5),
-        winner.cardNumbers.slice(5, 10),
-        winner.cardNumbers.slice(10, 15),
-        winner.cardNumbers.slice(15, 20),
-        winner.cardNumbers.slice(20, 25),
-      ];
-    }
-  } catch (e) {
-    console.error("Error processing card data:", e);
-  }
-  return null;
-}
-
-function calledNumbersForWinner(winner, gameCalledNumbers) {
-  const winnerCalled = Array.isArray(winner?.called) ? winner.called : [];
-  const gameCalled = Array.isArray(gameCalledNumbers) ? gameCalledNumbers : [];
-  return winnerCalled.length > 0 ? winnerCalled : gameCalled;
-}
-
-function dedupeWinningCartelas(winners) {
-  const out = [];
-  const seen = new Set();
-  for (const w of winners) {
-    const uid = String(w.userId ?? w.sessionId ?? "");
-    const cid = String(w.cartelaNumber ?? w.cartela?.cartelaNumber ?? "");
-    const key = `${uid}::${cid}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(w);
-  }
-  return out;
-}
 
 export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
@@ -56,10 +11,13 @@ export default function Winner({ onNavigate, onResetToGame }) {
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
-    console.log("🎯 Winner component mounted");
-    console.log("🏆 gameState.winners:", gameState.winners);
-    console.log("🏆 gameState.phase:", gameState.phase);
-  }, [gameState.winners, gameState.phase]);
+    console.log("🎯 Winner component - Full gameState:", {
+      phase: gameState.phase,
+      winners: gameState.winners,
+      winnersCount: gameState.winners?.length,
+      calledNumbers: gameState.calledNumbers?.length,
+    });
+  }, [gameState.winners, gameState.phase, gameState.calledNumbers]);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -85,13 +43,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
   }, [gameState.phase, onNavigate]);
 
   const winners = gameState.winners || [];
-  const displayWinners = dedupeWinningCartelas(winners);
   const hasWinners = winners.length > 0;
-
-  console.log("📊 Winner render:", {
-    winnersCount: winners.length,
-    hasWinners,
-  });
 
   const isCurrentUserWinner =
     sessionId &&
@@ -101,31 +53,6 @@ export default function Winner({ onNavigate, onResetToGame }) {
         w.sessionId === sessionId ||
         (w.user && w.user.id && w.user.id.toString() === sessionId?.toString()),
     );
-
-  const getWinnerDisplayName = (winner) =>
-    winner.name ||
-    winner.playerName ||
-    winner.firstName ||
-    (winner.cartelaNumber ? `Cartella #${winner.cartelaNumber}` : "Winner");
-
-  const uniqueWinners = [];
-  const seenKeys = new Set();
-  winners.forEach((w) => {
-    const key =
-      w.userId ||
-      w.sessionId ||
-      (w.user && w.user.id) ||
-      getWinnerDisplayName(w);
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      uniqueWinners.push(w);
-    }
-  });
-
-  const winnerNames = uniqueWinners.map(getWinnerDisplayName);
-  const gameCalled = Array.isArray(gameState.calledNumbers)
-    ? gameState.calledNumbers
-    : [];
 
   // No winner state
   if (!hasWinners) {
@@ -179,9 +106,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
           {/* Winner names - Show ALL winners */}
           <div className="space-y-2">
-            {winnerNames.slice(0, 5).map((name, idx) => (
+            {winners.map((winner, idx) => (
               <div
-                key={`${name}-${idx}`}
+                key={`${winner.userId}-${idx}`}
                 className="flex items-center justify-center gap-2 flex-wrap"
               >
                 <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-full px-3 py-1 text-emerald-200 font-bold text-sm">
@@ -191,15 +118,15 @@ export default function Winner({ onNavigate, onResetToGame }) {
                       size={12}
                     />
                   )}
-                  {name}
+                  {winner.name || `Cartella #${winner.cartelaNumber}`}
                 </div>
+                {winner.prize && (
+                  <span className="text-yellow-400 text-xs font-medium">
+                    won {winner.prize} ETB
+                  </span>
+                )}
               </div>
             ))}
-            {winnerNames.length > 5 && (
-              <p className="text-white/40 text-xs">
-                +{winnerNames.length - 5} more winners
-              </p>
-            )}
           </div>
 
           {/* Current user won badge */}
@@ -212,74 +139,61 @@ export default function Winner({ onNavigate, onResetToGame }) {
         </div>
 
         {/* Winning Cards */}
-        {displayWinners.length > 0 && (
-          <div
-            className={`space-y-3 mb-4 ${
-              displayWinners.length > 2 ? "max-h-[50vh] overflow-y-auto" : ""
-            }`}
-          >
-            {displayWinners.slice(0, 4).map((w, idx) => {
-              const cardData = cardDataFromWinner(w);
-              const calledNumbersForCard = calledNumbersForWinner(
-                w,
-                gameCalled,
-              );
-              const boardNumber = w.cartelaNumber || w.cardId || "N/A";
-              const label = getWinnerDisplayName(w);
+        <div className="space-y-3 mb-4 max-h-[50vh] overflow-y-auto">
+          {winners.map((winner, idx) => {
+            const cardData = winner.card;
+            const calledNumbers =
+              winner.called || gameState.calledNumbers || [];
+            const boardNumber = winner.cartelaNumber;
+            const prize = winner.prize || 0;
 
-              return (
-                <div
-                  key={`${String(w.userId)}-${boardNumber}-${idx}`}
-                  className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-3"
-                >
-                  {displayWinners.length > 1 && (
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <span className="text-white/50 text-[10px] font-medium">
-                        Winner
-                      </span>
-                      <span className="text-yellow-400 text-xs font-bold">
-                        {label}
-                      </span>
-                      <span className="text-white/30 text-[10px]">
-                        · #{boardNumber}
-                      </span>
+            return (
+              <div
+                key={`${winner.userId}-${boardNumber}-${idx}`}
+                className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-3"
+              >
+                <div className="flex items-center justify-between mb-2 px-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400 text-sm font-bold">
+                      Cartella #{boardNumber}
+                    </span>
+                    <span className="text-emerald-400 text-xs font-medium">
+                      Won {prize} ETB
+                    </span>
+                  </div>
+                  <span className="text-white/40 text-xs">
+                    {winner.name || "Player"}
+                  </span>
+                </div>
+                <div className="flex justify-center">
+                  {cardData &&
+                  Array.isArray(cardData) &&
+                  cardData.length === 5 ? (
+                    <CartellaCard
+                      id={boardNumber}
+                      card={cardData}
+                      called={calledNumbers}
+                      isPreview={false}
+                      showWinningPattern={true}
+                      showHeader={false}
+                      size="small"
+                    />
+                  ) : (
+                    <div className="bg-white/5 rounded-xl p-4 text-center w-full">
+                      <div className="text-2xl mb-1">🏆</div>
+                      <p className="text-white/40 text-sm">
+                        Cartella #{boardNumber}
+                      </p>
+                      <p className="text-emerald-400 text-xs font-bold mt-1">
+                        Won {prize} ETB
+                      </p>
                     </div>
                   )}
-                  <div className="flex justify-center">
-                    {cardData ? (
-                      <CartellaCard
-                        id={boardNumber}
-                        card={cardData}
-                        called={calledNumbersForCard}
-                        isPreview={false}
-                        showWinningPattern={true}
-                        showHeader={displayWinners.length === 1}
-                        size={displayWinners.length > 1 ? "small" : "normal"}
-                      />
-                    ) : (
-                      <div className="bg-white/5 rounded-xl p-4 text-center w-full max-w-xs">
-                        <div className="text-2xl mb-1">🏆</div>
-                        <p className="text-white/40 text-xs">
-                          Cartella #{boardNumber}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {displayWinners.length === 1 && (
-                    <p className="text-center text-white/30 text-[10px] mt-2">
-                      Cartella #{boardNumber}
-                    </p>
-                  )}
                 </div>
-              );
-            })}
-            {displayWinners.length > 4 && (
-              <div className="text-center text-white/40 text-xs">
-                +{displayWinners.length - 4} more winning cartellas
               </div>
-            )}
-          </div>
-        )}
+            );
+          })}
+        </div>
 
         {/* Countdown */}
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl py-4 px-4 text-center">
