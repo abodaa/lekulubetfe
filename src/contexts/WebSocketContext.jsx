@@ -634,26 +634,29 @@ export function WebSocketProvider({ children }) {
                       w.userId?.toString() === currentUserId,
                   )?.prize || 0;
 
-                console.log("🏆 WebSocket - Updating gameState with winners:", {
-                  winnersCount: event.payload.winners?.length,
-                  userWon,
-                  userPrize,
-                });
-
-                return {
+                // IMPORTANT: Keep winners data, don't clear them
+                const newState = {
                   ...prev,
                   phase: "announce",
                   gameId: event.payload?.gameId || prev.gameId,
-                  winners: event.payload.winners || prev.winners || [],
+                  winners: event.payload.winners || prev.winners || [], // Keep winners
                   calledNumbers:
                     event.payload.calledNumbers || prev.calledNumbers,
                   currentNumber: null,
-                  yourCards: [],
+                  yourCards: [], // Clear user's cards
                   yourSelections: [],
                   nextRegistrationStart: event.payload?.nextStartAt || null,
                   youWon: userWon,
                   yourPrize: userPrize,
                 };
+
+                console.log("🏆 WebSocket - New gameState:", {
+                  phase: newState.phase,
+                  winnersCount: newState.winners.length,
+                  youWon: newState.youWon,
+                });
+
+                return newState;
               });
               break;
 

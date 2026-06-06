@@ -391,9 +391,7 @@ export default function GameLayout({ stake, onNavigate }) {
         }));
       }
 
-      setTimeout(() => {
-        onNavigate?.("winner");
-      }, 500);
+      onNavigate?.("winner");
     }
   }, [
     gameState.phase,

@@ -56,8 +56,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
-    console.log("🏆 Winners received:", gameState.winners);
-  }, [gameState.winners]);
+    console.log("🎯 Winner component mounted");
+    console.log("🏆 gameState.winners:", gameState.winners);
+    console.log("🏆 gameState.phase:", gameState.phase);
+  }, [gameState.winners, gameState.phase]);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -84,8 +86,12 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
   const winners = gameState.winners || [];
   const displayWinners = dedupeWinningCartelas(winners);
-  const isMultiCartelas = displayWinners.length > 1;
   const hasWinners = winners.length > 0;
+
+  console.log("📊 Winner render:", {
+    winnersCount: winners.length,
+    hasWinners,
+  });
 
   const isCurrentUserWinner =
     sessionId &&
@@ -214,7 +220,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
           >
             {displayWinners.slice(0, 4).map((w, idx) => {
               const cardData = cardDataFromWinner(w);
-              const calledNumbers = calledNumbersForWinner(w, gameCalled);
+              const calledNumbersForCard = calledNumbersForWinner(
+                w,
+                gameCalled,
+              );
               const boardNumber = w.cartelaNumber || w.cardId || "N/A";
               const label = getWinnerDisplayName(w);
 
@@ -241,7 +250,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                       <CartellaCard
                         id={boardNumber}
                         card={cardData}
-                        called={calledNumbers}
+                        called={calledNumbersForCard}
                         isPreview={false}
                         showWinningPattern={true}
                         showHeader={displayWinners.length === 1}
