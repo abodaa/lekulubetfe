@@ -6,10 +6,10 @@ class AudioService {
     this.sounds = new Map();
     this.isEnabled = false;
     this.isInitializing = false;
-    this.useHtml5Fallback = false;
   }
 
   async init() {
+    // Prevent multiple initializations
     if (this.isEnabled) return true;
     if (this.isInitializing) return this.initPromise;
 
@@ -17,29 +17,25 @@ class AudioService {
 
     this.initPromise = (async () => {
       try {
+        // Create audio context
         const AudioContextClass =
           window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) {
-          console.warn("⚠️ Web Audio API not supported, using HTML5 fallback");
-          this.useHtml5Fallback = true;
-          this.isEnabled = true;
-          return true;
+          console.warn("⚠️ Web Audio API not supported");
+          return false;
         }
 
         this.audioContext = new AudioContextClass();
 
-        if (this.audioContext.state === "suspended") {
-          await this.audioContext.resume();
-        }
+        // Resume context (required after user interaction)
+        await this.audioContext.resume();
 
         this.isEnabled = true;
-        console.log("✅ Web Audio API initialized");
+        console.log("✅ Web Audio API initialized for Mini App");
         return true;
       } catch (error) {
-        console.warn("⚠️ Web Audio API failed, using HTML5 fallback:", error);
-        this.useHtml5Fallback = true;
-        this.isEnabled = true;
-        return true;
+        console.warn("⚠️ Web Audio API initialization failed:", error);
+        return false;
       } finally {
         this.isInitializing = false;
       }
@@ -49,19 +45,28 @@ class AudioService {
   }
 
   async loadSound(letter, number) {
-    if (this.useHtml5Fallback) return null;
     if (!this.audioContext) return null;
 
     const key = `${letter}${number}`;
-    const url = `/sound/${letter}${number}.mp3`;
+    const url = `/sound/${letter}${number}.MP3`;
 
     if (this.sounds.has(key)) return this.sounds.get(key);
 
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        // Try lowercase extension as fallback
+        const fallbackUrl = `/sound/${letter}${number}.MP3`;
+        const fallbackResponse = await fetch(fallbackUrl);
+        if (!fallbackResponse.ok)
+          throw new Error(`HTTP ${fallbackResponse.status}`);
+        const fallbackArrayBuffer = await fallbackResponse.arrayBuffer();
+        const fallbackAudioBuffer =
+          await this.audioContext.decodeAudioData(fallbackArrayBuffer);
+        this.sounds.set(key, fallbackAudioBuffer);
+        return fallbackAudioBuffer;
       }
+
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       this.sounds.set(key, audioBuffer);
@@ -74,67 +79,34 @@ class AudioService {
 
   async playNumberSound(n) {
     if (!n) return;
-    await this.init();
+
+    // Ensure audio is initialized
+    const initialized = await this.init();
+    if (!initialized || !this.audioContext) return;
+
+    // Ensure context is running (resume if suspended)
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
 
     const letter = this.getLetterForNumber(n);
 
-    if (this.useHtml5Fallback) {
-      return this.playHtml5Sound(letter, n);
+    const audioBuffer = await this.loadSound(letter, n);
+    if (!audioBuffer) return;
+
+    try {
+      const source = this.audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.audioContext.destination);
+      source.start();
+
+      // Clean up source when done
+      source.onended = () => {
+        source.disconnect();
+      };
+    } catch (error) {
+      console.warn(`Failed to play sound for ${letter}${n}:`, error);
     }
-
-    if (this.audioContext) {
-      if (this.audioContext.state === "suspended") {
-        await this.audioContext.resume();
-      }
-
-      const audioBuffer = await this.loadSound(letter, n);
-      if (audioBuffer) {
-        try {
-          const source = this.audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(this.audioContext.destination);
-          source.start();
-          source.onended = () => source.disconnect();
-          console.log(`✅ Playing ${letter}${n} via Web Audio`);
-          return;
-        } catch (error) {
-          console.warn(`Web Audio failed for ${letter}${n}:`, error);
-        }
-      }
-    }
-
-    return this.playHtml5Sound(letter, n);
-  }
-
-  playHtml5Sound(letter, n) {
-    return new Promise((resolve) => {
-      const audioPath = `/sound/${letter}${n}.mp3`;
-      const audio = new Audio(audioPath);
-      audio.volume = 0.7;
-
-      audio.addEventListener(
-        "canplaythrough",
-        () => {
-          audio.play().catch((err) => {
-            console.warn(`HTML5 play failed: ${audioPath}`, err);
-          });
-        },
-        { once: true },
-      );
-
-      audio.addEventListener(
-        "error",
-        (e) => {
-          console.warn(`HTML5 audio error: ${audioPath}`, e);
-          resolve();
-        },
-        { once: true },
-      );
-
-      audio.addEventListener("ended", () => resolve(), { once: true });
-
-      audio.load();
-    });
   }
 
   getLetterForNumber(n) {
@@ -146,21 +118,28 @@ class AudioService {
   }
 
   async preloadAll() {
-    await this.init();
-    console.log("🔊 Preloading sounds...");
+    const initialized = await this.init();
+    if (!initialized) return;
 
+    console.log("🔊 Preloading all sounds for Mini App...");
+    const promises = [];
     for (let n = 1; n <= 75; n++) {
       const letter = this.getLetterForNumber(n);
-      const audio = new Audio(`/sound/${letter}${n}.mp3`);
-      audio.preload = "auto";
-      audio.load();
-      if (n % 20 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+      promises.push(this.loadSound(letter, n));
+
+      // Load in batches to avoid overwhelming the network
+      if (n % 10 === 0) {
+        await Promise.all(promises);
+        promises.length = 0;
+        // Small delay to prevent rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
     }
-    console.log("✅ Sounds preloaded");
+    await Promise.all(promises);
+    console.log("✅ All sounds preloaded for Mini App");
   }
 
+  // Resume audio context (call this on user interaction)
   async resume() {
     if (this.audioContext && this.audioContext.state === "suspended") {
       await this.audioContext.resume();

@@ -249,7 +249,7 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // Replace your existing sound useEffect with this:
+  // Play sound when number is called
   useEffect(() => {
     if (!isSoundOn) return;
     if (!currentNumber) return;
@@ -257,11 +257,7 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase !== "running") return;
 
     const play = async () => {
-      try {
-        await playNumberSound(currentNumber);
-      } catch (error) {
-        console.warn("Sound play error:", error);
-      }
+      await playNumberSound(currentNumber).catch(() => {});
     };
     play();
   }, [currentNumber, isSoundOn, startCountdown, gameState.phase]);
@@ -737,22 +733,6 @@ export default function GameLayout({ stake, onNavigate }) {
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
-
-              <button
-                onClick={async () => {
-                  console.log("🔊 Testing sound for number 42");
-                  const testAudio = new Audio("/sound/B10.mp3");
-                  testAudio.volume = 0.7;
-                  testAudio
-                    .play()
-                    .then(() => console.log("✅ Sound played successfully"))
-                    .catch((e) => console.error("❌ Sound failed:", e));
-                }}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs bg-purple-500/30 text-white"
-              >
-                🔊
-              </button>
-
               <button
                 onClick={() => {
                   if (isAutoMarkOn) {
