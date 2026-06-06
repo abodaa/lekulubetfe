@@ -28,7 +28,6 @@ class AudioService {
 
         this.audioContext = new AudioContextClass();
 
-        // Check if we need to resume (browser autoplay policy)
         if (this.audioContext.state === "suspended") {
           await this.audioContext.resume();
         }
@@ -37,10 +36,7 @@ class AudioService {
         console.log("✅ Web Audio API initialized");
         return true;
       } catch (error) {
-        console.warn(
-          "⚠️ Web Audio API initialization failed, using HTML5 fallback:",
-          error,
-        );
+        console.warn("⚠️ Web Audio API failed, using HTML5 fallback:", error);
         this.useHtml5Fallback = true;
         this.isEnabled = true;
         return true;
@@ -53,9 +49,7 @@ class AudioService {
   }
 
   async loadSound(letter, number) {
-    // If using HTML5 fallback, don't preload via Web Audio
     if (this.useHtml5Fallback) return null;
-
     if (!this.audioContext) return null;
 
     const key = `${letter}${number}`;
@@ -68,7 +62,6 @@ class AudioService {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
       this.sounds.set(key, audioBuffer);
@@ -81,17 +74,14 @@ class AudioService {
 
   async playNumberSound(n) {
     if (!n) return;
-
     await this.init();
 
     const letter = this.getLetterForNumber(n);
 
-    // Use HTML5 Audio fallback if Web Audio failed
     if (this.useHtml5Fallback) {
       return this.playHtml5Sound(letter, n);
     }
 
-    // Try Web Audio first
     if (this.audioContext) {
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
@@ -105,17 +95,14 @@ class AudioService {
           source.connect(this.audioContext.destination);
           source.start();
           source.onended = () => source.disconnect();
+          console.log(`✅ Playing ${letter}${n} via Web Audio`);
           return;
         } catch (error) {
-          console.warn(
-            `Web Audio failed for ${letter}${n}, trying HTML5 fallback:`,
-            error,
-          );
+          console.warn(`Web Audio failed for ${letter}${n}:`, error);
         }
       }
     }
 
-    // Fallback to HTML5 Audio
     return this.playHtml5Sound(letter, n);
   }
 
@@ -125,26 +112,28 @@ class AudioService {
       const audio = new Audio(audioPath);
       audio.volume = 0.7;
 
-      const onEnd = () => {
-        audio.removeEventListener("ended", onEnd);
-        audio.removeEventListener("error", onError);
-        resolve();
-      };
+      audio.addEventListener(
+        "canplaythrough",
+        () => {
+          audio.play().catch((err) => {
+            console.warn(`HTML5 play failed: ${audioPath}`, err);
+          });
+        },
+        { once: true },
+      );
 
-      const onError = (e) => {
-        console.warn(`HTML5 audio failed: ${audioPath}`, e);
-        audio.removeEventListener("ended", onEnd);
-        audio.removeEventListener("error", onError);
-        resolve();
-      };
+      audio.addEventListener(
+        "error",
+        (e) => {
+          console.warn(`HTML5 audio error: ${audioPath}`, e);
+          resolve();
+        },
+        { once: true },
+      );
 
-      audio.addEventListener("ended", onEnd);
-      audio.addEventListener("error", onError);
+      audio.addEventListener("ended", () => resolve(), { once: true });
 
-      audio.play().catch((err) => {
-        console.warn(`HTML5 play failed: ${audioPath}`, err);
-        resolve();
-      });
+      audio.load();
     });
   }
 
@@ -158,21 +147,17 @@ class AudioService {
 
   async preloadAll() {
     await this.init();
-
     console.log("🔊 Preloading sounds...");
 
-    // Preload using HTML5 Audio (more reliable)
     for (let n = 1; n <= 75; n++) {
       const letter = this.getLetterForNumber(n);
       const audio = new Audio(`/sound/${letter}${n}.mp3`);
       audio.preload = "auto";
       audio.load();
-
       if (n % 20 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
-
     console.log("✅ Sounds preloaded");
   }
 
