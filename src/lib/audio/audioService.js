@@ -53,7 +53,7 @@ class AudioService {
     if (!this.audioContext) return null;
 
     const key = `${letter}${number}`;
-    const url = `/sound/${letter}${number}.mp3`;
+    const url = `https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3`;
 
     if (this.sounds.has(key)) return this.sounds.get(key);
 
@@ -108,7 +108,7 @@ class AudioService {
 
   playHtml5Sound(letter, n) {
     return new Promise((resolve) => {
-      const audioPath = `/sound/${letter}${n}.mp3`;
+      const audioPath = `https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3`;
       const audio = new Audio(audioPath);
       audio.volume = 0.7;
 
@@ -151,7 +151,7 @@ class AudioService {
 
     for (let n = 1; n <= 75; n++) {
       const letter = this.getLetterForNumber(n);
-      const audio = new Audio(`/sound/${letter}${n}.mp3`);
+      const audio = new Audio(`https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3`);
       audio.preload = "auto";
       audio.load();
       if (n % 20 === 0) {
