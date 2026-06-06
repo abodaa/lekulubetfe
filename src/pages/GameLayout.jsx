@@ -733,6 +733,32 @@ export default function GameLayout({ stake, onNavigate }) {
               >
                 {isSoundOn ? "🔊" : "🔇"}
               </button>
+
+              <button
+                onClick={async () => {
+                  console.log("Testing sound...");
+                  const testNumber = 42;
+                  const letter =
+                    testNumber <= 15
+                      ? "B"
+                      : testNumber <= 30
+                        ? "I"
+                        : testNumber <= 45
+                          ? "N"
+                          : testNumber <= 60
+                            ? "G"
+                            : "O";
+                  const audio = new Audio(`/sound/${letter}${testNumber}.mp3`);
+                  audio.volume = 0.7;
+                  audio
+                    .play()
+                    .then(() => console.log("✅ Sound played"))
+                    .catch((e) => console.error("❌ Sound failed:", e));
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs bg-purple-500/30 text-white"
+              >
+                🔊
+              </button>
               <button
                 onClick={() => {
                   if (isAutoMarkOn) {
