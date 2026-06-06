@@ -62,13 +62,6 @@ function AppContent() {
 
   // Smart navigation function
   const determineGamePage = () => {
-    console.log("=== determineGamePage ===");
-    console.log("phase:", gameState.phase);
-    console.log("hasUserCards:", hasUserCards());
-    console.log("hasEnoughPlayers:", hasEnoughPlayers());
-    console.log("selectedStake:", selectedStake);
-    console.log("winners:", gameState.winners?.length);
-
     // No stake selected - go to game selection
     if (!selectedStake) {
       return "game";
