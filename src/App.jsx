@@ -67,21 +67,17 @@ function AppContent() {
     console.log("hasUserCards:", hasUserCards());
     console.log("hasEnoughPlayers:", hasEnoughPlayers());
     console.log("selectedStake:", selectedStake);
+    console.log("winners:", gameState.winners?.length);
 
     // No stake selected - go to game selection
     if (!selectedStake) {
       return "game";
     }
 
-    // Game finished (announce phase) - THIS IS THE KEY PART
-    if (gameState.phase === "announce" && gameState.gameId) {
-      if (hasUserCards()) {
-        console.log("→ PLAYER WITH CARDS - GOING TO WINNER PAGE");
-        return "winner";
-      } else {
-        console.log("→ WATCH MODE - GOING TO CARTELA SELECTION");
-        return "cartela-selection";
-      }
+    // Game finished (announce phase) - PRIORITY #1
+    if (gameState.phase === "announce") {
+      console.log("→ GAME FINISHED - GOING TO WINNER PAGE");
+      return "winner";
     }
 
     // Game is running or starting
@@ -118,6 +114,12 @@ function AppContent() {
       return;
     }
 
+    // Don't auto-navigate if we're already on winner page
+    if (currentPage === "winner") {
+      console.log("Already on winner page, skipping auto-navigation");
+      return;
+    }
+
     const targetPage = determineGamePage();
     console.log("🎯 Target page:", targetPage, "Current page:", currentPage);
 
@@ -136,8 +138,6 @@ function AppContent() {
   ]);
 
   // Handle query parameter routing
-  // In App.jsx - Add leaderboard to query param handling
-
   useEffect(() => {
     const checkUrlParams = () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -158,7 +158,6 @@ function AppContent() {
             setCurrentPage("cartela-selection");
           }
         }
-        // Only set to game if no stake is selected
         if (!stakeParam && !selectedStake) {
           setCurrentPage("game");
         }
@@ -170,15 +169,13 @@ function AppContent() {
     return () => window.removeEventListener("popstate", checkUrlParams);
   }, []);
 
-  // Add this useEffect in App.jsx - after other useEffects
+  // Restore stake from reconnect
   useEffect(() => {
-    // Check if we have a reconnect stake saved
     const reconnectStake = sessionStorage.getItem("reconnect_stake");
     const reconnectTimestamp = sessionStorage.getItem("reconnect_timestamp");
 
     if (reconnectStake && reconnectTimestamp) {
       const timestamp = parseInt(reconnectTimestamp);
-      // Only use if less than 10 seconds old
       if (Date.now() - timestamp < 10000) {
         const stakeValue = parseInt(reconnectStake);
         if (stakeValue && [10, 20, 50].includes(stakeValue)) {
@@ -188,7 +185,6 @@ function AppContent() {
           setCurrentPage("cartela-selection");
         }
       }
-      // Clear sessionStorage
       sessionStorage.removeItem("reconnect_stake");
       sessionStorage.removeItem("reconnect_timestamp");
     }
@@ -201,26 +197,21 @@ function AppContent() {
 
   const handleResetToGame = () => {
     localStorage.removeItem("selectedStake");
-
     setSelectedStake(null);
     setSelectedCartelas([]);
     setCurrentGameId(null);
     setCurrentPage("game");
   };
 
-  // In App.jsx - Update handleNavigate
   const navigationInProgressRef = React.useRef(false);
 
   const handleNavigate = (page, forceDirect = false) => {
-    // Prevent multiple rapid navigations
     if (navigationInProgressRef.current) return;
     navigationInProgressRef.current = true;
-
     setIsNavigating(true);
 
     setTimeout(() => {
       if (page === "game") {
-        // Check if we need smart navigation or direct
         if (!forceDirect) {
           const targetPage = determineGamePage();
           if (targetPage !== "game") {
@@ -233,7 +224,6 @@ function AppContent() {
           }
           setCurrentPage(targetPage);
         } else {
-          // Force direct navigation to game page (reset state)
           setSelectedStake(null);
           setSelectedCartelas([]);
           setCurrentGameId(null);
@@ -244,8 +234,6 @@ function AppContent() {
         setCurrentPage(page);
       }
       setIsNavigating(false);
-
-      // Reset navigation guard after delay
       setTimeout(() => {
         navigationInProgressRef.current = false;
       }, 300);
@@ -320,7 +308,6 @@ function AppContent() {
     <div className="App">
       {renderPage()}
 
-      {/* Navigation Loading Overlay */}
       {isNavigating && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 text-center">
