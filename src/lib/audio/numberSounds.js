@@ -53,7 +53,7 @@ export const playNumberSound = async (n) => {
 
     const letter =
       n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
-    const audioPath = `/sound/${letter}${n}.mp3`;
+    const audioPath = `/sound/${letter}${n}.MP3`;
     const audio = new Audio(audioPath);
     activeAudio = audio;
 
@@ -111,7 +111,7 @@ export const preloadNumberSounds = async () => {
   for (let n = 1; n <= 75; n++) {
     const letter =
       n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
-    const audio = new Audio(`/sound/${letter}${n}.mp3`);
+    const audio = new Audio(`/sound/${letter}${n}.MP3`);
     audio.preload = "auto";
     promises.push(
       new Promise((resolve) => {
