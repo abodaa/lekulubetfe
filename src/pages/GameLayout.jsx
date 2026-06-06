@@ -377,11 +377,14 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
-  // ========== WINNER PAGE NAVIGATION - Called when game phase changes to "announce" ==========
+  // Navigate to winner page when game finishes
   useEffect(() => {
     if (gameState.phase === "announce" && !hasNavigatedToWinnerRef.current) {
       hasNavigatedToWinnerRef.current = true;
-      console.log("🏆 Game finished - navigating to winner page");
+      console.log(
+        "🏆 Game finished - navigating to winner page. Winners:",
+        gameState.winners?.length,
+      );
 
       if (gameState.youWon) {
         showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
@@ -391,6 +394,7 @@ export default function GameLayout({ stake, onNavigate }) {
         }));
       }
 
+      // Navigate to winner page - don't clear any data
       onNavigate?.("winner");
     }
   }, [
