@@ -249,7 +249,7 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // Play sound when number is called
+  // Replace your existing sound useEffect with this:
   useEffect(() => {
     if (!isSoundOn) return;
     if (!currentNumber) return;
@@ -257,7 +257,11 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase !== "running") return;
 
     const play = async () => {
-      await playNumberSound(currentNumber).catch(() => {});
+      try {
+        await playNumberSound(currentNumber);
+      } catch (error) {
+        console.warn("Sound play error:", error);
+      }
     };
     play();
   }, [currentNumber, isSoundOn, startCountdown, gameState.phase]);
