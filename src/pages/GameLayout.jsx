@@ -125,7 +125,6 @@ export default function GameLayout({ stake, onNavigate }) {
     ? gameState.yourCards
     : [];
 
-  // Memoize called numbers set for performance
   const calledNumbersSet = useMemo(
     () => new Set(calledNumbers),
     [calledNumbers],
@@ -189,7 +188,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // ========== NETWORK RECOVERY - Listen for numbers recovered from WebSocket ==========
   useEffect(() => {
     const handleNumbersRecovered = (event) => {
-      const { numbers, allNumbers } = event.detail;
+      const { numbers } = event.detail;
       console.log(
         `🔁 Network recovery: Restored ${numbers.length} missed numbers`,
       );
@@ -378,7 +377,7 @@ export default function GameLayout({ stake, onNavigate }) {
     setMissedWinningPatterns(newMissedPatterns);
   }, [calledNumbers, gameState.phase, yourCards, checkBingoPattern]);
 
-  // ========== WINNER PAGE NAVIGATION ==========
+  // ========== WINNER PAGE NAVIGATION - Called when game phase changes to "announce" ==========
   useEffect(() => {
     if (gameState.phase === "announce" && !hasNavigatedToWinnerRef.current) {
       hasNavigatedToWinnerRef.current = true;
@@ -404,6 +403,7 @@ export default function GameLayout({ stake, onNavigate }) {
     onNavigate,
   ]);
 
+  // Reset navigation flag when registration starts
   useEffect(() => {
     if (gameState.phase === "registration") {
       hasNavigatedToWinnerRef.current = false;
@@ -541,7 +541,7 @@ export default function GameLayout({ stake, onNavigate }) {
     }
   };
 
-  // Memoized number board - MOVED BEFORE CONDITIONAL RETURNS
+  // Memoized number board
   const NumberBoard = useMemo(
     () => (
       <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
@@ -615,7 +615,7 @@ export default function GameLayout({ stake, onNavigate }) {
     [calledNumbersSet, currentNumber],
   );
 
-  // Conditional returns - MUST be after all Hooks
+  // Conditional returns
   if (isRefreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
