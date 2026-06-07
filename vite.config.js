@@ -16,5 +16,6 @@ export default defineConfig({
     "import.meta.env.VITE_WS_URL": JSON.stringify(
       process.env.VITE_WS_URL || "wss://lekulubingoback.onrender.com",
     ),
+    esbuild: { drop: ["console", "debugger"] },
   },
 });
