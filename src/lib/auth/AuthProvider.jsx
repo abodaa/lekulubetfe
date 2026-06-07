@@ -89,253 +89,154 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const safeParseUser = () => {
       try {
-        console.log("🔍 Checking for initData early...", {
-          hasTelegram: !!window?.Telegram,
-          hasWebApp: !!window?.Telegram?.WebApp,
-          initDataFromWebApp: window?.Telegram?.WebApp?.initData
-            ? "PRESENT"
-            : "MISSING",
-          hash: window.location.hash,
-          search: window.location.search,
-          url: window.location.href,
-        });
+        return JSON.parse(localStorage.getItem("user"));
+      } catch {
+        return null;
+      }
+    };
 
-        const hashParamsEarly = new URLSearchParams(
-          window.location.hash.substring(1),
-        );
-        const searchParamsEarly = new URLSearchParams(window.location.search);
+    // Read initData from the Telegram SDK or URL params (some platforms deliver
+    // it via hash/search instead of WebApp.initData).
+    const readInitData = () => {
+      const fromWebApp = window?.Telegram?.WebApp?.initData;
+      const fromHash = new URLSearchParams(
+        window.location.hash.substring(1),
+      ).get("tgWebAppData");
+      const fromSearch = new URLSearchParams(window.location.search).get(
+        "tgWebAppData",
+      );
+      return (
+        (fromWebApp && fromWebApp.trim()) ||
+        (fromHash && fromHash.trim()) ||
+        (fromSearch && fromSearch.trim()) ||
+        null
+      );
+    };
 
-        const initDataFromWebAppEarly = window?.Telegram?.WebApp?.initData;
-        const initDataFromHashEarly = hashParamsEarly.get("tgWebAppData");
-        const initDataFromSearchEarly = searchParamsEarly.get("tgWebAppData");
+    // Bounded, fast poll for initData — only used on the slow path (no cached
+    // session). Replaces the old fixed multi-second sleeps.
+    const waitForInitData = async (maxMs = 1500, stepMs = 50) => {
+      const start = Date.now();
+      let data = readInitData();
+      while (!data && Date.now() - start < maxMs) {
+        await new Promise((r) => setTimeout(r, stepMs));
+        data = readInitData();
+      }
+      return data;
+    };
 
-        const initDataEarly =
-          (initDataFromWebAppEarly && initDataFromWebAppEarly.trim()) ||
-          (initDataFromHashEarly && initDataFromHashEarly.trim()) ||
-          (initDataFromSearchEarly && initDataFromSearchEarly.trim()) ||
-          null;
+    const applySession = (out) => {
+      if (cancelled || !out?.sessionId) return false;
+      setSessionId(out.sessionId);
+      localStorage.setItem("sessionId", out.sessionId);
+      setUser(out.user);
+      localStorage.setItem("user", JSON.stringify(out.user));
+      return true;
+    };
 
-        if (initDataEarly && initDataEarly.trim() !== "") {
-          const out = await verifyTelegram(initDataEarly);
-          const prevUser = (() => {
+    const mergeProfile = async (sid, baseUser) => {
+      try {
+        const prof = await fetchProfileWithSession(sid);
+        if (cancelled || !prof?.user) return;
+        const merged = {
+          ...baseUser,
+          firstName: prof.user.firstName,
+          lastName: prof.user.lastName,
+          phone: prof.user.phone,
+          isRegistered: prof.user.isRegistered,
+          role: prof.user.role,
+        };
+        setUser(merged);
+        localStorage.setItem("user", JSON.stringify(merged));
+      } catch {
+        /* non-fatal: keep cached user */
+      }
+    };
+
+    const clearSession = () => {
+      localStorage.removeItem("sessionId");
+      localStorage.removeItem("user");
+      setSessionId(null);
+      setUser(null);
+    };
+
+    (async () => {
+      const storedSid = localStorage.getItem("sessionId");
+      const storedUser = safeParseUser();
+
+      // ---- FAST PATH: valid cached token -> render immediately, verify in bg ----
+      if (storedSid && storedUser && !isTokenExpired(storedSid)) {
+        setIsLoading(false); // open right away
+
+        (async () => {
+          const initData = readInitData(); // no waiting on the fast path
+          let sid = storedSid;
+          if (initData) {
             try {
-              return JSON.parse(localStorage.getItem("user"));
-            } catch {
-              return null;
-            }
-          })();
-          if (prevUser && prevUser.id && prevUser.id !== out.user?.id) {
-            localStorage.removeItem("user");
-          }
-          setSessionId(out.sessionId);
-          localStorage.setItem("sessionId", out.sessionId);
-
-          let mergedUser = out.user;
-          try {
-            const prof = await fetchProfileWithSession(out.sessionId);
-            if (prof?.user) {
-              mergedUser = {
-                ...mergedUser,
-                ...{
-                  firstName: prof.user.firstName,
-                  lastName: prof.user.lastName,
-                  phone: prof.user.phone,
-                  isRegistered: prof.user.isRegistered,
-                },
-              };
-            }
-          } catch {}
-          setUser(mergedUser);
-          localStorage.setItem("user", JSON.stringify(mergedUser));
-          setIsLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error(
-          "Failed to refresh session with Telegram initData:",
-          error,
-        );
-        localStorage.removeItem("sessionId");
-        localStorage.removeItem("user");
-        setSessionId(null);
-        setUser(null);
-      }
-
-      if (sessionId && user) {
-        if (isTokenExpired(sessionId)) {
-          localStorage.removeItem("sessionId");
-          localStorage.removeItem("user");
-          setSessionId(null);
-          setUser(null);
-        } else {
-          try {
-            const prof = await fetchProfileWithSession(sessionId);
-            if (prof?.user) {
-              if (!user.phone || user.isRegistered === false) {
-                const merged = {
-                  ...user,
-                  ...{
-                    firstName: prof.user.firstName,
-                    lastName: prof.user.lastName,
-                    phone: prof.user.phone,
-                    isRegistered: prof.user.isRegistered,
-                  },
-                };
-                setUser(merged);
-                localStorage.setItem("user", JSON.stringify(merged));
-              }
-              setIsLoading(false);
-              return;
-            } else {
-              localStorage.removeItem("sessionId");
-              localStorage.removeItem("user");
-              setSessionId(null);
-              setUser(null);
-            }
-          } catch (error) {
-            localStorage.removeItem("sessionId");
-            localStorage.removeItem("user");
-            setSessionId(null);
-            setUser(null);
-          }
-        }
-      }
-
-      let attempts = 0;
-      const maxAttempts = 10;
-      while (attempts < maxAttempts && !window?.Telegram?.WebApp) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        attempts++;
-      }
-
-      const isInTelegram =
-        window?.Telegram?.WebApp &&
-        (window?.Telegram?.WebApp?.initDataUnsafe?.user ||
-          window?.Telegram?.WebApp?.platform === "tdesktop" ||
-          window?.Telegram?.WebApp?.platform === "android" ||
-          window?.Telegram?.WebApp?.platform === "ios" ||
-          window?.Telegram?.WebApp?.platform === "web" ||
-          navigator.userAgent.includes("Telegram"));
-
-      if (
-        isInTelegram &&
-        (!window?.Telegram?.WebApp?.initData ||
-          window.Telegram.WebApp.initData.trim() === "")
-      ) {
-        for (let i = 0; i < 10; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          const currentInitData = window?.Telegram?.WebApp?.initData;
-          if (currentInitData && currentInitData.trim() !== "") break;
-        }
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const searchParams = new URLSearchParams(window.location.search);
-
-      const initDataFromWebApp = window?.Telegram?.WebApp?.initData;
-      const initDataFromHash = hashParams.get("tgWebAppData");
-      const initDataFromSearch = searchParams.get("tgWebAppData");
-
-      const initData =
-        (initDataFromWebApp && initDataFromWebApp.trim()) ||
-        (initDataFromHash && initDataFromHash.trim()) ||
-        (initDataFromSearch && initDataFromSearch.trim()) ||
-        null;
-
-      if (!initData || initData.trim() === "") {
-        const definitelyInTelegram =
-          window?.Telegram?.WebApp &&
-          (window?.Telegram?.WebApp?.initDataUnsafe?.user ||
-            window?.Telegram?.WebApp?.platform ||
-            navigator.userAgent.includes("Telegram"));
-
-        if (definitelyInTelegram) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          const finalInitData =
-            (window?.Telegram?.WebApp?.initData &&
-              window?.Telegram?.WebApp?.initData.trim()) ||
-            new URLSearchParams(window.location.hash.substring(1))
-              .get("tgWebAppData")
-              ?.trim() ||
-            new URLSearchParams(window.location.search)
-              .get("tgWebAppData")
-              ?.trim() ||
-            null;
-
-          if (finalInitData && finalInitData.trim() !== "") {
-            try {
-              const out = await verifyTelegram(finalInitData);
-              setSessionId(out.sessionId);
-              localStorage.setItem("sessionId", out.sessionId);
-              let mergedUser = out.user;
-              try {
-                const prof = await fetchProfileWithSession(out.sessionId);
-                if (prof?.user) {
-                  mergedUser = {
-                    ...mergedUser,
-                    ...{
-                      firstName: prof.user.firstName,
-                      lastName: prof.user.lastName,
-                      phone: prof.user.phone,
-                      isRegistered: prof.user.isRegistered,
-                    },
-                  };
+              const out = await verifyTelegram(initData);
+              if (!cancelled && out?.sessionId) {
+                if (
+                  out.user?.id &&
+                  storedUser?.id &&
+                  out.user.id !== storedUser.id
+                ) {
+                  // Different Telegram user on this device -> switch fully.
+                  applySession(out);
+                  sid = out.sessionId;
+                } else {
+                  // Same user -> adopt the refreshed token, keep cached user.
+                  sid = out.sessionId;
+                  setSessionId(out.sessionId);
+                  localStorage.setItem("sessionId", out.sessionId);
                 }
-              } catch {}
-              setUser(mergedUser);
-              localStorage.setItem("user", JSON.stringify(mergedUser));
-              setIsLoading(false);
-              return;
-            } catch (e) {}
+              }
+            } catch {
+              /* verify failed; cached token is still used */
+            }
           }
-        }
+          // Refresh profile fields quietly. On failure we keep cached data
+          // rather than logging the user out (avoids false gate on a blip).
+          if (!cancelled && sid) {
+            mergeProfile(sid, safeParseUser() || storedUser);
+          }
+        })();
+        return;
+      }
 
-        setSessionId(null);
-        setUser(null);
-        localStorage.removeItem("sessionId");
-        localStorage.removeItem("user");
-        setIsLoading(false);
+      // ---- SLOW PATH: no valid cached token -> authenticate before rendering ----
+      setIsLoading(true);
+      const initData = readInitData() || (await waitForInitData());
+      if (cancelled) return;
+
+      if (!initData) {
+        clearSession();
+        setIsLoading(false); // -> Access Restricted gate
         return;
       }
 
       try {
         const out = await verifyTelegram(initData);
-        if (out && out.sessionId) {
-          setSessionId(out.sessionId);
-          localStorage.setItem("sessionId", out.sessionId);
-          let mergedUser = out.user;
-          try {
-            const prof = await fetchProfileWithSession(out.sessionId);
-            if (prof?.user) {
-              mergedUser = {
-                ...mergedUser,
-                ...{
-                  firstName: prof.user.firstName,
-                  lastName: prof.user.lastName,
-                  phone: prof.user.phone,
-                  isRegistered: prof.user.isRegistered,
-                },
-              };
-            }
-          } catch {}
-          setUser(mergedUser);
-          localStorage.setItem("user", JSON.stringify(mergedUser));
-        } else {
+        if (cancelled) return;
+        if (!applySession(out)) {
           throw new Error("Invalid authentication response");
         }
+        setIsLoading(false); // render as soon as we hold a session
+        mergeProfile(out.sessionId, out.user); // background profile merge
       } catch (e) {
-        setSessionId(null);
-        setUser(null);
-        localStorage.removeItem("sessionId");
-        localStorage.removeItem("user");
-      } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          clearSession();
+          setIsLoading(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const value = useMemo(

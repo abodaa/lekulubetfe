@@ -5,6 +5,11 @@ import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
 import { useWebSocket } from "../contexts/WebSocketContext";
 
+// The 200 cartella layouts are static. Cache them at module scope so they're
+// available instantly on every remount (e.g. after a game finishes and we come
+// back from the winner screen) instead of re-fetching and blocking the screen.
+let cachedCartellas = null;
+
 export default function CartelaSelection({
   onNavigate,
   onResetToGame,
@@ -14,8 +19,8 @@ export default function CartelaSelection({
 }) {
   const { sessionId } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
-  const [cards, setCards] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cards, setCards] = useState(() => cachedCartellas || []);
+  const [loading, setLoading] = useState(() => !cachedCartellas);
   const [error, setError] = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const [alertBanners, setAlertBanners] = useState([]);
@@ -178,27 +183,39 @@ export default function CartelaSelection({
 
   const [retryCount, setRetryCount] = useState(0);
 
-  // Fetch all cartellas
+  // Fetch all cartellas (static layouts). Uses the module cache when present so
+  // we never block the screen on a re-fetch after the first load.
   useEffect(() => {
+    if (!sessionId) return;
+
     const fetchCards = async () => {
-      if (!sessionId) return;
       try {
-        setLoading(true);
+        // Only show the blocking spinner if we have nothing cached yet.
+        if (!cachedCartellas) setLoading(true);
         setError(null);
         const response = await apiFetch("/api/cartellas", { sessionId });
         if (response.success && Array.isArray(response.cards)) {
+          cachedCartellas = response.cards;
           setCards(response.cards);
           setError(null);
-        } else {
+        } else if (!cachedCartellas) {
           setError("Failed to load cards");
         }
       } catch (err) {
         console.error("Error fetching cards:", err);
-        setError("Failed to load cards from server");
+        // If we have cached cards, keep showing them; only surface the error
+        // when there's nothing to display.
+        if (!cachedCartellas) setError("Failed to load cards from server");
       } finally {
         setLoading(false);
       }
     };
+
+    // If cached, render instantly and refresh quietly in the background.
+    if (cachedCartellas) {
+      setCards(cachedCartellas);
+      setLoading(false);
+    }
     fetchCards();
   }, [sessionId, retryCount]);
 
@@ -443,8 +460,8 @@ export default function CartelaSelection({
   const totalBalance = (Number(wallet.main) || 0) + (Number(wallet.bonus) || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
 
-  // Loading state
-  if (loading || !cardsReady) {
+  // Loading state — only block while actively loading with nothing to show yet.
+  if (loading && !cardsReady) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
@@ -458,8 +475,8 @@ export default function CartelaSelection({
     );
   }
 
-  // Error state
-  if (error) {
+  // Error / empty state — failed or empty fetch (no more infinite spinner).
+  if (error || !cardsReady) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
@@ -467,7 +484,9 @@ export default function CartelaSelection({
           <h2 className="text-white text-xl font-bold mb-2">
             Connection Error
           </h2>
-          <p className="text-white/60 mb-6">{error}</p>
+          <p className="text-white/60 mb-6">
+            {error || "Couldn't load cartellas. Please retry."}
+          </p>
           <button
             onClick={() => setRetryCount((c) => c + 1)}
             className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition-all"
