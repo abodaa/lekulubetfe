@@ -19,6 +19,10 @@ export function WebSocketProvider({ children }) {
   const reconnectTimeoutRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
+  // Hold latest values so the connect callback doesn't need them as deps
+  // (prevents the socket from tearing down on every number call).
+  const resumeRef = useRef(null);
+  const currentStakeRef = useRef(null);
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -176,6 +180,13 @@ export function WebSocketProvider({ children }) {
     }
   }, [currentStake, safeSessionId, gameState.calledNumbers]);
 
+  // Keep refs pointed at the latest resume fn / stake without forcing the
+  // connect callback to re-create (which would churn the WebSocket).
+  useEffect(() => {
+    resumeRef.current = resumeGameAfterReconnect;
+    currentStakeRef.current = currentStake;
+  });
+
   const connectGeneral = useCallback(() => {
     console.log("🔍 WebSocket connectGeneral called:", {
       safeSessionId: safeSessionId ? "PRESENT" : "MISSING",
@@ -190,12 +201,12 @@ export function WebSocketProvider({ children }) {
       return;
     }
 
-    if (connected && wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       console.log("Already connected to general WebSocket");
       return;
     }
 
-    if (isConnecting || connectionAttemptRef.current) {
+    if (connectionAttemptRef.current) {
       console.log("General connection already in progress, skipping");
       return;
     }
@@ -256,10 +267,10 @@ export function WebSocketProvider({ children }) {
           }
         }, 30000);
 
-        // Resume game after reconnect
+        // Resume game after reconnect (via ref to avoid dep churn)
         setTimeout(() => {
-          if (currentStake) {
-            resumeGameAfterReconnect();
+          if (currentStakeRef.current) {
+            resumeRef.current?.();
           }
         }, 500);
 
@@ -729,13 +740,7 @@ export function WebSocketProvider({ children }) {
         wsRef.current = null;
       }
     };
-  }, [
-    safeSessionId,
-    connected,
-    isConnecting,
-    currentStake,
-    resumeGameAfterReconnect,
-  ]);
+  }, [safeSessionId, currentStake]);
 
   const connectToStake = useCallback(
     (stake) => {
