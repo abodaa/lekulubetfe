@@ -54,7 +54,7 @@ const Toast = ({ message, type = "error", duration = 3000, onClose }) => {
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 max-w-sm w-full px-4 transition-all duration-300 ease-out ${
+      className={`fixed top-4 left-2 right-2 z-50 max-w-sm w-full px-4 transition-all duration-300 ease-out ${
         isExiting ? "translate-x-full opacity-0" : "translate-x-0 opacity-100"
       }`}
     >

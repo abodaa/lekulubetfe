@@ -10,6 +10,26 @@ import { useAuth } from "../lib/auth/AuthProvider";
 
 const WebSocketContext = createContext();
 
+// Convert the server's authoritative remaining time into a LOCAL-clock deadline,
+// so the on-screen countdown is identical across devices regardless of each
+// device's wall-clock skew. Prefers countdownSeconds; then (endsAt - serverTime),
+// which are both server-clock values so they cancel out; only falls back to the
+// local clock as a last resort.
+function localCountdownAnchor(payload = {}) {
+  const endsAt = payload.endsAt ?? payload.registrationEndTime ?? null;
+  let remaining;
+  if (payload.countdownSeconds != null) {
+    remaining = Math.max(0, Math.floor(payload.countdownSeconds));
+  } else if (endsAt != null && payload.serverTime != null) {
+    remaining = Math.max(0, Math.ceil((endsAt - payload.serverTime) / 1000));
+  } else if (endsAt != null) {
+    remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+  } else {
+    remaining = 0;
+  }
+  return { remaining, localEndTime: Date.now() + remaining * 1000 };
+}
+
 export function WebSocketProvider({ children }) {
   const { sessionId } = useAuth();
   const wsRef = useRef(null);
@@ -337,19 +357,16 @@ export function WebSocketProvider({ children }) {
                 const phase = snapshotPhase;
                 const gameId = snapshotGameId;
 
-                const registrationEndTime =
-                  event.payload.nextStartAt ||
-                  event.payload.registrationEndTime;
-
-                const serverCountdown =
-                  event.payload.countdownSeconds != null
-                    ? event.payload.countdownSeconds
-                    : registrationEndTime
-                      ? Math.max(
-                          0,
-                          Math.ceil((registrationEndTime - Date.now()) / 1000),
-                        )
-                      : 0;
+                const {
+                  remaining: serverCountdown,
+                  localEndTime: registrationEndTime,
+                } = localCountdownAnchor({
+                  endsAt:
+                    event.payload.nextStartAt ||
+                    event.payload.registrationEndTime,
+                  serverTime: event.payload.serverTime,
+                  countdownSeconds: event.payload.countdownSeconds,
+                });
 
                 const shouldPreserveCards =
                   phase === "running" &&
@@ -411,16 +428,10 @@ export function WebSocketProvider({ children }) {
             }
 
             case "registration_open": {
-              const registrationEndTime = event.payload.endsAt;
-              const serverCountdown =
-                event.payload.countdownSeconds != null
-                  ? event.payload.countdownSeconds
-                  : registrationEndTime
-                    ? Math.max(
-                        0,
-                        Math.ceil((registrationEndTime - Date.now()) / 1000),
-                      )
-                    : 0;
+              const {
+                remaining: serverCountdown,
+                localEndTime: registrationEndTime,
+              } = localCountdownAnchor(event.payload);
               setGameState((prev) => ({
                 ...prev,
                 phase: "registration",
@@ -442,16 +453,10 @@ export function WebSocketProvider({ children }) {
             }
 
             case "registration_extended": {
-              const registrationEndTime = event.payload.endsAt;
-              const serverCountdown =
-                event.payload.countdownSeconds != null
-                  ? event.payload.countdownSeconds
-                  : registrationEndTime
-                    ? Math.max(
-                        0,
-                        Math.ceil((registrationEndTime - Date.now()) / 1000),
-                      )
-                    : 0;
+              const {
+                remaining: serverCountdown,
+                localEndTime: registrationEndTime,
+              } = localCountdownAnchor(event.payload);
               setGameState((prev) => ({
                 ...prev,
                 phase: "registration",
