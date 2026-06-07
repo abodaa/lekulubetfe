@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import CartellaCard from "../components/CartellaCard";
 import { apiFetch } from "../lib/api/client";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
 import { useWebSocket } from "../contexts/WebSocketContext";
-
-// The 200 cartella layouts are static. Cache them at module scope so they're
-// available instantly on every remount (e.g. after a game finishes and we come
-// back from the winner screen) instead of re-fetching and blocking the screen.
-let cachedCartellas = null;
+import { getCachedCartellas, prefetchCartellas } from "../lib/cartellaCache";
 
 export default function CartelaSelection({
   onNavigate,
@@ -19,8 +15,8 @@ export default function CartelaSelection({
 }) {
   const { sessionId } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
-  const [cards, setCards] = useState(() => cachedCartellas || []);
-  const [loading, setLoading] = useState(() => !cachedCartellas);
+  const [cards, setCards] = useState(() => getCachedCartellas() || []);
+  const [loading, setLoading] = useState(() => !getCachedCartellas());
   const [error, setError] = useState(null);
   const [walletLoading, setWalletLoading] = useState(true);
   const [alertBanners, setAlertBanners] = useState([]);
@@ -183,40 +179,34 @@ export default function CartelaSelection({
 
   const [retryCount, setRetryCount] = useState(0);
 
-  // Fetch all cartellas (static layouts). Uses the module cache when present so
-  // we never block the screen on a re-fetch after the first load.
+  // Cartella layouts are static — serve from cache instantly; fetch once if cold.
   useEffect(() => {
     if (!sessionId) return;
 
-    const fetchCards = async () => {
-      try {
-        // Only show the blocking spinner if we have nothing cached yet.
-        if (!cachedCartellas) setLoading(true);
-        setError(null);
-        const response = await apiFetch("/api/cartellas", { sessionId });
-        if (response.success && Array.isArray(response.cards)) {
-          cachedCartellas = response.cards;
-          setCards(response.cards);
-          setError(null);
-        } else if (!cachedCartellas) {
-          setError("Failed to load cards");
-        }
-      } catch (err) {
-        console.error("Error fetching cards:", err);
-        // If we have cached cards, keep showing them; only surface the error
-        // when there's nothing to display.
-        if (!cachedCartellas) setError("Failed to load cards from server");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // If cached, render instantly and refresh quietly in the background.
-    if (cachedCartellas) {
-      setCards(cachedCartellas);
+    const cached = getCachedCartellas();
+    if (cached) {
+      setCards(cached);
       setLoading(false);
+      return;
     }
-    fetchCards();
+
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    prefetchCartellas(sessionId).then((fetched) => {
+      if (!alive) return;
+      if (fetched && fetched.length > 0) {
+        setCards(fetched);
+        setError(null);
+      } else {
+        setError("Failed to load cards from server");
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      alive = false;
+    };
   }, [sessionId, retryCount]);
 
   // Auto-navigate to game layout when game starts
@@ -315,6 +305,55 @@ export default function CartelaSelection({
     };
   }, []);
 
+  // ===== Optimistic selection =====
+  // Reflect a tap instantly, then reconcile with the server's confirmation and
+  // revert if it gets rejected — so selecting a card feels immediate.
+  const [pending, setPending] = useState({}); // { [cardNum]: "add" | "remove" }
+
+  const effectiveSelections = useMemo(() => {
+    const s = new Set(
+      (Array.isArray(gameState.yourSelections)
+        ? gameState.yourSelections
+        : []
+      ).map(Number),
+    );
+    for (const [num, op] of Object.entries(pending)) {
+      if (op === "add") s.add(Number(num));
+      else s.delete(Number(num));
+    }
+    return Array.from(s);
+  }, [gameState.yourSelections, pending]);
+
+  // Clear pending entries once the server's state catches up to them.
+  useEffect(() => {
+    const server = new Set(
+      (Array.isArray(gameState.yourSelections)
+        ? gameState.yourSelections
+        : []
+      ).map(Number),
+    );
+    setPending((prev) => {
+      let changed = false;
+      const next = {};
+      for (const [num, op] of Object.entries(prev)) {
+        const inServer = server.has(Number(num));
+        if ((op === "add" && inServer) || (op === "remove" && !inServer)) {
+          changed = true; // server caught up — drop this pending entry
+        } else {
+          next[num] = op;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [gameState.yourSelections]);
+
+  // If the server rejects a selection, drop optimistic state and resync.
+  useEffect(() => {
+    if (lastEvent?.type === "selection_rejected") {
+      setPending({});
+    }
+  }, [lastEvent]);
+
   // ========== MAIN HANDLER FOR SELECTING A CARTELLA ==========
   const handleCardSelect = async (cardNumber) => {
     // Prevent multiple rapid clicks
@@ -332,9 +371,8 @@ export default function CartelaSelection({
         return;
       }
 
-      const selectedNumbers = Array.isArray(gameState.yourSelections)
-        ? gameState.yourSelections
-        : [];
+      // Validate against the optimistic set so rapid taps respect the 5 limit.
+      const selectedNumbers = effectiveSelections;
 
       // Check if game is in registration phase
       if (gameState.phase !== "registration") {
@@ -404,8 +442,9 @@ export default function CartelaSelection({
         return;
       }
 
-      // Select the cartella
+      // Select the cartella — optimistically reflect it immediately.
       selectCartella(cardNum);
+      setPending((p) => ({ ...p, [cardNum]: "add" }));
       showSuccess(
         `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/5)`,
       );
@@ -415,16 +454,14 @@ export default function CartelaSelection({
     } finally {
       setTimeout(() => {
         isSelectingRef.current = false;
-      }, 500);
+      }, 150);
     }
   };
 
   // ========== HANDLER FOR REMOVING A CARTELLA ==========
   const handleRemoveCartella = async (cardNumber) => {
     const cardNum = Number(cardNumber);
-    const selectedNumbers = Array.isArray(gameState.yourSelections)
-      ? gameState.yourSelections
-      : [];
+    const selectedNumbers = effectiveSelections;
 
     if (!selectedNumbers.includes(cardNum)) {
       showError(`Cartella #${cardNum} not selected`);
@@ -438,6 +475,7 @@ export default function CartelaSelection({
 
     try {
       deselectCartella(cardNum);
+      setPending((p) => ({ ...p, [cardNum]: "remove" }));
       showSuccess(`Cartella #${cardNum} removed`);
     } catch (err) {
       console.error("Error removing cartella:", err);
@@ -453,9 +491,7 @@ export default function CartelaSelection({
         ? "--"
         : gameState.countdown || 0;
 
-  const selectedNumbers = Array.isArray(gameState.yourSelections)
-    ? gameState.yourSelections
-    : [];
+  const selectedNumbers = effectiveSelections;
 
   const totalBalance = (Number(wallet.main) || 0) + (Number(wallet.bonus) || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;

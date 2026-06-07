@@ -4,6 +4,7 @@ import { useAuth } from "../lib/auth/AuthProvider";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import lbLogo from "../assets/lb.png";
 import { apiFetch, getApiBase } from "../lib/api/client";
+import { prefetchCartellas } from "../lib/cartellaCache";
 import { motion } from "framer-motion";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
@@ -14,6 +15,12 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const apiBase = getApiBase();
   const { sessionId } = useAuth();
   useWebSocket();
+
+  // Warm the static cartella-layout cache while the player is picking a stake,
+  // so the selection screen renders instantly when they tap one.
+  useEffect(() => {
+    if (sessionId) prefetchCartellas(sessionId);
+  }, [sessionId]);
 
   useEffect(() => {
     let isMounted = true;
