@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from "react";
-import Game from "./pages/Game";
-import Rules from "./components/Rules";
-import Scores from "./pages/Scores";
-import History from "./pages/History";
-import Wallet from "./pages/Wallet";
-import Profile from "./pages/Profile";
-import CartelaSelection from "./pages/CartelaSelection.jsx";
-import GameLayout from "./pages/GameLayout.jsx";
-import Winner from "./pages/Winner.jsx";
+import React, { useState, useEffect, lazy, Suspense } from "react";
+import Game from "./pages/Game"; // eager: default landing page
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
   WebSocketProvider,
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
-import AdminLayout from "./admin/AdminLayout.jsx";
+
+// Lazy-loaded routes — split out of the initial bundle so players don't
+// download the admin panel and secondary pages on first paint (faster cold
+// start in the Telegram WebView).
+const Rules = lazy(() => import("./components/Rules"));
+const Scores = lazy(() => import("./pages/Scores"));
+const History = lazy(() => import("./pages/History"));
+const Wallet = lazy(() => import("./pages/Wallet"));
+const Profile = lazy(() => import("./pages/Profile"));
+const CartelaSelection = lazy(() => import("./pages/CartelaSelection.jsx"));
+const GameLayout = lazy(() => import("./pages/GameLayout.jsx"));
+const Winner = lazy(() => import("./pages/Winner.jsx"));
+const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
 
 // Inner component that has access to WebSocket context
 function AppContent() {
@@ -299,7 +303,15 @@ function AppContent() {
 
   return (
     <div className="App">
-      {renderPage()}
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+            <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+          </div>
+        }
+      >
+        {renderPage()}
+      </Suspense>
 
       {isNavigating && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">

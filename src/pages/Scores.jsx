@@ -64,26 +64,14 @@ export default function Scores({ onNavigate }) {
     const fetchLeaderboard = async () => {
       try {
         setLeadersLoading(true);
-        const tryEndpoints = async () => {
-          const endpoints = [
-            `/api/leaderboard?period=${topFilter}`,
-            `/leaderboard?period=${topFilter}`,
-            `/stats/leaderboard?period=${topFilter}`,
-            `/leaderboard/${topFilter}`,
-          ];
-          for (const path of endpoints) {
-            try {
-              const res = await apiFetch(path, { sessionId });
-              return res;
-            } catch (e) {
-              console.warn(`Failed to fetch from ${path}:`, e);
-              // continue to next
-            }
-          }
+        // The leaderboard lives at /leaderboard (mounted under /api via
+        // generalRoutes). One request — the old 3 fallbacks were dead routes.
+        const data = await apiFetch(`/leaderboard?period=${topFilter}`, {
+          sessionId,
+        }).catch((e) => {
+          console.warn("Failed to fetch leaderboard:", e);
           return null;
-        };
-
-        const data = await tryEndpoints();
+        });
         const rows = Array.isArray(data)
           ? data
           : Array.isArray(data?.leaders)
