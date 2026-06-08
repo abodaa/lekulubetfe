@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import CartellaCard from "../components/CartellaCard";
 import { FaTrophy, FaCrown, FaClock } from "react-icons/fa";
 import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
+import { playBingoSound } from "../lib/audio/numberSounds";
 
 export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
   const { sessionId } = useAuth();
-  const [countdown, setCountdown] = useState(0)
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     console.log("🎯 Winner component - Full gameState:", {
@@ -44,6 +45,24 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
   const winners = gameState.winners || [];
   const hasWinners = winners.length > 0;
+
+  // Play the celebratory bingo sound once when the game completes with a winner,
+  // unless the player has muted sound (shared toggle stored by GameLayout).
+  const bingoSoundPlayedRef = useRef(false);
+  useEffect(() => {
+    if (bingoSoundPlayedRef.current || !hasWinners) return;
+    let soundOn = true;
+    try {
+      const saved = localStorage.getItem("lekulu_sound_enabled");
+      soundOn = saved !== null ? saved === "true" : true;
+    } catch {
+      soundOn = true;
+    }
+    if (soundOn) {
+      bingoSoundPlayedRef.current = true;
+      playBingoSound().catch(() => {});
+    }
+  }, [hasWinners]);
 
   const isCurrentUserWinner =
     sessionId &&

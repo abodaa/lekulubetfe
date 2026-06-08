@@ -100,6 +100,57 @@ export const stopAllSounds = () => {
   }
 };
 
+// Celebratory sound played when a game completes with a winner.
+// File lives alongside the number sounds: /sound/bingo.mp3
+export const playBingoSound = async () => {
+  return new Promise((resolve) => {
+    if (!audioEnabled) {
+      resolve();
+      return;
+    }
+
+    // Stop any number sound still playing, then play the bingo jingle.
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+      activeAudio = null;
+    }
+
+    const audio = new Audio("/sound/bingo.mp3");
+    activeAudio = audio;
+    audio.volume = 0.8;
+    audio.preload = "auto";
+
+    const cleanup = () => {
+      audio.removeEventListener("ended", onEnd);
+      audio.removeEventListener("error", onError);
+    };
+    const onEnd = () => {
+      if (activeAudio === audio) activeAudio = null;
+      cleanup();
+      resolve();
+    };
+    const onError = (e) => {
+      console.warn("⚠️ Failed to play /sound/bingo.mp3", e);
+      if (activeAudio === audio) activeAudio = null;
+      cleanup();
+      resolve();
+    };
+
+    audio.addEventListener("ended", onEnd);
+    audio.addEventListener("error", onError);
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn("⚠️ Bingo audio play failed:", err);
+        if (activeAudio === audio) activeAudio = null;
+        resolve();
+      });
+    }
+  });
+};
+
 export const initAudio = async () => {
   console.log("🎵 Audio system initialized");
   return true;

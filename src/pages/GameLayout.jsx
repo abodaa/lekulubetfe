@@ -314,6 +314,16 @@ export default function GameLayout({ stake, onNavigate }) {
 
       if (claimingStates[cardNumber]) return;
 
+      // Manual mode: only a real, complete pattern counts. If the called numbers
+      // don't form a winning pattern on this card yet, show "No Bingo" and stop —
+      // never claim, never flip the button/cartella to WON.
+      const entry = (yourCards || []).find((c) => c.cardNumber === cardNumber);
+      const cardData = entry?.card;
+      if (!cardData || !checkBingoPattern(cardData, calledNumbers)) {
+        showError("No Bingo");
+        return;
+      }
+
       try {
         setClaimingStates((prev) => ({ ...prev, [cardNumber]: true }));
 
@@ -345,6 +355,9 @@ export default function GameLayout({ stake, onNavigate }) {
       currentGameId,
       gameState.phase,
       claimingStates,
+      yourCards,
+      calledNumbers,
+      checkBingoPattern,
       showError,
       showSuccess,
     ],
@@ -479,6 +492,13 @@ export default function GameLayout({ stake, onNavigate }) {
     const h = (event) => {
       const reason = event?.detail?.reason || "invalid_claim";
       const cardNumber = event?.detail?.cardNumber;
+
+      // A rejection means this cartella did NOT win — undo any optimistic WON
+      // marker and clear its claiming state so it never stays shown as WON.
+      if (cardNumber != null) {
+        claimedCartellasRef.current.delete(cardNumber);
+        setClaimingStates((prev) => ({ ...prev, [cardNumber]: false }));
+      }
 
       if (reason === "invalid_claim") {
         setManuallyMarkedNumbers({});
