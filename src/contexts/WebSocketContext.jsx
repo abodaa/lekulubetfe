@@ -821,6 +821,17 @@ export function WebSocketProvider({ children }) {
           "numbers",
         );
 
+        // Convert the server's deadline into a local-clock deadline using the
+        // serverTime/countdownSeconds now included in the status response, so a
+        // mid-registration reconnect shows the same countdown as everyone else.
+        const recoveredRegEnd = data.game.registrationEndsAt
+          ? localCountdownAnchor({
+              endsAt: new Date(data.game.registrationEndsAt).getTime(),
+              serverTime: data.game.serverTime,
+              countdownSeconds: data.game.countdownSeconds,
+            }).localEndTime
+          : null;
+
         setGameState((prev) => ({
           ...prev,
           calledNumbers: data.game.calledNumbers || [],
@@ -829,9 +840,7 @@ export function WebSocketProvider({ children }) {
           gameId: data.game.gameId || prev.gameId,
           playersCount: data.game.playersCount || prev.playersCount,
           prizePool: data.game.totalPrizes || prev.prizePool,
-          registrationEndTime: data.game.registrationEndsAt
-            ? new Date(data.game.registrationEndsAt).getTime()
-            : prev.registrationEndTime,
+          registrationEndTime: recoveredRegEnd ?? prev.registrationEndTime,
         }));
 
         return true;

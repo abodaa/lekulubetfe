@@ -14,6 +14,7 @@ import {
   preloadNumberSounds,
   initAudio,
   resumeAudio,
+  stopAllSounds,
 } from "../lib/audio/numberSounds";
 import "../styles/bingo-balls.css";
 import "../styles/action-buttons.css";
@@ -138,6 +139,14 @@ export default function GameLayout({ stake, onNavigate }) {
       return true;
     }
   });
+  // Keep the latest sound-on value in a ref so the play effect can read it
+  // without re-running when it toggles (prevents re-announcing on unmute).
+  const isSoundOnRef = useRef(isSoundOn);
+  useEffect(() => {
+    isSoundOnRef.current = isSoundOn;
+  }, [isSoundOn]);
+  // Last number we already handled, so we never replay it on unmute/re-render.
+  const lastPlayedNumberRef = useRef(null);
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
@@ -249,18 +258,20 @@ export default function GameLayout({ stake, onNavigate }) {
     };
   }, []);
 
-  // Play sound when number is called
+  // Play sound when a NEW number is called. Reads sound-on via a ref so toggling
+  // it doesn't re-run this effect (no spurious re-announcing). Each number is
+  // marked handled even while muted; the toggle handler announces the current
+  // number on unmute.
   useEffect(() => {
-    if (!isSoundOn) return;
     if (!currentNumber) return;
     if (startCountdown > 0) return;
     if (gameState.phase !== "running") return;
+    if (currentNumber === lastPlayedNumberRef.current) return;
 
-    const play = async () => {
-      await playNumberSound(currentNumber).catch(() => {});
-    };
-    play();
-  }, [currentNumber, isSoundOn, startCountdown, gameState.phase]);
+    lastPlayedNumberRef.current = currentNumber;
+    if (!isSoundOnRef.current) return; // muted: marked handled, but stay silent
+    playNumberSound(currentNumber).catch(() => {});
+  }, [currentNumber, startCountdown, gameState.phase]);
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
@@ -535,11 +546,28 @@ export default function GameLayout({ stake, onNavigate }) {
   const handleSoundToggle = () => {
     const newState = !isSoundOn;
     setIsSoundOn(newState);
+    isSoundOnRef.current = newState; // immediate, before the sync effect runs
     localStorage.setItem("lekulu_sound_enabled", newState.toString());
-    if (newState && !audioInitializedRef.current) {
-      audioInitializedRef.current = true;
-      initAudio().catch(() => {});
-      resumeAudio().catch(() => {});
+    if (newState) {
+      if (!audioInitializedRef.current) {
+        audioInitializedRef.current = true;
+        initAudio().catch(() => {});
+        resumeAudio().catch(() => {});
+      }
+      // Announce the number currently on screen right away (within this user
+      // gesture, so playback is allowed). Mark it handled so the play effect
+      // doesn't double-announce it.
+      if (
+        currentNumber &&
+        startCountdown === 0 &&
+        gameState.phase === "running"
+      ) {
+        lastPlayedNumberRef.current = currentNumber;
+        playNumberSound(currentNumber).catch(() => {});
+      }
+    } else {
+      // Muting: stop whatever is playing right now, immediately.
+      stopAllSounds();
     }
   };
 
