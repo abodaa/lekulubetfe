@@ -650,6 +650,16 @@ export function WebSocketProvider({ children }) {
                       w.userId?.toString() === currentUserId,
                   )?.prize || 0;
 
+                // Convert the server's absolute next-start time into a
+                // local-clock deadline so the Winner countdown reads the same on
+                // every device regardless of wall-clock skew.
+                const nextStart = event.payload?.nextStartAt
+                  ? localCountdownAnchor({
+                      endsAt: event.payload.nextStartAt,
+                      serverTime: event.payload.serverTime,
+                    }).localEndTime
+                  : null;
+
                 // IMPORTANT: Keep winners data, don't clear them
                 const newState = {
                   ...prev,
@@ -661,7 +671,7 @@ export function WebSocketProvider({ children }) {
                   currentNumber: null,
                   yourCards: [], // Clear user's cards
                   yourSelections: [],
-                  nextRegistrationStart: event.payload?.nextStartAt || null,
+                  nextRegistrationStart: nextStart,
                   youWon: userWon,
                   yourPrize: userPrize,
                 };
