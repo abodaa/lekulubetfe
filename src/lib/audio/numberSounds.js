@@ -3,6 +3,7 @@
 let activeAudio = null;
 let audioEnabled = true;
 let audioUnlocked = false;
+let bingoAudio = null; // preloaded so the win jingle plays instantly
 
 // Try to unlock audio on user interaction
 const unlockAudio = () => {
@@ -100,64 +101,58 @@ export const stopAllSounds = () => {
   }
 };
 
+// Preload the win jingle so it's ready the instant a game completes.
+export const preloadBingoSound = () => {
+  try {
+    if (!bingoAudio) {
+      bingoAudio = new Audio("/sound/bingo.mp3");
+      bingoAudio.preload = "auto";
+      bingoAudio.volume = 0.8;
+      bingoAudio.load();
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  return bingoAudio;
+};
+
 // Celebratory sound played when a game completes with a winner.
-// File lives alongside the number sounds: /sound/bingo.mp3
+// Uses the preloaded element so there's no fetch/decode delay.
 export const playBingoSound = async () => {
-  return new Promise((resolve) => {
-    if (!audioEnabled) {
-      resolve();
-      return;
-    }
+  if (!audioEnabled) return;
 
-    // Stop any number sound still playing, then play the bingo jingle.
-    if (activeAudio) {
-      activeAudio.pause();
-      activeAudio.currentTime = 0;
-      activeAudio = null;
-    }
+  // Stop any number sound still playing, then play the bingo jingle.
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio.currentTime = 0;
+    activeAudio = null;
+  }
 
-    const audio = new Audio("/sound/bingo.mp3");
-    activeAudio = audio;
-    audio.volume = 0.8;
-    audio.preload = "auto";
-
-    const cleanup = () => {
-      audio.removeEventListener("ended", onEnd);
-      audio.removeEventListener("error", onError);
-    };
-    const onEnd = () => {
-      if (activeAudio === audio) activeAudio = null;
-      cleanup();
-      resolve();
-    };
-    const onError = (e) => {
-      console.warn("⚠️ Failed to play /sound/bingo.mp3", e);
-      if (activeAudio === audio) activeAudio = null;
-      cleanup();
-      resolve();
-    };
-
-    audio.addEventListener("ended", onEnd);
-    audio.addEventListener("error", onError);
-
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((err) => {
-        console.warn("⚠️ Bingo audio play failed:", err);
-        if (activeAudio === audio) activeAudio = null;
-        resolve();
-      });
-    }
-  });
+  const audio = preloadBingoSound() || new Audio("/sound/bingo.mp3");
+  activeAudio = audio;
+  try {
+    audio.currentTime = 0;
+  } catch (e) {
+    /* some browsers throw if not yet loaded; ignore */
+  }
+  audio.volume = 0.8;
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch((err) => {
+      console.warn("⚠️ Bingo audio play failed:", err);
+    });
+  }
 };
 
 export const initAudio = async () => {
   console.log("🎵 Audio system initialized");
+  preloadBingoSound();
   return true;
 };
 
 export const preloadNumberSounds = async () => {
   console.log("🔊 Preloading sounds...");
+  preloadBingoSound();
   const promises = [];
   for (let n = 1; n <= 75; n++) {
     const letter =
