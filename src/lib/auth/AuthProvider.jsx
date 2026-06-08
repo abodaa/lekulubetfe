@@ -86,7 +86,18 @@ export function AuthProvider({ children }) {
     const raw = localStorage.getItem("user");
     return raw ? JSON.parse(raw) : null;
   });
-  const [isLoading, setIsLoading] = useState(true);
+  // Start WITHOUT the loading screen if we already hold a valid token — returning
+  // users render the app on the very first paint; the effect verifies in the
+  // background. Only show the auth screen when there's no usable cached session.
+  const [isLoading, setIsLoading] = useState(() => {
+    try {
+      const sid = localStorage.getItem("sessionId");
+      const usr = localStorage.getItem("user");
+      return !(sid && usr && !isTokenExpired(sid));
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     let cancelled = false;
