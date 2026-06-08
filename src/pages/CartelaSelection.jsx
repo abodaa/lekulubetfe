@@ -445,9 +445,6 @@ export default function CartelaSelection({
       // Select the cartella — optimistically reflect it immediately.
       selectCartella(cardNum);
       setPending((p) => ({ ...p, [cardNum]: "add" }));
-      // showSuccess(
-      //   `Cartella #${cardNum} added! (${selectedNumbers.length + 1}/5)`,
-      // );
     } catch (err) {
       console.error("Error selecting cartella:", err);
       showError("Failed to select cartella.");
@@ -476,7 +473,6 @@ export default function CartelaSelection({
     try {
       deselectCartella(cardNum);
       setPending((p) => ({ ...p, [cardNum]: "remove" }));
-      // showSuccess(`Cartella #${cardNum} removed`);
     } catch (err) {
       console.error("Error removing cartella:", err);
 
@@ -592,7 +588,7 @@ export default function CartelaSelection({
                 }
 
                 // Navigate with forceDirect = true to reset stake
-                onNavigate?.("game", true);
+                onResetToGame?.();
 
                 // Reset flag after delay
                 setTimeout(() => {
