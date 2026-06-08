@@ -1,5 +1,10 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import Game from "./pages/Game"; // eager: default landing page
+// In-game flow is eager so the stake -> cartella -> game -> winner path NEVER
+// waits on a code chunk (no Suspense spinner mid-flow, even on first load).
+import CartelaSelection from "./pages/CartelaSelection.jsx";
+import GameLayout from "./pages/GameLayout.jsx";
+import Winner from "./pages/Winner.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
@@ -7,23 +12,13 @@ import {
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
 
-// Lazy-loaded routes — split out of the initial bundle so players don't
-// download the admin panel and secondary pages on first paint (faster cold
-// start in the Telegram WebView).
+// Secondary tab pages stay lazy (not in the immediate game path).
 const Rules = lazy(() => import("./components/Rules"));
 const Scores = lazy(() => import("./pages/Scores"));
 const History = lazy(() => import("./pages/History"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const Profile = lazy(() => import("./pages/Profile"));
-// In-game flow: lazy (keeps the initial bundle lean) but prefetched right after
-// mount (see AppContent) so stake -> cartella -> game -> winner never shows a
-// chunk-loading spinner.
-const loadCartelaSelection = () => import("./pages/CartelaSelection.jsx");
-const loadGameLayout = () => import("./pages/GameLayout.jsx");
-const loadWinner = () => import("./pages/Winner.jsx");
-const CartelaSelection = lazy(loadCartelaSelection);
-const GameLayout = lazy(loadGameLayout);
-const Winner = lazy(loadWinner);
+// Admin is the big, rarely-used bundle — keep it lazy.
 const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
 
 // Inner component that has access to WebSocket context
@@ -42,22 +37,6 @@ function AppContent() {
   // Clear localStorage stake on mount to always start fresh
   useEffect(() => {
     localStorage.removeItem("selectedStake");
-  }, []);
-
-  // Warm the in-game route chunks shortly after load (during idle) so the
-  // stake -> cartella -> game -> winner flow never shows a chunk-load spinner.
-  useEffect(() => {
-    const warm = () => {
-      loadCartelaSelection();
-      loadGameLayout();
-      loadWinner();
-    };
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      const id = window.requestIdleCallback(warm, { timeout: 2000 });
-      return () => window.cancelIdleCallback?.(id);
-    }
-    const t = setTimeout(warm, 1200);
-    return () => clearTimeout(t);
   }, []);
 
   // Set a timeout for WebSocket connection

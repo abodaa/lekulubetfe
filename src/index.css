@@ -63,10 +63,19 @@
 }
 
 /* Base app layout helpers */
+html {
+  /* Solid fallback painted on the very first frame, before the gradient. */
+  background-color: #312e81; /* indigo-900 */
+}
 body {
-  background-color: #d6b3f2;
-  /* Flat purple background */
-  color: #111827; /* near-black for strong contrast on light background */
+  margin: 0;
+  min-height: 100vh;
+  /* Match the app's first screen exactly (Tailwind: bg-gradient-to-br
+     from-indigo-900 via-purple-900 to-pink-900) so the pre-React paint is
+     identical to what React renders — no purple flash on load. */
+  background: #312e81
+    linear-gradient(135deg, #312e81 0%, #581c87 50%, #831843 100%) no-repeat;
+  color: #111827;
 }
 
 @keyframes shrink {
