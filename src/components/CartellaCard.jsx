@@ -198,7 +198,7 @@ export default function CartellaCard({
       >
         <div
           className={`grid grid-cols-5 ${
-            size === "fill" ? "grid-rows-5 flex-1 min-h-0" : ""
+            size === "fill" ? "grid-rows-5 flex-1 min-h-0 gap-1" : ""
           }`}
         >
           {grid.map((row, rowIndex) =>

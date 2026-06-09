@@ -826,12 +826,16 @@ export default function GameLayout({ stake, onNavigate }) {
               { label: "Derash", value: currentPrizePool || 0 },
               { label: "Players", value: gameState.playersCount || 0 },
               { label: "Stake", value: stake || 0 },
-              { label: "Bonus", value: wallet.bonus?.toLocaleString() || 0 },
+              // { label: "Bonus", value: wallet.bonus?.toLocaleString() || 0 },
               { label: "Calls", value: `${calledNumbers.length}/75` },
             ].map((s) => (
               <div
                 key={s.label}
-                className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+                className={`${
+                  s.label === "Derash"
+                    ? "from-amber-300 to-amber-500 text-slate-900 grid-cols-2 text-xl font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                    : "grid-cols-1 bg-white/10 text-white/70"
+                } rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
               >
                 <p className="text-white/50 text-[10px] uppercase tracking-wide">
                   {s.label}

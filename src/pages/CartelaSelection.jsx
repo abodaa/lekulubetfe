@@ -747,7 +747,7 @@ export default function CartelaSelection({
                           isSelected
                             ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 border border-amber-200/70 scale-105 shadow-[0_4px_16px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/50"
                             : isTaken
-                              ? "bg-white/[0.02] text-white/20 border border-white/[0.04] cursor-not-allowed"
+                              ? "bg-red-400 text-white border border-red-400 cursor-not-allowed"
                               : gameState.phase === "registration"
                                 ? "bg-gradient-to-b from-white/[0.1] to-white/[0.02] text-white/80 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:from-amber-400/25 hover:to-amber-400/5 hover:text-amber-100 hover:border-amber-400/40 hover:scale-105 active:scale-95 cursor-pointer"
                                 : "bg-white/[0.02] text-white/25 border border-white/5 cursor-not-allowed"
