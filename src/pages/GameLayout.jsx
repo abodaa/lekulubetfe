@@ -833,8 +833,8 @@ export default function GameLayout({ stake, onNavigate }) {
                 key={s.label}
                 className={`${
                   s.label === "Derash"
-                    ? "from-amber-300 to-amber-500 text-slate-900 grid-cols-2 text-xl font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.5)]"
-                    : "grid-cols-1 bg-white/10 text-white/70"
+                    ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 col-span-2 text-xl font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                    : "grid-cols-1 bg-white/10 text-white/70 col-span-1"
                 } rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
               >
                 <p className="text-white/50 text-[10px] uppercase tracking-wide">
