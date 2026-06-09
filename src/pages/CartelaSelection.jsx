@@ -743,7 +743,7 @@ export default function CartelaSelection({
                         key={cartelaNumber}
                         onClick={() => handleCardSelect(cartelaNum)}
                         disabled={gameState.phase !== "registration"}
-                        className={`aspect-square rounded-full text-sm font-bold transition-all duration-200 flex items-center justify-center ${
+                        className={`aspect-square rounded-full text-xs font-bold transition-all duration-200 flex items-center justify-center ${
                           isSelected
                             ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 border border-amber-200/70 scale-105 shadow-[0_4px_16px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/50"
                             : isTaken
