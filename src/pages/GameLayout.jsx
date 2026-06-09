@@ -896,7 +896,7 @@ export default function GameLayout({ stake, onNavigate }) {
         {!isWatchMode && NumberBoard}
 
         <main className="flex-1 px-3 pb-1.5 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1">
+          <div className="flex-1 min-h-0">
             {yourCards.length > 0 ? (
               <div className="relative h-full">
                 <Swiper
@@ -937,9 +937,9 @@ export default function GameLayout({ stake, onNavigate }) {
                       !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
-                        <div className="px-1 pb-3 h-full flex items-center justify-center">
+                        <div className="px-1 pb-3 h-full flex flex-col">
                           <div
-                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border w-full flex flex-col max-h-full ${
+                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border w-full flex flex-col flex-1 min-h-0 ${
                               hasMissedPattern &&
                               !alreadyClaimed &&
                               !isAutoMarkOn
