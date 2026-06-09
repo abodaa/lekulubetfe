@@ -594,7 +594,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Memoized number board
   const NumberBoard = useMemo(
     () => (
-      <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 overflow-hidden">
+      <div className="bg-white/5 backdrop-blur my-2 border border-white/10 overflow-hidden">
         <table className="w-full border-collapse">
           <tbody>
             {[
@@ -631,7 +631,7 @@ export default function GameLayout({ stake, onNavigate }) {
             ].map(({ letter, color, start, end }) => (
               <tr key={letter}>
                 <td
-                  className={`text-center text-[11px] font-black py-0.5 w-[8%] ${color}`}
+                  className={`text-center text-[12px] font-black py-0.5 w-[8%] ${color}`}
                 >
                   {letter}
                 </td>
@@ -644,7 +644,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <td
                       key={n}
-                      className={`text-center text-[10px] py-0.5 font-bold transition-colors duration-150 ${
+                      className={`text-center text-[12px] py-0.5 font-bold transition-colors duration-150 ${
                         isCurrent
                           ? "bg-orange-500 text-white scale-105"
                           : isCalled
@@ -833,10 +833,10 @@ export default function GameLayout({ stake, onNavigate }) {
                 key={s.label}
                 className="bg-white/5 rounded-lg px-1 py-1 text-center border border-white/10 leading-tight"
               >
-                <p className="text-white/50 text-[8px] uppercase tracking-wide">
+                <p className="text-white/50 text-[10px] uppercase tracking-wide">
                   {s.label}
                 </p>
-                <p className="text-white font-bold text-[11px]">{s.value}</p>
+                <p className="text-white font-bold text-[12px]">{s.value}</p>
               </div>
             ))}
           </div>
@@ -844,7 +844,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Previously Called Numbers */}
         {!isWatchMode && calledNumbers.length > 0 && (
-          <div className="px-3 pb-1 flex-shrink-0 my-1">
+          <div className="px-3 pb-1 flex-shrink-0 my-2">
             <div className="flex justify-center gap-1 flex-wrap">
               {calledNumbers
                 .slice(-5)
@@ -871,7 +871,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <div
                       key={`${n}-${i}`}
-                      className={`rounded-full w-7 h-7 flex items-center justify-center text-[10px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
+                      className={`rounded-full w-7 h-7 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
                           ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80"
                           : ""
@@ -888,7 +888,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {!isWatchMode && startCountdown > 0 && calledNumbers.length === 0 && (
           <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-            Starts in {startCountdown} secs
+            Starts in {startCountdown ? startCountdown : 0} secs
           </p>
         )}
 
