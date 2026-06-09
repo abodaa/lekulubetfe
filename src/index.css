@@ -63,19 +63,34 @@
 }
 
 /* Base app layout helpers */
-html {
-  /* Solid fallback painted on the very first frame, before the gradient. */
-  background-color: #312e81; /* indigo-900 */
+:root {
+  /* Real usable viewport height. Defaults to the dynamic viewport unit and is
+     overridden with an exact pixel value by main.jsx (synced to Telegram's
+     WebView viewport) so full-height screens fit without the 100vh cut-off. */
+  --app-height: 100dvh;
+}
+
+html,
+body {
+  /* Match the app's screens exactly so the first paint (before React mounts)
+     doesn't flash a different color. Mirrors Tailwind
+     bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900. */
+  background: linear-gradient(to bottom right, #312e81, #581c87, #831843);
+  background-attachment: fixed;
+  min-height: var(--app-height);
+}
+html,
+body,
+#root {
+  height: 100%;
 }
 body {
-  margin: 0;
-  min-height: 100vh;
-  /* Match the app's first screen exactly (Tailwind: bg-gradient-to-br
-     from-indigo-900 via-purple-900 to-pink-900) so the pre-React paint is
-     identical to what React renders — no purple flash on load. */
-  background: #312e81
-    linear-gradient(135deg, #312e81 0%, #581c87 50%, #831843 100%) no-repeat;
-  color: #111827;
+  color: #111827; /* unchanged: components set their own colors */
+  overflow-x: hidden; /* never scroll sideways on any screen */
+}
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes shrink {
@@ -220,7 +235,7 @@ body {
   min-height: 100vh;
   padding-bottom: 6rem;
   /* leave space for bottom nav on mobile */
-  background: #d6b3f2; /* Flat purple background */
+  background: linear-gradient(to bottom right, #312e81, #581c87, #831843);
 }
 
 .bottom-nav {

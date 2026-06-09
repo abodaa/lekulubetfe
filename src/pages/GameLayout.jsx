@@ -668,7 +668,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Conditional returns
   if (isRefreshing) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
           <p className="text-white/80 text-lg font-bold">Refreshing...</p>
@@ -679,7 +679,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
   if (!currentGameId && !connected && !isRefreshing) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
           <div className="text-white text-lg font-bold mb-2">Connecting...</div>
@@ -706,7 +706,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const isWatchMode = yourCards.length === 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -755,7 +755,7 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
       )}
 
-      <div className="max-w-md mx-auto w-full flex flex-col h-screen">
+      <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
         <header className="px-3 pt-2 pb-1 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">

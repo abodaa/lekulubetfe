@@ -495,7 +495,7 @@ export default function CartelaSelection({
   // Loading state — only block while actively loading with nothing to show yet.
   if (loading && !cardsReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/80 text-lg font-medium">
@@ -510,7 +510,7 @@ export default function CartelaSelection({
   // Error / empty state — failed or empty fetch (no more infinite spinner).
   if (error || !cardsReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-white text-xl font-bold mb-2">
@@ -531,7 +531,7 @@ export default function CartelaSelection({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
       {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
@@ -587,7 +587,7 @@ export default function CartelaSelection({
                   }
                 }
 
-                // Navigate with forceDirect = true to reset stake
+                // Reset stake directly — instant, no navigation overlay.
                 onResetToGame?.();
 
                 // Reset flag after delay
