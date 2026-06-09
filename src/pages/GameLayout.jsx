@@ -600,31 +600,31 @@ export default function GameLayout({ stake, onNavigate }) {
             {[
               {
                 letter: "B",
-                color: "bg-blue-600/70 text-blue-100",
+                color: "bg-white/[0.04] text-sky-300",
                 start: 1,
                 end: 15,
               },
               {
                 letter: "I",
-                color: "bg-green-600/70 text-green-100",
+                color: "bg-white/[0.04] text-emerald-300",
                 start: 16,
                 end: 30,
               },
               {
                 letter: "N",
-                color: "bg-purple-600/70 text-purple-100",
+                color: "bg-white/[0.04] text-violet-300",
                 start: 31,
                 end: 45,
               },
               {
                 letter: "G",
-                color: "bg-red-600/70 text-red-100",
+                color: "bg-white/[0.04] text-rose-300",
                 start: 46,
                 end: 60,
               },
               {
                 letter: "O",
-                color: "bg-yellow-600/70 text-yellow-100",
+                color: "bg-white/[0.04] text-amber-300",
                 start: 61,
                 end: 75,
               },
@@ -668,7 +668,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Conditional returns
   if (isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
           <p className="text-white/80 text-lg font-bold">Refreshing...</p>
@@ -679,7 +679,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
   if (!currentGameId && !connected && !isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
           <div className="text-white text-lg font-bold mb-2">Connecting...</div>
@@ -687,7 +687,7 @@ export default function GameLayout({ stake, onNavigate }) {
           {showTimeout && (
             <button
               onClick={() => onNavigate?.("cartela-selection")}
-              className="px-6 py-3 bg-pink-600 text-white rounded-lg font-bold"
+              className="px-6 py-3 bg-amber-500 text-slate-900 rounded-lg font-bold"
             >
               Back
             </button>
@@ -706,7 +706,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const isWatchMode = yourCards.length === 0;
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col">
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -762,10 +762,10 @@ export default function GameLayout({ stake, onNavigate }) {
               <div
                 className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
                   gameState.phase === "running"
-                    ? "bg-green-500/30 text-green-200 border-green-400/40"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
                     : gameState.phase === "registration"
-                      ? "bg-yellow-500/30 text-yellow-200 border-yellow-400/40"
-                      : "bg-gray-500/30 text-gray-200 border-gray-400/40"
+                      ? "bg-amber-500/20 text-amber-300 border-amber-400/40"
+                      : "bg-slate-500/20 text-slate-300 border-slate-400/30"
                 }`}
               >
                 {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
@@ -798,7 +798,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-green-600 bg-green-600/20" : "text-white/70 bg-white/20"}`}
+                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
               >
                 {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
               </button>
@@ -862,18 +862,18 @@ export default function GameLayout({ stake, onNavigate }) {
                             ? "G"
                             : "O";
                   const colors = {
-                    B: "bg-blue-500/30 text-blue-200 border-blue-400/40",
-                    I: "bg-green-500/30 text-green-200 border-green-400/40",
-                    N: "bg-purple-500/30 text-purple-200 border-purple-400/40",
-                    G: "bg-red-500/30 text-red-200 border-red-400/40",
-                    O: "bg-yellow-500/30 text-yellow-200 border-yellow-400/40",
+                    B: "bg-sky-500/20 text-sky-200 border-sky-400/40",
+                    I: "bg-emerald-500/20 text-emerald-200 border-emerald-400/40",
+                    N: "bg-violet-500/20 text-violet-200 border-violet-400/40",
+                    G: "bg-rose-500/20 text-rose-200 border-rose-400/40",
+                    O: "bg-amber-500/20 text-amber-200 border-amber-400/40",
                   };
                   return (
                     <div
                       key={`${n}-${i}`}
                       className={`rounded-full w-10 h-10 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
-                          ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80"
+                          ? "ring-2 ring-amber-300 scale-110 bg-opacity-80"
                           : ""
                       }`}
                     >
@@ -947,7 +947,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                 : hasWinningPattern &&
                                     !alreadyClaimed &&
                                     !isAutoMarkOn
-                                  ? "border-green-500/50 bg-green-500/10"
+                                  ? "border-emerald-500/50 bg-emerald-500/10"
                                   : "border-white/10"
                             }`}
                           >
@@ -957,7 +957,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   Cartella #{cardNumber}
                                 </span>
                                 {alreadyClaimed && (
-                                  <span className="text-green-400 text-xs font-bold bg-green-500/20 px-2 py-0.5 rounded-full">
+                                  <span className="text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-0.5 rounded-full">
                                     WON ✓
                                   </span>
                                 )}
@@ -974,8 +974,8 @@ export default function GameLayout({ stake, onNavigate }) {
                                   alreadyClaimed
                                     ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
                                     : isAutoMarkOn
-                                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white opacity-70 cursor-not-allowed"
-                                      : "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:scale-105"
+                                      ? "bg-gradient-to-r from-slate-600 to-slate-700 text-white/80 opacity-80 cursor-not-allowed"
+                                      : "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 hover:scale-105 shadow-lg shadow-amber-500/20"
                                 }`}
                               >
                                 {isClaiming
@@ -1063,7 +1063,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   </p>
                   <div className="flex items-center justify-center gap-4 mb-6">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span className="text-white/30 text-xs font-bold">
                         Live
                       </span>

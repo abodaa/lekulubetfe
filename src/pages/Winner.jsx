@@ -76,11 +76,11 @@ export default function Winner({ onNavigate, onResetToGame }) {
   // No winner state
   if (!hasWinners) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col items-center justify-center px-4">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 text-center mb-4">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <GiTrophyCup className="text-yellow-400" size={28} />
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <GiTrophyCup className="text-amber-400" size={28} />
             </div>
             <h1 className="text-white font-bold text-2xl mb-2">Game Over</h1>
             <p className="text-white/40 text-sm">No winners this round</p>
@@ -106,10 +106,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
   }
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f]">
       <div className="max-w-md mx-auto px-4 py-6 pb-24">
         {/* Winner Banner */}
-        <div className="bg-white/5 backdrop-blur border border-yellow-500/30 rounded-2xl p-5 text-center mb-4">
+        <div className="bg-white/5 backdrop-blur border border-amber-400/30 rounded-2xl p-5 text-center mb-4">
           <div className="flex justify-center gap-2 mb-3">
             <span className="text-2xl">🎉</span>
             <span className="text-2xl">🏆</span>
@@ -117,7 +117,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-3">
-            <FaTrophy className="text-yellow-400" size={24} />
+            <FaTrophy className="text-amber-400" size={24} />
             <h1 className="text-white font-black text-3xl tracking-wider">
               BINGO!
             </h1>
@@ -133,14 +133,14 @@ export default function Winner({ onNavigate, onResetToGame }) {
                 <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-full px-3 py-1 text-emerald-200 font-bold text-sm">
                   {idx === 0 && (
                     <FaCrown
-                      className="inline mr-1 text-yellow-400"
+                      className="inline mr-1 text-amber-400"
                       size={12}
                     />
                   )}
                   {winner.name || `Cartella #${winner.cartelaNumber}`}
                 </div>
                 {winner.prize && (
-                  <span className="text-yellow-400 text-xs font-medium">
+                  <span className="text-amber-400 text-xs font-medium">
                     won {winner.prize} ETB
                   </span>
                 )}
@@ -150,9 +150,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
           {/* Current user won badge */}
           {isCurrentUserWinner && (
-            <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-400/30">
-              <GiConfirmed size={12} className="text-green-400" />
-              <span className="text-green-400 text-xs font-bold">You won!</span>
+            <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30">
+              <GiConfirmed size={12} className="text-emerald-400" />
+              <span className="text-emerald-400 text-xs font-bold">You won!</span>
             </div>
           )}
         </div>
@@ -173,7 +173,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
               >
                 <div className="flex items-center justify-between mb-2 px-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 text-sm font-bold">
+                    <span className="text-amber-400 text-sm font-bold">
                       Cartella #{boardNumber}
                     </span>
                     <span className="text-emerald-400 text-xs font-medium">

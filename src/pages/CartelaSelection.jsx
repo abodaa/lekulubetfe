@@ -495,7 +495,7 @@ export default function CartelaSelection({
   // Loading state — only block while actively loading with nothing to show yet.
   if (loading && !cardsReady) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/80 text-lg font-medium">
@@ -510,7 +510,7 @@ export default function CartelaSelection({
   // Error / empty state — failed or empty fetch (no more infinite spinner).
   if (error || !cardsReady) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-white text-xl font-bold mb-2">
@@ -531,7 +531,7 @@ export default function CartelaSelection({
   }
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col">
       {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
@@ -618,7 +618,7 @@ export default function CartelaSelection({
             <div
               className={`px-4 py-2 rounded-xl text-center min-w-[80px] ${
                 gameState.phase === "registration"
-                  ? "bg-yellow-500/20 border border-yellow-500/30"
+                  ? "bg-amber-500/15 border border-amber-400/40"
                   : "bg-white/5 border border-white/10"
               }`}
             >
@@ -628,7 +628,7 @@ export default function CartelaSelection({
               <div
                 className={`text-2xl font-extrabold font-mono ${
                   gameState.phase === "registration"
-                    ? "text-yellow-300"
+                    ? "text-amber-300"
                     : "text-white/60"
                 }`}
               >
@@ -644,11 +644,11 @@ export default function CartelaSelection({
               <div
                 className={`text-sm font-bold ${
                   gameState.phase === "registration"
-                    ? "text-green-300"
+                    ? "text-emerald-300"
                     : gameState.phase === "waiting"
-                      ? "text-yellow-300"
+                      ? "text-amber-300"
                       : gameState.phase === "running"
-                        ? "text-blue-300"
+                        ? "text-emerald-400"
                         : "text-white/60"
                 }`}
               >
@@ -745,9 +745,9 @@ export default function CartelaSelection({
                         disabled={gameState.phase !== "registration"}
                         className={`aspect-square rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                           isSelected
-                            ? "bg-green-500/50 text-green-300 border-2 border-green-400 scale-105"
+                            ? "bg-amber-400 text-slate-900 border-2 border-amber-300 scale-105 shadow-lg shadow-amber-500/30"
                             : isTaken
-                              ? "bg-red-500/20 text-red-300/50 border border-red-500/20 cursor-not-allowed"
+                              ? "bg-rose-500/15 text-rose-300/50 border border-rose-500/20 cursor-not-allowed"
                               : gameState.phase === "registration"
                                 ? "bg-white/10 text-white/70 hover:bg-white/20 hover:scale-105 border border-white/10 cursor-pointer"
                                 : "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
@@ -767,7 +767,7 @@ export default function CartelaSelection({
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                   <h3 className="text-white/80 text-sm font-semibold">
                     Your Cartellas ({selectedNumbers.length}/5)
                   </h3>
@@ -798,7 +798,7 @@ export default function CartelaSelection({
                   return (
                     <div
                       key={number}
-                      className="bg-white/5 backdrop-blur rounded-xl p-2 border border-green-500/20 relative"
+                      className="bg-white/5 backdrop-blur rounded-xl p-2 border border-amber-400/20 relative"
                     >
                       <button
                         onClick={() => handleRemoveCartella(number)}
@@ -828,9 +828,9 @@ export default function CartelaSelection({
           {gameState.phase !== "registration" &&
             gameState.phase !== "waiting" &&
             selectedNumbers.length === 0 && (
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 text-center">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-center">
                 <div className="text-3xl mb-2">⏳</div>
-                <p className="text-yellow-300/80 text-sm font-medium">
+                <p className="text-amber-300/80 text-sm font-medium">
                   Game in progress
                 </p>
                 <p className="text-white/40 text-xs mt-1">
@@ -840,9 +840,9 @@ export default function CartelaSelection({
             )}
 
           {gameState.phase === "waiting" && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-2" />
-              <p className="text-blue-300/80 text-sm font-medium">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+              <div className="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full mx-auto mb-2" />
+              <p className="text-white/70 text-sm font-medium">
                 Connecting to room...
               </p>
               <p className="text-white/40 text-xs mt-1">
