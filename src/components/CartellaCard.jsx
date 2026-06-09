@@ -251,7 +251,7 @@ export default function CartellaCard({
                   key={`${rowIndex}-${colIndex}`}
                   onClick={() => handleCellClick(number)}
                   className={`
-                    ${size === "fill" ? "aspect-square" : "aspect-square"} flex items-center justify-center text-xs sm:text-sm font-medium
+                    ${size === "fill" ? "w-full h-full" : "aspect-square"} flex items-center justify-center text-xs sm:text-sm font-medium
                     transition-all duration-200 rounded-md m-0.5
                     ${cellStyle}
                     ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}
