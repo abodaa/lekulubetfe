@@ -137,11 +137,11 @@ export default function CartellaCard({
 
   const letters = ["B", "I", "N", "G", "O"];
   const letterColors = [
-    "bg-blue-500/30 text-blue-200 border-blue-400/30",
-    "bg-green-500/30 text-green-200 border-green-400/30",
-    "bg-purple-500/30 text-purple-200 border-purple-400/30",
-    "bg-red-500/30 text-red-200 border-red-400/30",
-    "bg-yellow-500/30 text-yellow-200 border-yellow-400/30",
+    "bg-gradient-to-b from-sky-500/30 to-sky-500/10 text-sky-200 border-sky-400/30",
+    "bg-gradient-to-b from-emerald-500/30 to-emerald-500/10 text-emerald-200 border-emerald-400/30",
+    "bg-gradient-to-b from-violet-500/30 to-violet-500/10 text-violet-200 border-violet-400/30",
+    "bg-gradient-to-b from-rose-500/30 to-rose-500/10 text-rose-200 border-rose-400/30",
+    "bg-gradient-to-b from-amber-500/30 to-amber-500/10 text-amber-200 border-amber-400/30",
   ];
 
   const winningPattern = showWinningPattern
@@ -192,12 +192,12 @@ export default function CartellaCard({
 
       {/* Numbers Grid */}
       <div
-        className={`bg-white/5 backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden ${
+        className={`bg-gradient-to-b from-white/[0.05] to-white/[0.01] backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden ${
           size === "fill" ? "flex-1 min-h-0 flex flex-col" : ""
         }`}
       >
         <div
-          className={`grid grid-cols-5 gap-1 ${
+          className={`grid grid-cols-5 ${
             size === "fill" ? "grid-rows-5 flex-1 min-h-0" : ""
           }`}
         >
@@ -215,34 +215,36 @@ export default function CartellaCard({
               );
               const isClickable = !isAutoMarkOn && onNumberToggle && !isFree;
 
-              let cellStyle = "bg-white/20 text-white border border-white/5";
+              let cellStyle =
+                "bg-gradient-to-b from-white/[0.12] to-white/[0.04] text-white border border-white/10";
 
               if (isFree) {
                 if (isMissedWinCell) {
                   cellStyle =
-                    "bg-red-500/60 text-red-900 border border-red-400/50 font-bold";
+                    "bg-rose-500/60 text-rose-950 border border-rose-400/50 font-bold";
                 } else if (isWinningCell) {
                   cellStyle =
-                    "bg-green-500 text-white border border-green-400/50 font-bold";
+                    "bg-gradient-to-b from-emerald-400 to-emerald-600 text-white border border-emerald-300/50 font-bold shadow-[0_2px_10px_rgba(16,185,129,0.45)]";
                 } else {
                   cellStyle =
-                    "bg-amber-500/60 text-amber-900 border border-amber-400/30 font-bold";
+                    "bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 border border-amber-300/40 font-bold shadow-[0_2px_8px_rgba(245,158,11,0.35)]";
                 }
               } else if (isMissedWinCell) {
                 cellStyle =
-                  "bg-red-500 text-white border border-red-400/50 font-bold";
+                  "bg-rose-500 text-white border border-rose-400/50 font-bold";
               } else if (isWinningCell) {
                 cellStyle =
-                  "bg-green-500 text-white border border-green-400/50 font-bold";
+                  "bg-gradient-to-b from-emerald-400 to-emerald-600 text-white border border-emerald-300/50 font-bold shadow-[0_2px_10px_rgba(16,185,129,0.45)]";
               } else if (isSelected) {
-                cellStyle = "bg-blue-500 text-white border border-blue-400/50";
+                cellStyle =
+                  "bg-amber-400 text-slate-900 border border-amber-300/50";
               } else if (isCalled) {
                 if (showWinningPattern) {
                   cellStyle =
-                    "bg-yellow-500 text-white border border-yellow-400/20";
+                    "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 border border-amber-200/40 shadow-[0_2px_8px_rgba(245,158,11,0.4)]";
                 } else {
                   cellStyle =
-                    "bg-emerald-500 text-white border border-emerald-400/40";
+                    "bg-gradient-to-b from-emerald-400 to-emerald-600 text-white border border-emerald-400/40 shadow-[0_2px_8px_rgba(16,185,129,0.35)]";
                 }
               }
 

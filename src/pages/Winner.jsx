@@ -76,9 +76,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
   // No winner state
   if (!hasWinners) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col items-center justify-center px-4">
+      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-sm">
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 text-center mb-4">
+          <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-6 text-center mb-4">
             <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-amber-500/20 flex items-center justify-center">
               <GiTrophyCup className="text-amber-400" size={28} />
             </div>
@@ -86,7 +86,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
             <p className="text-white/40 text-sm">No winners this round</p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl py-5 px-4 text-center">
+          <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] py-5 px-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <FaClock className="text-white/30" size={14} />
               <p className="text-white/40 text-xs uppercase tracking-wider">
@@ -106,10 +106,10 @@ export default function Winner({ onNavigate, onResetToGame }) {
   }
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f]">
+    <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       <div className="max-w-md mx-auto px-4 py-6 pb-24">
         {/* Winner Banner */}
-        <div className="bg-white/5 backdrop-blur border border-amber-400/30 rounded-2xl p-5 text-center mb-4">
+        <div className="bg-gradient-to-b from-amber-400/15 to-white/[0.02] backdrop-blur-xl border border-amber-400/40 rounded-2xl p-5 text-center mb-4 shadow-[0_0_40px_rgba(245,158,11,0.18)]">
           <div className="flex justify-center gap-2 mb-3">
             <span className="text-2xl">🎉</span>
             <span className="text-2xl">🏆</span>
@@ -118,7 +118,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
 
           <div className="flex items-center justify-center gap-2 mb-3">
             <FaTrophy className="text-amber-400" size={24} />
-            <h1 className="text-white font-black text-3xl tracking-wider">
+            <h1 className="font-black text-3xl tracking-wider bg-gradient-to-b from-amber-200 to-amber-400 bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(245,158,11,0.35)]">
               BINGO!
             </h1>
           </div>
@@ -169,7 +169,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
             return (
               <div
                 key={`${winner.userId}-${boardNumber}-${idx}`}
-                className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-3"
+                className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3"
               >
                 <div className="flex items-center justify-between mb-2 px-2">
                   <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
         </div>
 
         {/* Countdown */}
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl py-4 px-4 text-center">
+        <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_6px_24px_rgba(0,0,0,0.3)] py-4 px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
             <FaClock className="text-white/30" size={12} />
             <p className="text-white/40 text-[10px] uppercase tracking-wider">

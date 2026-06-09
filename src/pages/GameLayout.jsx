@@ -594,7 +594,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Memoized number board
   const NumberBoard = useMemo(
     () => (
-      <div className="bg-white/5 backdrop-blur my-2 border border-white/10 overflow-hidden">
+      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border border-white/10 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
         <table className="w-full border-collapse">
           <tbody>
             {[
@@ -646,7 +646,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       key={n}
                       className={`text-center text-[12px] py-0.5 font-bold transition-colors duration-150 ${
                         isCurrent
-                          ? "bg-orange-500 text-white scale-105"
+                          ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
                           : isCalled
                             ? "bg-white/20 text-white"
                             : "text-white/20"
@@ -668,7 +668,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Conditional returns
   if (isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
           <p className="text-white/80 text-lg font-bold">Refreshing...</p>
@@ -679,7 +679,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
   if (!currentGameId && !connected && !isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
           <div className="text-white text-lg font-bold mb-2">Connecting...</div>
@@ -706,7 +706,7 @@ export default function GameLayout({ stake, onNavigate }) {
   const isWatchMode = yourCards.length === 0;
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col">
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -831,7 +831,7 @@ export default function GameLayout({ stake, onNavigate }) {
             ].map((s) => (
               <div
                 key={s.label}
-                className="bg-white/5 rounded-lg px-1 py-1 text-center border border-white/10 leading-tight"
+                className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
               >
                 <p className="text-white/50 text-[10px] uppercase tracking-wide">
                   {s.label}
@@ -873,7 +873,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       key={`${n}-${i}`}
                       className={`rounded-full w-10 h-10 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
-                          ? "ring-2 ring-amber-300 scale-110 bg-opacity-80"
+                          ? "ring-2 ring-amber-300 scale-110 shadow-[0_0_14px_rgba(245,158,11,0.55)]"
                           : ""
                       }`}
                     >
@@ -939,7 +939,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       <SwiperSlide key={cardNumber}>
                         <div className="px-1 pb-3 h-full flex flex-col">
                           <div
-                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border w-full flex flex-col flex-1 min-h-0 ${
+                            className={`bg-gradient-to-b from-white/[0.07] to-white/[0.02] backdrop-blur-xl rounded-2xl p-2 border w-full flex flex-col flex-1 min-h-0 shadow-[0_8px_32px_rgba(0,0,0,0.35)] ${
                               hasMissedPattern &&
                               !alreadyClaimed &&
                               !isAutoMarkOn
@@ -975,7 +975,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                     ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
                                     : isAutoMarkOn
                                       ? "bg-gradient-to-r from-slate-600 to-slate-700 text-white/80 opacity-80 cursor-not-allowed"
-                                      : "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900 hover:scale-105 shadow-lg shadow-amber-500/20"
+                                      : "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 hover:scale-105 active:scale-95 shadow-[0_4px_16px_rgba(245,158,11,0.45)]"
                                 }`}
                               >
                                 {isClaiming
@@ -1078,7 +1078,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px]">
+                  <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 p-4 mb-6 max-w-[280px] shadow-[0_8px_32px_rgba(0,0,0,0.35)]">
                     <div className="flex items-start gap-3">
                       <span className="text-2xl text-white">
                         <BsInfoCircle />

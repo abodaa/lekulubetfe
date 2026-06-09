@@ -73,9 +73,10 @@
 html,
 body {
   /* Match the app's screens exactly so the first paint (before React mounts)
-     doesn't flash a different color. Mirrors Tailwind
-     bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f]. */
-  background: linear-gradient(to bottom, #111a2e, #0a0f1c, #06090f);
+     doesn't flash a different color. Mirrors the in-app radial top-light. */
+  background:
+    radial-gradient(110% 70% at 50% 0%, #16243f 0%, transparent 55%),
+    linear-gradient(180deg, #0e1830 0%, #0a0f1c 55%, #06080f 100%);
   background-attachment: fixed;
   min-height: var(--app-height);
 }

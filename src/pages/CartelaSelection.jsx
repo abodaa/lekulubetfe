@@ -495,7 +495,7 @@ export default function CartelaSelection({
   // Loading state — only block while actively loading with nothing to show yet.
   if (loading && !cardsReady) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center">
+      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/80 text-lg font-medium">
@@ -510,7 +510,7 @@ export default function CartelaSelection({
   // Error / empty state — failed or empty fetch (no more infinite spinner).
   if (error || !cardsReady) {
     return (
-      <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex items-center justify-center px-4">
+      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-white text-xl font-bold mb-2">
@@ -531,7 +531,7 @@ export default function CartelaSelection({
   }
 
   return (
-    <div className="min-h-[var(--app-height)] bg-gradient-to-b from-[#111a2e] via-[#0a0f1c] to-[#06090f] flex flex-col">
+    <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col">
       {/* Alert Banners */}
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
@@ -616,10 +616,10 @@ export default function CartelaSelection({
 
             {/* Timer */}
             <div
-              className={`px-4 py-2 rounded-xl text-center min-w-[80px] ${
+              className={`px-4 py-2 rounded-xl text-center min-w-[80px] transition-all ${
                 gameState.phase === "registration"
-                  ? "bg-amber-500/15 border border-amber-400/40"
-                  : "bg-white/5 border border-white/10"
+                  ? "bg-gradient-to-b from-amber-400/25 to-amber-500/5 border border-amber-400/50 shadow-[0_0_22px_rgba(245,158,11,0.25)]"
+                  : "bg-gradient-to-b from-white/[0.06] to-white/[0.02] border border-white/10"
               }`}
             >
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
@@ -665,7 +665,7 @@ export default function CartelaSelection({
         {/* Stats Bar */}
         <div className="px-4 pb-3">
           <div className="grid grid-cols-4 gap-2">
-            {/* <div className="bg-white/5 rounded-xl p-3 text-center">
+            {/* <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Main
               </div>
@@ -673,7 +673,7 @@ export default function CartelaSelection({
                 {walletLoading ? "..." : (wallet.main || 0).toLocaleString()}
               </div>
             </div> */}
-            <div className="bg-white/5 rounded-xl p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Main
               </div>
@@ -683,7 +683,7 @@ export default function CartelaSelection({
                   : (Number(wallet.main) || 0).toLocaleString()}
               </div>
             </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-xs uppercase tracking-wider">
                 Bonus
               </div>
@@ -693,13 +693,13 @@ export default function CartelaSelection({
                   : (Number(wallet.bonus) || 0).toLocaleString()}
               </div>
             </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Stake
               </div>
               <div className="text-white font-bold text-sm">{stake}</div>
             </div>
-            <div className="bg-white/5 rounded-xl p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
                 Players
               </div>
@@ -721,7 +721,7 @@ export default function CartelaSelection({
                 {totalCartellas} cards
               </span>
             </div>
-            <div className="bg-white/5 backdrop-blur rounded-2xl p-4 border border-white/10 max-h-[380px] overflow-y-auto">
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.01] backdrop-blur-xl rounded-2xl p-4 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] max-h-[380px] overflow-y-auto">
               <div className="grid grid-cols-10 gap-1.5">
                 {Array.from({ length: totalCartellas }, (_, i) => i + 1).map(
                   (cartelaNumber) => {
@@ -743,14 +743,14 @@ export default function CartelaSelection({
                         key={cartelaNumber}
                         onClick={() => handleCardSelect(cartelaNum)}
                         disabled={gameState.phase !== "registration"}
-                        className={`aspect-square rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
+                        className={`aspect-square rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
                           isSelected
-                            ? "bg-amber-400 text-slate-900 border-2 border-amber-300 scale-105 shadow-lg shadow-amber-500/30"
+                            ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 border border-amber-200/70 scale-105 shadow-[0_4px_16px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/50"
                             : isTaken
-                              ? "bg-rose-500/15 text-rose-300/50 border border-rose-500/20 cursor-not-allowed"
+                              ? "bg-white/[0.02] text-white/20 border border-white/[0.04] cursor-not-allowed"
                               : gameState.phase === "registration"
-                                ? "bg-white/10 text-white/70 hover:bg-white/20 hover:scale-105 border border-white/10 cursor-pointer"
-                                : "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
+                                ? "bg-gradient-to-b from-white/[0.1] to-white/[0.02] text-white/80 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:from-amber-400/25 hover:to-amber-400/5 hover:text-amber-100 hover:border-amber-400/40 hover:scale-105 active:scale-95 cursor-pointer"
+                                : "bg-white/[0.02] text-white/25 border border-white/5 cursor-not-allowed"
                         }`}
                       >
                         {cartelaNumber}
