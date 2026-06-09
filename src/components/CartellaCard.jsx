@@ -166,16 +166,20 @@ export default function CartellaCard({
 
   return (
     <div
-      className={`${
-        size === "small"
-          ? "max-w-[250px]"
-          : isPreview
-            ? "max-w-[280px]"
-            : "max-w-[320px]"
-      } w-full mx-auto aspect-square`}
+      className={
+        size === "fill"
+          ? "h-full max-h-full max-w-full aspect-square mx-auto flex flex-col"
+          : `${
+              size === "small"
+                ? "max-w-[250px]"
+                : isPreview
+                  ? "max-w-[280px]"
+                  : "max-w-[320px]"
+            } w-full mx-auto aspect-square`
+      }
     >
       {/* BINGO Header */}
-      <div className="grid grid-cols-5 gap-1 mb-1.5">
+      <div className="grid grid-cols-5 gap-1 mb-1.5 flex-shrink-0">
         {letters.map((letter, index) => (
           <div
             key={letter}
@@ -187,8 +191,16 @@ export default function CartellaCard({
       </div>
 
       {/* Numbers Grid */}
-      <div className="bg-white/5 backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden">
-        <div className="grid grid-cols-5">
+      <div
+        className={`bg-white/5 backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden ${
+          size === "fill" ? "flex-1 min-h-0 flex flex-col" : ""
+        }`}
+      >
+        <div
+          className={`grid grid-cols-5 ${
+            size === "fill" ? "grid-rows-5 flex-1 min-h-0" : ""
+          }`}
+        >
           {grid.map((row, rowIndex) =>
             row.map((number, colIndex) => {
               const n = Number(number);
@@ -239,7 +251,7 @@ export default function CartellaCard({
                   key={`${rowIndex}-${colIndex}`}
                   onClick={() => handleCellClick(number)}
                   className={`
-                    aspect-square flex items-center justify-center text-xs sm:text-sm font-medium
+                    ${size === "fill" ? "w-full h-full" : "aspect-square"} flex items-center justify-center text-xs sm:text-sm font-medium
                     transition-all duration-200 rounded-md m-0.5
                     ${cellStyle}
                     ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}

@@ -937,9 +937,9 @@ export default function GameLayout({ stake, onNavigate }) {
                       !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
-                        <div className="px-1 pb-3">
+                        <div className="px-1 pb-3 h-full flex items-center justify-center">
                           <div
-                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border ${
+                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border w-full flex flex-col max-h-full ${
                               hasMissedPattern &&
                               !alreadyClaimed &&
                               !isAutoMarkOn
@@ -951,7 +951,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   : "border-white/10"
                             }`}
                           >
-                            <div className="flex justify-between items-center mb-1">
+                            <div className="flex justify-between items-center mb-1 flex-shrink-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-white/70 text-sm font-bold">
                                   Cartella #{cardNumber}
@@ -988,37 +988,41 @@ export default function GameLayout({ stake, onNavigate }) {
                               </button>
                             </div>
 
-                            <MemoizedCartellaCard
-                              id={cardNumber}
-                              card={card}
-                              called={
-                                isAutoMarkOn
-                                  ? [
-                                      ...new Set([
-                                        ...calledNumbers,
-                                        ...(manuallyMarkedNumbers[cardNumber]
-                                          ? Array.from(
-                                              manuallyMarkedNumbers[cardNumber],
-                                            )
-                                          : []),
-                                      ]),
-                                    ]
-                                  : markedNumbers
-                              }
-                              isPreview={false}
-                              showHeader={false}
-                              isAutoMarkOn={isAutoMarkOn}
-                              onNumberToggle={
-                                !isAutoMarkOn
-                                  ? (number) =>
-                                      handleNumberToggle(cardNumber, number)
-                                  : undefined
-                              }
-                              missedWinningCalledNumbers={
-                                missedWinningPatterns[cardNumber] || null
-                              }
-                              size="small"
-                            />
+                            <div className="flex-1 min-h-0 flex items-center justify-center">
+                              <MemoizedCartellaCard
+                                id={cardNumber}
+                                card={card}
+                                called={
+                                  isAutoMarkOn
+                                    ? [
+                                        ...new Set([
+                                          ...calledNumbers,
+                                          ...(manuallyMarkedNumbers[cardNumber]
+                                            ? Array.from(
+                                                manuallyMarkedNumbers[
+                                                  cardNumber
+                                                ],
+                                              )
+                                            : []),
+                                        ]),
+                                      ]
+                                    : markedNumbers
+                                }
+                                isPreview={false}
+                                showHeader={false}
+                                isAutoMarkOn={isAutoMarkOn}
+                                onNumberToggle={
+                                  !isAutoMarkOn
+                                    ? (number) =>
+                                        handleNumberToggle(cardNumber, number)
+                                    : undefined
+                                }
+                                missedWinningCalledNumbers={
+                                  missedWinningPatterns[cardNumber] || null
+                                }
+                                size="fill"
+                              />
+                            </div>
                           </div>
                         </div>
                       </SwiperSlide>
