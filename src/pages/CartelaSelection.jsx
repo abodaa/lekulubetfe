@@ -721,8 +721,8 @@ export default function CartelaSelection({
                 {totalCartellas} cards
               </span>
             </div>
-            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.01] backdrop-blur-xl rounded-2xl p-4 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] max-h-[380px] overflow-y-auto">
-              <div className="grid grid-cols-10 gap-1.5">
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.01] backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] max-h-[420px] overflow-y-auto">
+              <div className="grid grid-cols-10 gap-1">
                 {Array.from({ length: totalCartellas }, (_, i) => i + 1).map(
                   (cartelaNumber) => {
                     const cartelaNum = Number(cartelaNumber);
@@ -743,7 +743,7 @@ export default function CartelaSelection({
                         key={cartelaNumber}
                         onClick={() => handleCardSelect(cartelaNum)}
                         disabled={gameState.phase !== "registration"}
-                        className={`aspect-square rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
+                        className={`aspect-square rounded-full text-base font-bold transition-all duration-200 flex items-center justify-center ${
                           isSelected
                             ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 border border-amber-200/70 scale-105 shadow-[0_4px_16px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/50"
                             : isTaken
