@@ -1,192 +1,170 @@
 // src/lib/audio/numberSounds.js
+//
+// Web Audio implementation. Each clip is fetched and decoded ONCE into an
+// AudioBuffer, then played through a BufferSource. Compared to the previous
+// `new Audio()`-per-call approach this fixes:
+//   - silent draws on poor networks (no per-draw fetch; buffers live in memory),
+//   - the first-number warmup lag (the output path is pre-warmed),
+//   - mute latency (BufferSource.stop() is immediate/sample-accurate).
+// The public API is unchanged, so callers (GameLayout, Winner) need no edits.
 
-let activeAudio = null;
+let audioCtx = null;
 let audioEnabled = true;
-let audioUnlocked = false;
-let bingoAudio = null; // preloaded so the win jingle plays instantly
+let currentSource = null; // currently-playing BufferSource (for stopAllSounds)
+const buffers = new Map(); // key -> AudioBuffer
+let warmed = false;
 
-// Try to unlock audio on user interaction
-const unlockAudio = () => {
-  if (audioUnlocked) return;
-
-  // Create a silent audio context to unlock audio
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (AudioContextClass) {
-    const context = new AudioContextClass();
-    const buffer = context.createBuffer(1, 1, 22050);
-    const source = context.createBufferSource();
-    source.buffer = buffer;
-    source.connect(context.destination);
-    source.start();
-    context.close();
+const getCtx = () => {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      audioCtx = new AC();
+    } catch (e) {
+      return null;
+    }
   }
-
-  audioUnlocked = true;
-  console.log("🔓 Audio unlocked");
-
-  // Remove listeners after unlock
-  document.removeEventListener("click", unlockAudio);
-  document.removeEventListener("touchstart", unlockAudio);
+  return audioCtx;
 };
 
-// Add event listeners to unlock audio
-document.addEventListener("click", unlockAudio);
-document.addEventListener("touchstart", unlockAudio);
+const letterFor = (n) =>
+  n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
+const keyFor = (n) => `${letterFor(n)}${n}`;
+const urlFor = (n) => `/sound/${letterFor(n)}${n}.MP3`;
 
-export const playNumberSound = async (n) => {
-  return new Promise((resolve) => {
-    if (!audioEnabled) {
-      resolve();
-      return;
-    }
-
-    if (!n) {
-      resolve();
-      return;
-    }
-
-    // Cancel any currently playing sound
-    if (activeAudio) {
-      activeAudio.pause();
-      activeAudio.currentTime = 0;
-      activeAudio = null;
-    }
-
-    const letter =
-      n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
-    const audioPath = `/sound/${letter}${n}.MP3`;
-    const audio = new Audio(audioPath);
-    activeAudio = audio;
-
-    // Set volume
-    audio.volume = 0.7;
-    audio.preload = "auto";
-
-    const onEnd = () => {
-      if (activeAudio === audio) activeAudio = null;
-      audio.removeEventListener("ended", onEnd);
-      audio.removeEventListener("error", onError);
-      resolve();
-    };
-
-    const onError = (e) => {
-      console.warn(`⚠️ Failed to play sound: ${audioPath}`, e);
-      if (activeAudio === audio) activeAudio = null;
-      audio.removeEventListener("ended", onEnd);
-      audio.removeEventListener("error", onError);
-      resolve();
-    };
-
-    audio.addEventListener("ended", onEnd);
-    audio.addEventListener("error", onError);
-
-    // Play with error handling
-    const playPromise = audio.play();
-
-    if (playPromise !== undefined) {
-      playPromise.catch((err) => {
-        console.warn(`⚠️ Audio play failed for ${audioPath}:`, err);
-        if (activeAudio === audio) activeAudio = null;
-        resolve();
-      });
-    }
-  });
-};
-
-export const stopAllSounds = () => {
-  if (activeAudio) {
-    activeAudio.pause();
-    activeAudio.currentTime = 0;
-    activeAudio = null;
-  }
-};
-
-// Preload the win jingle so it's ready the instant a game completes.
-export const preloadBingoSound = () => {
+// Warm the output path once so the very first real sound has no startup delay.
+const warmOutput = () => {
+  const ctx = getCtx();
+  if (!ctx || warmed) return;
   try {
-    if (!bingoAudio) {
-      bingoAudio = new Audio("/sound/bingo.mp3");
-      bingoAudio.preload = "auto";
-      bingoAudio.volume = 0.8;
-      bingoAudio.load();
-    }
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    warmed = true;
   } catch (e) {
     /* ignore */
   }
-  return bingoAudio;
 };
 
-// Celebratory sound played when a game completes with a winner.
-// Uses the preloaded element so there's no fetch/decode delay.
+// Resume + warm the context on the first user gesture (autoplay policy).
+const unlock = () => {
+  const ctx = getCtx();
+  if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+  warmOutput();
+  document.removeEventListener("click", unlock);
+  document.removeEventListener("touchstart", unlock);
+};
+if (typeof document !== "undefined") {
+  document.addEventListener("click", unlock);
+  document.addEventListener("touchstart", unlock);
+}
+
+async function loadBuffer(key, url) {
+  if (buffers.has(key)) return buffers.get(key);
+  const ctx = getCtx();
+  if (!ctx) return null;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const arr = await res.arrayBuffer();
+    const buf = await ctx.decodeAudioData(arr);
+    buffers.set(key, buf);
+    return buf;
+  } catch (e) {
+    return null;
+  }
+}
+
+function playBuffer(buf, volume) {
+  const ctx = getCtx();
+  if (!ctx || !buf) return;
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+  // Stop whatever is currently playing first.
+  if (currentSource) {
+    try {
+      currentSource.onended = null;
+      currentSource.stop();
+    } catch (e) {}
+    currentSource = null;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  src.connect(gain);
+  gain.connect(ctx.destination);
+  src.onended = () => {
+    if (currentSource === src) currentSource = null;
+  };
+  currentSource = src;
+  try {
+    src.start(0);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+export const playNumberSound = async (n) => {
+  if (!audioEnabled || !n) return;
+  const key = keyFor(n);
+  let buf = buffers.get(key);
+  if (!buf) buf = await loadBuffer(key, urlFor(n)); // best-effort if not preloaded
+  playBuffer(buf, 0.85);
+};
+
+export const stopAllSounds = () => {
+  if (currentSource) {
+    try {
+      currentSource.onended = null;
+      currentSource.stop();
+    } catch (e) {}
+    currentSource = null;
+  }
+};
+
+export const preloadBingoSound = () => loadBuffer("bingo", "/sound/bingo.mp3");
+
 export const playBingoSound = async () => {
   if (!audioEnabled) return;
-
-  // Stop any number sound still playing, then play the bingo jingle.
-  if (activeAudio) {
-    activeAudio.pause();
-    activeAudio.currentTime = 0;
-    activeAudio = null;
-  }
-
-  const audio = preloadBingoSound() || new Audio("/sound/bingo.mp3");
-  activeAudio = audio;
-  try {
-    audio.currentTime = 0;
-  } catch (e) {
-    /* some browsers throw if not yet loaded; ignore */
-  }
-  audio.volume = 0.8;
-  const playPromise = audio.play();
-  if (playPromise !== undefined) {
-    playPromise.catch((err) => {
-      console.warn("⚠️ Bingo audio play failed:", err);
-    });
-  }
+  let buf = buffers.get("bingo");
+  if (!buf) buf = await loadBuffer("bingo", "/sound/bingo.mp3");
+  playBuffer(buf, 0.95);
 };
 
 export const initAudio = async () => {
-  console.log("🎵 Audio system initialized");
+  const ctx = getCtx();
+  if (ctx && ctx.state === "suspended") await ctx.resume().catch(() => {});
+  warmOutput();
   preloadBingoSound();
   return true;
 };
 
 export const preloadNumberSounds = async () => {
-  console.log("🔊 Preloading sounds...");
-  preloadBingoSound();
-  const promises = [];
-  for (let n = 1; n <= 75; n++) {
-    const letter =
-      n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
-    const audio = new Audio(`/sound/${letter}${n}.MP3`);
-    audio.preload = "auto";
-    promises.push(
-      new Promise((resolve) => {
-        audio.addEventListener("canplaythrough", () => resolve(), {
-          once: true,
-        });
-        audio.addEventListener("error", () => resolve(), { once: true });
-        audio.load();
-      }),
-    );
-
-    if (n % 20 === 0) {
-      await Promise.all(promises);
-      promises.length = 0;
-      await new Promise((resolve) => setTimeout(resolve, 100));
+  getCtx();
+  await preloadBingoSound();
+  // Decode in small batches so a poor connection still makes progress and we
+  // don't open 75 requests at once.
+  for (let start = 1; start <= 75; start += 8) {
+    const batch = [];
+    for (let n = start; n < start + 8 && n <= 75; n++) {
+      batch.push(loadBuffer(keyFor(n), urlFor(n)));
     }
+    await Promise.all(batch);
   }
-  await Promise.all(promises);
-  console.log("✅ All sounds preloaded");
+  return true;
 };
 
 export const resumeAudio = async () => {
-  console.log("🎵 Audio resumed");
+  const ctx = getCtx();
+  if (ctx && ctx.state === "suspended") await ctx.resume().catch(() => {});
   return true;
 };
 
 export const setAudioEnabled = (enabled) => {
   audioEnabled = enabled;
-  if (!enabled) {
-    stopAllSounds();
-  }
+  if (!enabled) stopAllSounds();
 };
