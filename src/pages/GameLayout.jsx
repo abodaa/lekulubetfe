@@ -756,7 +756,7 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
-        <header className="px-3 pt-2 pb-1 flex-shrink-0">
+        <header className="px-3 pt-1.5 pb-0.5 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <div
@@ -821,42 +821,31 @@ export default function GameLayout({ stake, onNavigate }) {
         </header>
 
         <div className="px-3 pb-1 flex-shrink-0">
-          <div className="grid grid-cols-3 gap-1.5">
-            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/60 text-xs">DERASH : </p>
-              <p className="text-white font-bold text-xs">
-                {currentPrizePool || 0}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/60 text-xs">Players : </p>
-              <p className="text-white font-bold text-xs">
-                {gameState.playersCount || 0}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/60 text-xs">Stake : </p>
-              <p className="text-white font-bold text-xs">{stake || 0}</p>
-            </div>
-            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/60 text-xs">Bonus : </p>
-              <p className="text-white font-bold text-xs">
-                {wallet.bonus?.toLocaleString() || 0}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 text-center border border-white/10">
-              <p className="text-white/60 text-xs">Calls : </p>
-              <p className="text-white font-bold text-xs">
-                {calledNumbers.length}/75
-              </p>
-            </div>
+          <div className="grid grid-cols-5 gap-1">
+            {[
+              { label: "Derash", value: currentPrizePool || 0 },
+              { label: "Players", value: gameState.playersCount || 0 },
+              { label: "Stake", value: stake || 0 },
+              { label: "Bonus", value: wallet.bonus?.toLocaleString() || 0 },
+              { label: "Calls", value: `${calledNumbers.length}/75` },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="bg-white/5 rounded-lg px-1 py-1 text-center border border-white/10 leading-tight"
+              >
+                <p className="text-white/50 text-[8px] uppercase tracking-wide">
+                  {s.label}
+                </p>
+                <p className="text-white font-bold text-[11px]">{s.value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Previously Called Numbers */}
         {!isWatchMode && calledNumbers.length > 0 && (
-          <div className="px-3 pb-1 flex-shrink-0 my-2">
-            <div className="flex justify-center gap-1.5 flex-wrap">
+          <div className="px-3 pb-1 flex-shrink-0 my-1">
+            <div className="flex justify-center gap-1 flex-wrap">
               {calledNumbers
                 .slice(-5)
                 .reverse()
@@ -882,7 +871,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <div
                       key={`${n}-${i}`}
-                      className={`rounded-full w-8 h-8 flex items-center justify-center text-[11px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
+                      className={`rounded-full w-7 h-7 flex items-center justify-center text-[10px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
                           ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80"
                           : ""
@@ -928,7 +917,7 @@ export default function GameLayout({ stake, onNavigate }) {
                     swiperRef.current = swiper;
                   }}
                   className="w-full h-full"
-                  style={{ paddingBottom: "20px" }}
+                  style={{ paddingBottom: "8px" }}
                 >
                   {yourCards.map(({ cardNumber, card }) => {
                     const markedNumbers = isAutoMarkOn
@@ -948,9 +937,9 @@ export default function GameLayout({ stake, onNavigate }) {
                       !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
-                        <div className="px-2 pb-8">
+                        <div className="px-1 pb-3">
                           <div
-                            className={`bg-white/5 backdrop-blur rounded-xl p-3 border ${
+                            className={`bg-white/5 backdrop-blur rounded-xl p-2 border ${
                               hasMissedPattern &&
                               !alreadyClaimed &&
                               !isAutoMarkOn
@@ -962,7 +951,7 @@ export default function GameLayout({ stake, onNavigate }) {
                                   : "border-white/10"
                             }`}
                           >
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center mb-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-white/70 text-sm font-bold">
                                   Cartella #{cardNumber}
@@ -981,7 +970,7 @@ export default function GameLayout({ stake, onNavigate }) {
                               <button
                                 onClick={() => handleCartellaBingo(cardNumber)}
                                 disabled={isAutoMarkOn || isClaiming}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
                                   alreadyClaimed
                                     ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
                                     : isAutoMarkOn
