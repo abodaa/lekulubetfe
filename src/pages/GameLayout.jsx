@@ -871,7 +871,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <div
                       key={`${n}-${i}`}
-                      className={`rounded-full w-7 h-7 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
+                      className={`rounded-full w-10 h-10 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
                           ? "ring-2 ring-yellow-400 scale-110 bg-opacity-80"
                           : ""
