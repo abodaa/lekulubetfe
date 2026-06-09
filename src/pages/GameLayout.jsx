@@ -821,7 +821,7 @@ export default function GameLayout({ stake, onNavigate }) {
         </header>
 
         <div className="px-3 pb-1 flex-shrink-0">
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-4 gap-1">
             {[
               { label: "Derash", value: currentPrizePool || 0 },
               { label: "Players", value: gameState.playersCount || 0 },
@@ -831,17 +831,13 @@ export default function GameLayout({ stake, onNavigate }) {
             ].map((s) => (
               <div
                 key={s.label}
-                className={`${
-                  s.label === "Derash"
-                    ? "bg-white text-black col-span-2 text-xl font-extrabold shadow-[0_0_8px_rgba(245,158,11,0.5)]"
-                    : "grid-cols-1 bg-white/10 text-white/70 col-span-1"
-                } rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
+                className={`${"bg-white/10 text-white/70 col-span-1"} rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
               >
                 <p className="text-white/50 text-[10px] uppercase tracking-wide">
                   {s.label}
                 </p>
                 <p
-                  className={`text-white font-bold ${s.label === "Derash" ? "text-[14px]" : "text-[11px]"}`}
+                  className={`text-white font-bold ${s.label === "Derash" ? "text-[12px]" : "text-[12px]"}`}
                 >
                   {s.label === "Derash" ? `${s.value} ETB` : s.value}
                 </p>
