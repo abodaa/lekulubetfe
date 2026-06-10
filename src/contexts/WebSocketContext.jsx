@@ -395,6 +395,16 @@ export function WebSocketProvider({ children }) {
                   }
                 }
 
+                const resolvedCalled =
+                  event.payload.calledNumbers ||
+                  event.payload.called ||
+                  prev.calledNumbers ||
+                  [];
+                const latestCalled =
+                  resolvedCalled.length > 0
+                    ? resolvedCalled[resolvedCalled.length - 1]
+                    : null;
+
                 const newState = {
                   ...prev,
                   playersCount:
@@ -405,11 +415,7 @@ export function WebSocketProvider({ children }) {
                     event.payload.availableCards || prev.availableCards || [],
                   phase,
                   gameId,
-                  calledNumbers:
-                    event.payload.calledNumbers ||
-                    event.payload.called ||
-                    prev.calledNumbers ||
-                    [],
+                  calledNumbers: resolvedCalled,
                   countdown: serverCountdown,
                   registrationEndTime,
                   yourCards: phase === "registration" ? [] : finalCards,
@@ -419,7 +425,7 @@ export function WebSocketProvider({ children }) {
                     event.payload.totalCartellas || prev.totalCartellas || 200,
                   ...(phase === "registration"
                     ? { currentNumber: null, winners: [] }
-                    : {}),
+                    : { currentNumber: latestCalled ?? prev.currentNumber }),
                 };
 
                 return newState;

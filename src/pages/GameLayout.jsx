@@ -147,6 +147,11 @@ export default function GameLayout({ stake, onNavigate }) {
   }, [isSoundOn]);
   // Last number we already handled, so we never replay it on unmute/re-render.
   const lastPlayedNumberRef = useRef(null);
+  // Burst-coalescing announce: a guaranteed-to-fire timer that voices only the
+  // most recent pending number, so a reconnect catch-up never replays the
+  // backlog and the timer can never be starved into silence.
+  const pendingNumberRef = useRef(null);
+  const announceTimerRef = useRef(null);
   const [isAutoMarkOn, setIsAutoMarkOn] = useState(true);
   const [manuallyMarkedNumbers, setManuallyMarkedNumbers] = useState({});
   const [claimingStates, setClaimingStates] = useState({});
@@ -268,17 +273,37 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase !== "running") return;
     if (currentNumber === lastPlayedNumberRef.current) return;
 
-    // Coalesce bursts: when several numbers arrive almost at once — e.g. the
-    // socket reconnects and replays the draws missed while offline — each rapid
-    // change cancels the previous pending announce, so only the LATEST number
-    // is spoken instead of replaying the whole backlog of previous numbers.
-    const id = setTimeout(() => {
-      lastPlayedNumberRef.current = currentNumber;
-      if (!isSoundOnRef.current) return; // muted: marked handled, stay silent
-      playNumberSound(currentNumber).catch(() => {});
-    }, 160);
-    return () => clearTimeout(id);
+    // Remember the most recent number to voice.
+    pendingNumberRef.current = currentNumber;
+
+    // If an announce is already scheduled, don't reschedule — the existing timer
+    // will voice whatever the latest pending number is when it fires. This means
+    // a reconnect burst (many numbers arriving at once) collapses to a single
+    // announce of the LATEST number, and the timer is never cancelled, so sound
+    // can never be starved into silence.
+    if (announceTimerRef.current != null) return;
+
+    announceTimerRef.current = setTimeout(() => {
+      announceTimerRef.current = null;
+      const n = pendingNumberRef.current;
+      pendingNumberRef.current = null;
+      if (n == null || n === lastPlayedNumberRef.current) return;
+      lastPlayedNumberRef.current = n; // mark handled even if muted
+      if (!isSoundOnRef.current) return;
+      playNumberSound(n).catch(() => {});
+    }, 220);
   }, [currentNumber, startCountdown, gameState.phase]);
+
+  // Clear the pending announce timer on unmount.
+  useEffect(
+    () => () => {
+      if (announceTimerRef.current != null) {
+        clearTimeout(announceTimerRef.current);
+        announceTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (currentGameId !== lastGameIdRef.current) {
