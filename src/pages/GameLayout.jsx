@@ -160,6 +160,8 @@ export default function GameLayout({ stake, onNavigate }) {
   const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
 
   const swiperRef = useRef(null);
+  // Which cartella slide is currently centered — drives the fixed bottom BINGO bar.
+  const [activeIndex, setActiveIndex] = useState(0);
   const claimedCartellasRef = useRef(new Set());
   const lastGameIdRef = useRef(null);
   const missedPatternsPersistentRef = useRef({});
@@ -731,6 +733,21 @@ export default function GameLayout({ stake, onNavigate }) {
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
 
+  // Active cartella (the centered slide) for the fixed bottom BINGO bar.
+  const safeActiveIndex =
+    yourCards.length > 0 ? Math.min(activeIndex, yourCards.length - 1) : 0;
+  const activeCard = yourCards[safeActiveIndex] || null;
+  const activeCardNumber = activeCard?.cardNumber ?? null;
+  const activeAlreadyClaimed =
+    activeCardNumber != null &&
+    claimedCartellasRef.current.has(activeCardNumber);
+  const activeIsClaiming =
+    activeCardNumber != null && !!claimingStates[activeCardNumber];
+  const activeHasWinning =
+    activeCard && checkBingoPattern(activeCard.card, calledNumbers);
+  const activeHasMissed =
+    activeCardNumber != null && !!missedWinningPatterns[activeCardNumber];
+
   // When a game finishes (announce), this screen is on its way to the winner
   // screen. Rendering anything here would briefly flash watch-mode (cards are
   // already cleared), so render nothing for that frame.
@@ -940,19 +957,20 @@ export default function GameLayout({ stake, onNavigate }) {
                   slidesPerView={1}
                   centeredSlides={true}
                   loop={true}
-                  pagination={{
-                    type: "fraction",
-                    clickable: true,
-                  }}
+                  pagination={false}
                   navigation={{
                     prevEl: ".swiper-button-prev-custom",
                     nextEl: ".swiper-button-next-custom",
                   }}
                   onSwiper={(swiper) => {
                     swiperRef.current = swiper;
+                    setActiveIndex(swiper.realIndex ?? 0);
                   }}
+                  onSlideChange={(swiper) =>
+                    setActiveIndex(swiper.realIndex ?? 0)
+                  }
                   className="w-full h-full"
-                  style={{ paddingBottom: "8px" }}
+                  style={{ paddingBottom: "0px" }}
                 >
                   {yourCards.map(({ cardNumber, card }) => {
                     const markedNumbers = isAutoMarkOn
@@ -972,7 +990,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       !!missedWinningPatterns[cardNumber];
                     return (
                       <SwiperSlide key={cardNumber}>
-                        <div className="px-1 pb-3 h-full flex flex-col">
+                        <div className="px-1 pb-1 h-full flex flex-col">
                           <div
                             className={`bg-gradient-to-b from-white/[0.07] to-white/[0.02] backdrop-blur-xl rounded-2xl p-2 border w-full flex flex-col flex-1 min-h-0 shadow-[0_8px_32px_rgba(0,0,0,0.35)] ${
                               hasMissedPattern &&
@@ -986,78 +1004,37 @@ export default function GameLayout({ stake, onNavigate }) {
                                   : "border-white/10"
                             }`}
                           >
-                            <div className="flex justify-between items-center mb-1 flex-shrink-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-white/70 text-sm font-bold">
-                                  Cartella #{cardNumber}
-                                </span>
-                                {alreadyClaimed && (
-                                  <span className="text-emerald-400 text-xs font-bold bg-emerald-500/20 px-2 py-0.5 rounded-full">
-                                    WON ✓
-                                  </span>
-                                )}
-                                {!isAutoMarkOn && hasMissedPattern && (
-                                  <span className="text-red-400 text-[9px] font-bold bg-red-500/20 px-1.5 py-0.5 rounded-full">
-                                    MISSED
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => handleCartellaBingo(cardNumber)}
-                                disabled={isAutoMarkOn || isClaiming}
-                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                                  alreadyClaimed
-                                    ? "bg-gray-500/50 text-gray-300 cursor-not-allowed"
-                                    : isAutoMarkOn
-                                      ? "bg-gradient-to-r from-slate-600 to-slate-700 text-white/80 opacity-80 cursor-not-allowed"
-                                      : "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 hover:scale-105 active:scale-95 shadow-[0_4px_16px_rgba(245,158,11,0.45)]"
-                                }`}
-                              >
-                                {isClaiming
-                                  ? "..."
-                                  : alreadyClaimed
-                                    ? "✓ WON"
-                                    : isAutoMarkOn
-                                      ? "🤖 AUTO"
-                                      : "🎉 BINGO!"}
-                              </button>
-                            </div>
-
-                            <div className="flex-1 min-h-0 flex items-center justify-center">
-                              <MemoizedCartellaCard
-                                id={cardNumber}
-                                card={card}
-                                called={
-                                  isAutoMarkOn
-                                    ? [
-                                        ...new Set([
-                                          ...calledNumbers,
-                                          ...(manuallyMarkedNumbers[cardNumber]
-                                            ? Array.from(
-                                                manuallyMarkedNumbers[
-                                                  cardNumber
-                                                ],
-                                              )
-                                            : []),
-                                        ]),
-                                      ]
-                                    : markedNumbers
-                                }
-                                isPreview={false}
-                                showHeader={false}
-                                isAutoMarkOn={isAutoMarkOn}
-                                onNumberToggle={
-                                  !isAutoMarkOn
-                                    ? (number) =>
-                                        handleNumberToggle(cardNumber, number)
-                                    : undefined
-                                }
-                                missedWinningCalledNumbers={
-                                  missedWinningPatterns[cardNumber] || null
-                                }
-                                size="fill"
-                              />
-                            </div>
+                            <MemoizedCartellaCard
+                              id={cardNumber}
+                              card={card}
+                              called={
+                                isAutoMarkOn
+                                  ? [
+                                      ...new Set([
+                                        ...calledNumbers,
+                                        ...(manuallyMarkedNumbers[cardNumber]
+                                          ? Array.from(
+                                              manuallyMarkedNumbers[cardNumber],
+                                            )
+                                          : []),
+                                      ]),
+                                    ]
+                                  : markedNumbers
+                              }
+                              isPreview={false}
+                              showHeader={false}
+                              isAutoMarkOn={isAutoMarkOn}
+                              onNumberToggle={
+                                !isAutoMarkOn
+                                  ? (number) =>
+                                      handleNumberToggle(cardNumber, number)
+                                  : undefined
+                              }
+                              missedWinningCalledNumbers={
+                                missedWinningPatterns[cardNumber] || null
+                              }
+                              size="fill"
+                            />
                           </div>
                         </div>
                       </SwiperSlide>
@@ -1143,6 +1120,68 @@ export default function GameLayout({ stake, onNavigate }) {
             ) : null}
           </div>
         </main>
+
+        {!isWatchMode && yourCards.length > 0 && (
+          <div className="flex-shrink-0 px-3 pb-3 pt-1">
+            {(activeAlreadyClaimed || (!isAutoMarkOn && activeHasMissed)) && (
+              <div className="flex justify-center mb-1.5">
+                {activeAlreadyClaimed ? (
+                  <span className="text-emerald-300 text-[10px] font-bold bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+                    WON ✓
+                  </span>
+                ) : (
+                  <span className="text-red-300 text-[10px] font-bold bg-red-500/20 border border-red-400/30 px-2.5 py-0.5 rounded-full">
+                    MISSED PATTERN
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="flex items-stretch gap-2.5">
+              {/* Active cartella + slide position */}
+              <div className="flex flex-col items-center justify-center px-3 py-2 rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 min-w-[64px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <span className="text-white/40 text-[8px] uppercase tracking-wide leading-none">
+                  Cartella
+                </span>
+                <span className="text-white font-extrabold text-base leading-tight">
+                  #{activeCardNumber}
+                </span>
+                {yourCards.length > 1 && (
+                  <span className="text-amber-300/80 text-[10px] font-bold leading-none">
+                    {safeActiveIndex + 1}/{yourCards.length}
+                  </span>
+                )}
+              </div>
+
+              {/* Fixed BINGO action for the active cartella */}
+              <button
+                onClick={() =>
+                  activeCardNumber != null &&
+                  handleCartellaBingo(activeCardNumber)
+                }
+                disabled={
+                  isAutoMarkOn || activeIsClaiming || activeAlreadyClaimed
+                }
+                className={`flex-1 rounded-2xl text-base font-extrabold tracking-wide transition-all ${
+                  activeAlreadyClaimed
+                    ? "bg-white/10 text-emerald-300 cursor-not-allowed"
+                    : isAutoMarkOn
+                      ? "bg-gradient-to-b from-slate-600/80 to-slate-700/80 text-white/70 cursor-not-allowed"
+                      : activeHasWinning
+                        ? "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 shadow-[0_6px_24px_rgba(245,158,11,0.55)] hover:brightness-110 active:scale-[0.98] animate-pulse"
+                        : "bg-gradient-to-b from-amber-300 to-amber-500 text-slate-900 shadow-[0_6px_20px_rgba(245,158,11,0.4)] hover:brightness-110 active:scale-[0.98]"
+                }`}
+              >
+                {activeIsClaiming
+                  ? "Claiming…"
+                  : activeAlreadyClaimed
+                    ? "✓ WON"
+                    : isAutoMarkOn
+                      ? "🤖 AUTO MARK ON"
+                      : "🎉 BINGO!"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

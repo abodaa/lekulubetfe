@@ -178,27 +178,30 @@ export default function CartellaCard({
             } w-full mx-auto aspect-square`
       }
     >
-      {/* BINGO Header */}
-      <div className="grid grid-cols-5 gap-1 mb-1.5 flex-shrink-0">
-        {letters.map((letter, index) => (
-          <div
-            key={letter}
-            className={`text-center text-sm font-extrabold py-1.5 rounded-lg border ${letterColors[index]}`}
-          >
-            {letter}
-          </div>
-        ))}
-      </div>
-
-      {/* Numbers Grid */}
+      {/* Card: B-I-N-G-O header and the numbers grid live in ONE panel */}
       <div
-        className={`bg-gradient-to-b from-white/[0.05] to-white/[0.01] backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden ${
-          size === "fill" ? "flex-1 min-h-0 flex flex-col" : ""
-        }`}
+        className={
+          size === "fill"
+            ? "flex-1 min-h-0 flex flex-col"
+            : "bg-gradient-to-b from-white/[0.05] to-white/[0.01] backdrop-blur rounded-2xl border p-2 border-white/10 overflow-hidden flex flex-col"
+        }
       >
+        {/* BINGO Header (inside the card) */}
+        <div className="grid grid-cols-5 gap-1 mb-1.5 flex-shrink-0">
+          {letters.map((letter, index) => (
+            <div
+              key={letter}
+              className={`text-center text-sm font-extrabold py-1.5 rounded-lg border ${letterColors[index]}`}
+            >
+              {letter}
+            </div>
+          ))}
+        </div>
+
+        {/* Numbers */}
         <div
           className={`grid grid-cols-5 ${
-            size === "fill" ? "grid-rows-5 flex-1 min-h-0 gap-1" : ""
+            size === "fill" ? "grid-rows-5 flex-1 min-h-0" : ""
           }`}
         >
           {grid.map((row, rowIndex) =>
@@ -253,7 +256,7 @@ export default function CartellaCard({
                   key={`${rowIndex}-${colIndex}`}
                   onClick={() => handleCellClick(number)}
                   className={`
-                    ${size === "fill" ? "w-full h-full aspect-square" : "aspect-square"} flex items-center justify-center text-xs sm:text-sm font-medium
+                    ${size === "fill" ? "w-full h-full" : "aspect-square"} flex items-center justify-center text-xs sm:text-sm font-medium
                     transition-all duration-200 rounded-md m-0.5
                     ${cellStyle}
                     ${isClickable ? "cursor-pointer hover:scale-110 hover:z-10 active:scale-95" : ""}
