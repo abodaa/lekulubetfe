@@ -1161,7 +1161,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 disabled={
                   isAutoMarkOn || activeIsClaiming || activeAlreadyClaimed
                 }
-                className={`flex-1 rounded-2xl text-base font-extrabold tracking-wide transition-all ${
+                className={`flex-1 rounded-2xl text-xl font-extrabold tracking-wide transition-all ${
                   activeAlreadyClaimed
                     ? "bg-white/10 text-emerald-300 cursor-not-allowed"
                     : isAutoMarkOn
@@ -1176,8 +1176,8 @@ export default function GameLayout({ stake, onNavigate }) {
                   : activeAlreadyClaimed
                     ? "✓ WON"
                     : isAutoMarkOn
-                      ? "🤖 AUTO MARK ON"
-                      : "🎉 BINGO!"}
+                      ? "AUTO MARK ON"
+                      : "BINGO!"}
               </button>
             </div>
           </div>
