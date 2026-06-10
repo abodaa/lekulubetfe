@@ -268,9 +268,16 @@ export default function GameLayout({ stake, onNavigate }) {
     if (gameState.phase !== "running") return;
     if (currentNumber === lastPlayedNumberRef.current) return;
 
-    lastPlayedNumberRef.current = currentNumber;
-    if (!isSoundOnRef.current) return; // muted: marked handled, but stay silent
-    playNumberSound(currentNumber).catch(() => {});
+    // Coalesce bursts: when several numbers arrive almost at once — e.g. the
+    // socket reconnects and replays the draws missed while offline — each rapid
+    // change cancels the previous pending announce, so only the LATEST number
+    // is spoken instead of replaying the whole backlog of previous numbers.
+    const id = setTimeout(() => {
+      lastPlayedNumberRef.current = currentNumber;
+      if (!isSoundOnRef.current) return; // muted: marked handled, stay silent
+      playNumberSound(currentNumber).catch(() => {});
+    }, 160);
+    return () => clearTimeout(id);
   }, [currentNumber, startCountdown, gameState.phase]);
 
   useEffect(() => {
@@ -569,22 +576,16 @@ export default function GameLayout({ stake, onNavigate }) {
     isSoundOnRef.current = newState; // immediate, before the sync effect runs
     localStorage.setItem("lekulu_sound_enabled", newState.toString());
     if (newState) {
+      // Unmuting: just enable audio. Do NOT replay the number already on screen
+      // (it's already marked handled), so toggling stays silent until the next
+      // new number is drawn.
       if (!audioInitializedRef.current) {
         audioInitializedRef.current = true;
         initAudio().catch(() => {});
         resumeAudio().catch(() => {});
       }
-      // Announce the number currently on screen right away (within this user
-      // gesture, so playback is allowed). Mark it handled so the play effect
-      // doesn't double-announce it.
-      if (
-        currentNumber &&
-        startCountdown === 0 &&
-        gameState.phase === "running"
-      ) {
-        lastPlayedNumberRef.current = currentNumber;
-        playNumberSound(currentNumber).catch(() => {});
-      }
+      lastPlayedNumberRef.current =
+        currentNumber || lastPlayedNumberRef.current;
     } else {
       // Muting: stop whatever is playing right now, immediately.
       stopAllSounds();
@@ -704,6 +705,11 @@ export default function GameLayout({ stake, onNavigate }) {
         ? "REG"
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
+
+  // When a game finishes (announce), this screen is on its way to the winner
+  // screen. Rendering anything here would briefly flash watch-mode (cards are
+  // already cleared), so render nothing for that frame.
+  if (gameState.phase === "announce") return null;
 
   return (
     <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col">

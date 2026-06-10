@@ -204,6 +204,15 @@ function AppContent() {
   const navigationInProgressRef = React.useRef(false);
 
   const handleNavigate = (page, forceDirect = false) => {
+    // In-game flow transitions must be instant — no loading overlay or delay —
+    // so finishing a game lands on results / cartella selection without a flash.
+    if (page === "winner" || page === "cartela-selection") {
+      navigationInProgressRef.current = false;
+      setIsNavigating(false);
+      setCurrentPage(page);
+      return;
+    }
+
     if (navigationInProgressRef.current) return;
     navigationInProgressRef.current = true;
     setIsNavigating(true);
