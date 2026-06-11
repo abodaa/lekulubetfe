@@ -676,7 +676,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         isCurrent
                           ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
                           : isCalled
-                            ? "bg-white/20 text-white"
+                            ? "bg-white/20 text-white rounded-full"
                             : "text-white/20"
                       }`}
                     >
@@ -849,7 +849,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`flex items-center gap-1 px-1 py-0.5 text-xs rounded-lg font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
+                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
               >
                 <span>Auto</span>{" "}
                 <span className="text-xl">
@@ -902,7 +902,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Previously Called Numbers */}
         {!isWatchMode && calledNumbers.length > 0 && (
-          <div className="px-3 pb-1 flex-shrink-0 my-2">
+          <div className="px-3 py-2 border border-white/20 bg-black rounded-lg flex-shrink-0 my-2">
             <div className="flex justify-center gap-1 flex-wrap">
               {calledNumbers
                 .slice(-5)
@@ -946,7 +946,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {!isWatchMode && startCountdown > 0 && calledNumbers.length === 0 && (
           <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-            Starts in {startCountdown ? startCountdown : 0} secs
+            Starts in {startCountdown ? startCountdown : "0"} secs
           </p>
         )}
 
