@@ -874,72 +874,86 @@ export default function GameLayout({ stake, onNavigate }) {
           </div>
         </header>
 
-        <div className="px-3 pb-1 flex-shrink-0">
-          <div className="grid grid-cols-4 gap-1">
-            {[
-              { label: "Derash", value: currentPrizePool || 0 },
-              { label: "Players", value: gameState.playersCount || 0 },
-              { label: "Stake", value: stake || 0 },
-              // { label: "Bonus", value: wallet.bonus?.toLocaleString() || 0 },
-              { label: "Calls", value: `${calledNumbers.length}/75` },
-            ].map((s) => (
-              <div
-                key={s.label}
-                className={`${"bg-white/10 text-white/70 col-span-1"} rounded-lg px-1 py-1 text-center border border-white/10 leading-tight shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]`}
-              >
-                <p className="text-white/50 text-[10px] uppercase tracking-wide">
-                  {s.label}
-                </p>
-                <p
-                  className={`text-white font-bold ${s.label === "Derash" ? "text-[12px]" : "text-[12px]"}`}
-                >
-                  {s.label === "Derash" ? `${s.value} ETB` : s.value}
-                </p>
+        {/* Draw + previously called numbers */}
+        {!isWatchMode && (
+          <div className="px-3 pt-1 pb-1.5 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {/* Derash / prize */}
+              <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-gradient-to-b from-amber-500/20 to-amber-600/5 border border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.18)] flex-shrink-0">
+                <span className="text-amber-300/70 text-[8px] font-bold uppercase tracking-wide leading-none">
+                  Derash
+                </span>
+                <span className="text-amber-300 font-extrabold text-sm leading-tight whitespace-nowrap">
+                  {currentPrizePool || 0} ETB
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Previously Called Numbers */}
-        {!isWatchMode && calledNumbers.length > 0 && (
-          <div className="p-3 border border-white/20 bg-black rounded-lg flex-shrink-0 my-2 max-w-[95%] mx-auto">
-            <div className="flex justify-center gap-1 flex-wrap">
-              {calledNumbers
-                .slice(-5)
-                .reverse()
-                .map((n, i) => {
-                  const isCurrent = n === currentNumber;
-                  const letter =
-                    n <= 15
-                      ? "B"
-                      : n <= 30
-                        ? "I"
-                        : n <= 45
-                          ? "N"
-                          : n <= 60
-                            ? "G"
-                            : "O";
-                  const colors = {
-                    B: "bg-sky-500/20 text-sky-200 border-sky-400/40",
-                    I: "bg-emerald-500/20 text-emerald-200 border-emerald-400/40",
-                    N: "bg-violet-500/20 text-violet-200 border-violet-400/40",
-                    G: "bg-rose-500/20 text-rose-200 border-rose-400/40",
-                    O: "bg-amber-500/20 text-amber-200 border-amber-400/40",
-                  };
-                  return (
-                    <div
-                      key={`${n}-${i}`}
-                      className={`rounded-full w-10 h-10 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
-                        isCurrent
-                          ? " bg-gradient-to-b  w-10 h-10  from-white/70 to-white text-black/70 scale-110 shadow-[0_0_14px_rgba(245,158,11,0.55)]"
-                          : " w-8 h-8 "
-                      }`}
-                    >
-                      {letter}
-                      {n}
-                    </div>
-                  );
-                })}
+              {/* Current draw ball */}
+              <div className="relative flex-shrink-0">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-b from-white to-slate-200 border border-white/70 shadow-[0_4px_14px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                  <span className="text-slate-900 font-black text-xl font-mono leading-none">
+                    {currentNumber || "--"}
+                  </span>
+                </div>
+                <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white shadow" />
+              </div>
+
+              {/* Recently called */}
+              <div className="flex-1 min-w-0 rounded-xl border border-sky-400/30 bg-white/[0.03] px-2 py-2 overflow-hidden">
+                {calledNumbers.length > 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    {calledNumbers
+                      .slice(-4)
+                      .reverse()
+                      .map((n, i) => {
+                        const letter =
+                          n <= 15
+                            ? "B"
+                            : n <= 30
+                              ? "I"
+                              : n <= 45
+                                ? "N"
+                                : n <= 60
+                                  ? "G"
+                                  : "O";
+                        const lc = {
+                          B: "text-sky-300",
+                          I: "text-emerald-300",
+                          N: "text-violet-300",
+                          G: "text-rose-300",
+                          O: "text-amber-300",
+                        };
+                        return (
+                          <div
+                            key={`${n}-${i}`}
+                            className="flex items-center gap-1 rounded-full bg-black/50 border border-white/10 pl-1.5 pr-2 py-1 flex-shrink-0"
+                          >
+                            <span
+                              className={`text-[11px] font-extrabold ${lc[letter]}`}
+                            >
+                              {letter}
+                            </span>
+                            <span className="text-white text-xs font-bold font-mono">
+                              {n}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <p className="text-white/30 text-[11px] text-center font-medium">
+                    Waiting for first call…
+                  </p>
+                )}
+              </div>
+
+              {/* Calls count */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="text-white/70 text-xs font-bold whitespace-nowrap">
+                  {calledNumbers.length}/75
+                </span>
+              </div>
             </div>
           </div>
         )}
