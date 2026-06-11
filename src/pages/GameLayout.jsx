@@ -733,6 +733,13 @@ export default function GameLayout({ stake, onNavigate }) {
         : "WAIT";
   const isWatchMode = yourCards.length === 0;
 
+  // Recently called numbers for the chips row — the current draw is shown in the
+  // white ball, so exclude it here and show the 4 calls before it (newest first).
+  const recentCalls = calledNumbers
+    .filter((n) => n !== currentNumber)
+    .slice(-4)
+    .reverse();
+
   // Active cartella (the centered slide) for the fixed bottom BINGO bar.
   const safeActiveIndex =
     yourCards.length > 0 ? Math.min(activeIndex, yourCards.length - 1) : 0;
@@ -924,46 +931,43 @@ export default function GameLayout({ stake, onNavigate }) {
 
               {/* Recently called */}
               <div className="flex-1 min-w-0 rounded-xl border border-sky-400/30 bg-white/[0.03] px-2 py-1.5 overflow-hidden">
-                {calledNumbers.length > 0 ? (
+                {recentCalls.length > 0 ? (
                   <div className="flex items-center justify-center gap-1.5">
-                    {calledNumbers
-                      .slice(-3)
-                      .reverse()
-                      .map((n) => {
-                        const letter =
-                          n <= 15
-                            ? "B"
-                            : n <= 30
-                              ? "I"
-                              : n <= 45
-                                ? "N"
-                                : n <= 60
-                                  ? "G"
-                                  : "O";
-                        const lc = {
-                          B: "text-sky-300 border-sky-400/40",
-                          I: "text-emerald-300 border-emerald-400/40",
-                          N: "text-violet-300 border-violet-400/40",
-                          G: "text-rose-300 border-rose-400/40",
-                          O: "text-amber-300 border-amber-400/40",
-                        };
-                        return (
-                          <div
-                            key={n}
-                            className={`w-10 h-10 rounded-full bg-black/50 border flex flex-col items-center justify-center leading-none flex-shrink-0 ${lc[letter]}`}
-                            style={{ animation: "drawPop 0.35s ease-out" }}
+                    {recentCalls.map((n) => {
+                      const letter =
+                        n <= 15
+                          ? "B"
+                          : n <= 30
+                            ? "I"
+                            : n <= 45
+                              ? "N"
+                              : n <= 60
+                                ? "G"
+                                : "O";
+                      const lc = {
+                        B: "text-sky-300 border-sky-400/40",
+                        I: "text-emerald-300 border-emerald-400/40",
+                        N: "text-violet-300 border-violet-400/40",
+                        G: "text-rose-300 border-rose-400/40",
+                        O: "text-amber-300 border-amber-400/40",
+                      };
+                      return (
+                        <div
+                          key={n}
+                          className={`w-10 h-10 rounded-full bg-black/50 border flex flex-col items-center justify-center leading-none flex-shrink-0 ${lc[letter]}`}
+                          style={{ animation: "drawPop 0.35s ease-out" }}
+                        >
+                          <span
+                            className={`text-[9px] font-extrabold ${lc[letter].split(" ")[0]}`}
                           >
-                            <span
-                              className={`text-[9px] font-extrabold ${lc[letter].split(" ")[0]}`}
-                            >
-                              {letter}
-                            </span>
-                            <span className="text-white text-[13px] font-bold font-mono">
-                              {n}
-                            </span>
-                          </div>
-                        );
-                      })}
+                            {letter}
+                          </span>
+                          <span className="text-white text-[13px] font-bold font-mono">
+                            {n}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-white/30 text-[11px] text-center font-medium">
@@ -1086,6 +1090,25 @@ export default function GameLayout({ stake, onNavigate }) {
                     );
                   })}
                 </Swiper>
+
+                {yourCards.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => swiperRef.current?.slidePrev()}
+                      aria-label="Previous cartella"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-amber-400/70 text-amber-300 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
+                    >
+                      <MdKeyboardArrowLeft size={22} />
+                    </button>
+                    <button
+                      onClick={() => swiperRef.current?.slideNext()}
+                      aria-label="Next cartella"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-amber-400/70 text-amber-300 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
+                    >
+                      <MdKeyboardArrowRight size={22} />
+                    </button>
+                  </>
+                )}
               </div>
             ) : isWatchMode ? (
               <div className="flex items-center justify-center h-full max-w-full mx-auto overflow-hidden">
@@ -1165,15 +1188,6 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
             )}
             <div className="flex items-stretch gap-2">
-              {yourCards.length > 1 && (
-                <button
-                  onClick={() => swiperRef.current?.slidePrev()}
-                  aria-label="Previous cartella"
-                  className="flex-shrink-0 w-9 rounded-2xl bg-white/[0.06] border border-white/10 text-white/80 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
-                >
-                  <MdKeyboardArrowLeft size={22} />
-                </button>
-              )}
               {/* Active cartella + slide position */}
               <div className="flex flex-col items-center justify-center px-3 py-2 rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 min-w-[64px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <span className="text-white/40 text-[8px] uppercase tracking-wide leading-none">
@@ -1188,16 +1202,6 @@ export default function GameLayout({ stake, onNavigate }) {
                   </span>
                 )}
               </div>
-
-              {yourCards.length > 1 && (
-                <button
-                  onClick={() => swiperRef.current?.slideNext()}
-                  aria-label="Next cartella"
-                  className="flex-shrink-0 w-9 rounded-2xl bg-white/[0.06] border border-white/10 text-white/80 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
-                >
-                  <MdKeyboardArrowRight size={22} />
-                </button>
-              )}
 
               {/* Fixed BINGO action for the active cartella */}
               <button
