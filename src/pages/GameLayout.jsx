@@ -877,6 +877,13 @@ export default function GameLayout({ stake, onNavigate }) {
         {/* Draw + previously called numbers */}
         {!isWatchMode && (
           <div className="px-3 pt-1 pb-1.5 flex-shrink-0">
+            <style>{`
+              @keyframes drawPop {
+                0% { transform: scale(0.4); opacity: 0; }
+                60% { transform: scale(1.12); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+              }
+            `}</style>
             <div className="flex items-center gap-2">
               {/* Derash / prize */}
               <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-gradient-to-b from-amber-500/20 to-amber-600/5 border border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.18)] flex-shrink-0">
@@ -890,8 +897,25 @@ export default function GameLayout({ stake, onNavigate }) {
 
               {/* Current draw ball */}
               <div className="relative flex-shrink-0">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-b from-white to-slate-200 border border-white/70 shadow-[0_4px_14px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                  <span className="text-slate-900 font-black text-xl font-mono leading-none">
+                <div
+                  key={currentNumber || "none"}
+                  className="w-14 h-14 rounded-full bg-gradient-to-b from-white to-slate-200 border border-white/70 shadow-[0_4px_14px_rgba(0,0,0,0.45)] flex flex-col items-center justify-center leading-none"
+                  style={{ animation: "drawPop 0.35s ease-out" }}
+                >
+                  <span className="text-slate-500 font-black text-[11px] tracking-wider">
+                    {currentNumber
+                      ? currentNumber <= 15
+                        ? "B"
+                        : currentNumber <= 30
+                          ? "I"
+                          : currentNumber <= 45
+                            ? "N"
+                            : currentNumber <= 60
+                              ? "G"
+                              : "O"
+                      : ""}
+                  </span>
+                  <span className="text-slate-900 font-black text-xl font-mono">
                     {currentNumber || "--"}
                   </span>
                 </div>
@@ -899,13 +923,13 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
 
               {/* Recently called */}
-              <div className="flex-1 min-w-0 rounded-xl border border-sky-400/30 bg-white/[0.03] px-2 py-2 overflow-hidden">
+              <div className="flex-1 min-w-0 rounded-xl border border-sky-400/30 bg-white/[0.03] px-2 py-1.5 overflow-hidden">
                 {calledNumbers.length > 0 ? (
                   <div className="flex items-center gap-1.5">
                     {calledNumbers
                       .slice(-4)
                       .reverse()
-                      .map((n, i) => {
+                      .map((n) => {
                         const letter =
                           n <= 15
                             ? "B"
@@ -917,23 +941,24 @@ export default function GameLayout({ stake, onNavigate }) {
                                   ? "G"
                                   : "O";
                         const lc = {
-                          B: "text-sky-300",
-                          I: "text-emerald-300",
-                          N: "text-violet-300",
-                          G: "text-rose-300",
-                          O: "text-amber-300",
+                          B: "text-sky-300 border-sky-400/40",
+                          I: "text-emerald-300 border-emerald-400/40",
+                          N: "text-violet-300 border-violet-400/40",
+                          G: "text-rose-300 border-rose-400/40",
+                          O: "text-amber-300 border-amber-400/40",
                         };
                         return (
                           <div
-                            key={`${n}-${i}`}
-                            className="flex items-center gap-1 rounded-full bg-black/50 border border-white/10 pl-1.5 pr-2 py-1 flex-shrink-0"
+                            key={n}
+                            className={`w-11 h-11 rounded-full bg-black/50 border flex flex-col items-center justify-center leading-none flex-shrink-0 ${lc[letter]}`}
+                            style={{ animation: "drawPop 0.35s ease-out" }}
                           >
                             <span
-                              className={`text-[11px] font-extrabold ${lc[letter]}`}
+                              className={`text-[9px] font-extrabold ${lc[letter].split(" ")[0]}`}
                             >
                               {letter}
                             </span>
-                            <span className="text-white text-xs font-bold font-mono">
+                            <span className="text-white text-[13px] font-bold font-mono">
                               {n}
                             </span>
                           </div>
