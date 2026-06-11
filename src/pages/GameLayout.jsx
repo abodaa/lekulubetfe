@@ -870,13 +870,6 @@ export default function GameLayout({ stake, onNavigate }) {
                 <p>Refresh</p>
               </button>
             </div>
-            {/* Calls count */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span className="text-white/70 text-xs font-bold whitespace-nowrap">
-                {calledNumbers.length}/75
-              </span>
-            </div>
             <div className="text-right px-2 py-1 rounded-lg bg-white/10 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Game
@@ -981,6 +974,14 @@ export default function GameLayout({ stake, onNavigate }) {
                     Waiting for first call…
                   </p>
                 )}
+              </div>
+
+              {/* Calls count */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="text-white/70 text-xs font-bold whitespace-nowrap">
+                  {calledNumbers.length}/75
+                </span>
               </div>
             </div>
           </div>
