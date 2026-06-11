@@ -820,14 +820,17 @@ export default function GameLayout({ stake, onNavigate }) {
               </div>
               <button
                 onClick={handleSoundToggle}
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                className={`px-2 py-1 rounded-sm flex items-center justify-center gap-1 text-sm font-bold transition-all ${
                   isSoundOn
                     ? "bg-white/20 text-white hover:bg-white/30"
                     : "bg-white/5 text-white/30 hover:bg-white/10"
                 }`}
                 aria-label={isSoundOn ? "Mute" : "Unmute"}
               >
-                {isSoundOn ? "🔊" : "🔇"}
+                <span>Sound</span>{" "}
+                <span className="text-xl">
+                  {isSoundOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
+                </span>
               </button>
               <button
                 onClick={() => {
@@ -846,18 +849,21 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`px-1 py-0.5 text-xl rounded-full font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
+                className={`flex items-center gap-1 px-1 py-0.5 text-sm rounded-sm font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
               >
-                {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
+                <span>Auto</span>{" "}
+                <span className="text-xl">
+                  {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
+                </span>
               </button>
               <button
                 onClick={handleRefresh}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
+                className="px-2 py-1 rounded-sm flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
               >
-                <BiRefresh />
+                <p>Refresh</p>
               </button>
             </div>
-            <div className="text-right">
+            <div className="text-right px-2 py-1 rounded-lg bg-white/10 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Game
               </div>
