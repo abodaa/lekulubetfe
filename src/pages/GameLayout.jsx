@@ -622,7 +622,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Memoized number board
   const NumberBoard = useMemo(
     () => (
-      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border border-white/10 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border border-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
         <table className="w-full border-collapse">
           <tbody>
             {[
@@ -674,7 +674,7 @@ export default function GameLayout({ stake, onNavigate }) {
                       key={n}
                       className={`text-center text-[12px] py-0.5 font-bold transition-colors duration-150 ${
                         isCurrent
-                          ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
+                          ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 rounded-full font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
                           : isCalled
                             ? "bg-white/20 text-white rounded-full"
                             : "text-white/20"
@@ -902,7 +902,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {/* Previously Called Numbers */}
         {!isWatchMode && calledNumbers.length > 0 && (
-          <div className="px-3 py-2 border border-white/20 bg-black rounded-lg flex-shrink-0 my-2">
+          <div className="p-3 border border-white/20 bg-black rounded-lg flex-shrink-0 my-2 max-w-[95%] mx-auto">
             <div className="flex justify-center gap-1 flex-wrap">
               {calledNumbers
                 .slice(-5)
@@ -931,8 +931,8 @@ export default function GameLayout({ stake, onNavigate }) {
                       key={`${n}-${i}`}
                       className={`rounded-full w-10 h-10 flex items-center justify-center text-[14px] font-extrabold font-mono border transition-all duration-150 ${colors[letter]} ${
                         isCurrent
-                          ? "ring-2 ring-amber-300 scale-110 shadow-[0_0_14px_rgba(245,158,11,0.55)]"
-                          : ""
+                          ? " bg-gradient-to-b  w-10 h-10  from-white/70 to-white text-black/70 scale-110 shadow-[0_0_14px_rgba(245,158,11,0.55)]"
+                          : " w-8 h-8 "
                       }`}
                     >
                       {letter}
