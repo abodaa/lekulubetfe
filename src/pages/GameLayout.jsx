@@ -925,9 +925,9 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* Recently called */}
               <div className="flex-1 min-w-0 rounded-xl border border-sky-400/30 bg-white/[0.03] px-2 py-1.5 overflow-hidden">
                 {calledNumbers.length > 0 ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-center gap-1.5">
                     {calledNumbers
-                      .slice(-4)
+                      .slice(-3)
                       .reverse()
                       .map((n) => {
                         const letter =
@@ -950,7 +950,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         return (
                           <div
                             key={n}
-                            className={`w-11 h-11 rounded-full bg-black/50 border flex flex-col items-center justify-center leading-none flex-shrink-0 ${lc[letter]}`}
+                            className={`w-10 h-10 rounded-full bg-black/50 border flex flex-col items-center justify-center leading-none flex-shrink-0 ${lc[letter]}`}
                             style={{ animation: "drawPop 0.35s ease-out" }}
                           >
                             <span
@@ -1086,23 +1086,6 @@ export default function GameLayout({ stake, onNavigate }) {
                     );
                   })}
                 </Swiper>
-
-                {yourCards.length > 1 && (
-                  <>
-                    <button
-                      className="swiper-button-prev-custom absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all shadow-lg"
-                      onClick={() => swiperRef.current?.slidePrev()}
-                    >
-                      <MdKeyboardArrowLeft size={20} />
-                    </button>
-                    <button
-                      className="swiper-button-next-custom absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all shadow-lg"
-                      onClick={() => swiperRef.current?.slideNext()}
-                    >
-                      <MdKeyboardArrowRight size={20} />
-                    </button>
-                  </>
-                )}
               </div>
             ) : isWatchMode ? (
               <div className="flex items-center justify-center h-full max-w-full mx-auto overflow-hidden">
@@ -1181,7 +1164,16 @@ export default function GameLayout({ stake, onNavigate }) {
                 )}
               </div>
             )}
-            <div className="flex items-stretch gap-2.5">
+            <div className="flex items-stretch gap-2">
+              {yourCards.length > 1 && (
+                <button
+                  onClick={() => swiperRef.current?.slidePrev()}
+                  aria-label="Previous cartella"
+                  className="flex-shrink-0 w-9 rounded-2xl bg-white/[0.06] border border-white/10 text-white/80 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  <MdKeyboardArrowLeft size={22} />
+                </button>
+              )}
               {/* Active cartella + slide position */}
               <div className="flex flex-col items-center justify-center px-3 py-2 rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 min-w-[64px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <span className="text-white/40 text-[8px] uppercase tracking-wide leading-none">
@@ -1196,6 +1188,16 @@ export default function GameLayout({ stake, onNavigate }) {
                   </span>
                 )}
               </div>
+
+              {yourCards.length > 1 && (
+                <button
+                  onClick={() => swiperRef.current?.slideNext()}
+                  aria-label="Next cartella"
+                  className="flex-shrink-0 w-9 rounded-2xl bg-white/[0.06] border border-white/10 text-white/80 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  <MdKeyboardArrowRight size={22} />
+                </button>
+              )}
 
               {/* Fixed BINGO action for the active cartella */}
               <button
