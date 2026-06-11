@@ -807,7 +807,7 @@ export default function GameLayout({ stake, onNavigate }) {
         <header className="px-3 pt-1.5 pb-0.5 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <div
+              {/* <div
                 className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
                   gameState.phase === "running"
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
@@ -817,13 +817,13 @@ export default function GameLayout({ stake, onNavigate }) {
                 }`}
               >
                 {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
-              </div>
+              </div> */}
               <button
                 onClick={handleSoundToggle}
-                className={`px-2 py-1 rounded-sm flex items-center justify-center gap-1 text-sm font-bold transition-all ${
+                className={`px-2 py-1 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-all ${
                   isSoundOn
-                    ? "bg-white/20 text-white hover:bg-white/30"
-                    : "bg-white/5 text-white/30 hover:bg-white/10"
+                    ? "text-emerald-400 bg-emerald-500/20"
+                    : "text-white/70 bg-white/20"
                 }`}
                 aria-label={isSoundOn ? "Mute" : "Unmute"}
               >
@@ -849,7 +849,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   }
                   setIsAutoMarkOn(!isAutoMarkOn);
                 }}
-                className={`flex items-center gap-1 px-1 py-0.5 text-sm rounded-sm font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
+                className={`flex items-center gap-1 px-1 py-0.5 text-xs rounded-lg font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
               >
                 <span>Auto</span>{" "}
                 <span className="text-xl">
@@ -858,7 +858,7 @@ export default function GameLayout({ stake, onNavigate }) {
               </button>
               <button
                 onClick={handleRefresh}
-                className="px-2 py-1 rounded-sm flex items-center justify-center text-base bg-white/20 text-white/70 font-bold"
+                className="px-2 py-1 rounded-lg flex items-center justify-center text-xs bg-white/20 text-white/70 font-bold"
               >
                 <p>Refresh</p>
               </button>
@@ -867,7 +867,7 @@ export default function GameLayout({ stake, onNavigate }) {
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Game
               </div>
-              <div className="text-white/70 text-[11px] font-bold font-mono">
+              <div className="text-white/70 text-[10px] font-bold font-mono">
                 {currentGameId ? currentGameId.replace("LB", "#") : "---"}
               </div>
             </div>
