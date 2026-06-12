@@ -267,7 +267,11 @@ export function WebSocketProvider({ children }) {
       if (!/\/ws$/i.test(wsBase)) {
         wsBase += "/ws";
       }
-      const wsUrl = `${wsBase}?token=${safeSessionId}`;
+      // Pass the stake on the handshake so the server can auto-join the room
+      // and push the snapshot immediately — saves a full join_room round-trip.
+      // (The join_room sent in onopen below is now idempotent server-side.)
+      const stakeQuery = currentStake ? `&stake=${currentStake}` : "";
+      const wsUrl = `${wsBase}?token=${safeSessionId}${stakeQuery}`;
       console.log("Connecting to general WebSocket:", wsUrl);
 
       const ws = new WebSocket(wsUrl);
