@@ -623,7 +623,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Memoized number board
   const NumberBoard = useMemo(
     () => (
-      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border border-b-white/10 border-t-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border py-2 border-b-white/10 border-t-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
         <table className="w-full border-collapse">
           <tbody>
             {[
