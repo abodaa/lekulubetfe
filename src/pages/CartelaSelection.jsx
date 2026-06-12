@@ -37,6 +37,7 @@ export default function CartelaSelection({
     }
     return { main: 0, bonus: 0 };
   });
+  const [refreshing, setRefreshing] = useState(false);
 
   const {
     connected,
@@ -544,6 +545,39 @@ export default function CartelaSelection({
   const totalBalance = (Number(wallet.main) || 0) + (Number(wallet.bonus) || 0);
   const cardsReady = Array.isArray(cards) && cards.length > 0;
 
+  // Derash (prize pool) = 80% of all staked cartellas. Prefer the server value
+  // when present, otherwise derive it from the number of taken cartellas.
+  const derashAmount =
+    gameState?.prizePool && gameState.prizePool > 0
+      ? gameState.prizePool
+      : Math.floor((gameState?.takenCards?.length || 0) * (stake || 0) * 0.8);
+
+  // Manual refresh: re-request a fresh room snapshot and re-pull the wallet.
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      if (stake) connectToStake(stake);
+      if (sessionId) {
+        const w = await apiFetch("/wallet", { sessionId });
+        const next = {
+          main: w.main ?? w.balance ?? 0,
+          bonus: w.bonus ?? 0,
+        };
+        setWallet(next);
+        try {
+          localStorage.setItem("lekulu_wallet", JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch (e) {
+      showError("Couldn't refresh — check your connection.");
+    } finally {
+      setTimeout(() => setRefreshing(false), 600);
+    }
+  };
+
   // Loading state — only block while actively loading with nothing to show yet.
   if (loading && !cardsReady) {
     return (
@@ -611,60 +645,88 @@ export default function CartelaSelection({
         {/* Header */}
         <header className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
-            {/* Back Button */}
+            {/* Back + Refresh */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  // Prevent double clicks
+                  if (isNavigatingBackRef.current) return;
+                  isNavigatingBackRef.current = true;
 
-            <button
-              onClick={() => {
-                // Prevent double clicks
-                if (isNavigatingBackRef.current) return;
-                isNavigatingBackRef.current = true;
-
-                // Clear alert banners
-                setAlertBanners([]);
-                alertTimersRef.current.forEach((timer) => clearTimeout(timer));
-                alertTimersRef.current.clear();
-
-                // If user has selected cartellas, deselect them all
-                const selectedNumbers = Array.isArray(gameState.yourSelections)
-                  ? gameState.yourSelections
-                  : [];
-
-                if (selectedNumbers.length > 0) {
-                  console.log(
-                    `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
+                  // Clear alert banners
+                  setAlertBanners([]);
+                  alertTimersRef.current.forEach((timer) =>
+                    clearTimeout(timer),
                   );
-                  // Deselect all cartellas
-                  for (const cardNum of selectedNumbers) {
-                    deselectCartella(cardNum);
+                  alertTimersRef.current.clear();
+
+                  // If user has selected cartellas, deselect them all
+                  const selectedNumbers = Array.isArray(
+                    gameState.yourSelections,
+                  )
+                    ? gameState.yourSelections
+                    : [];
+
+                  if (selectedNumbers.length > 0) {
+                    console.log(
+                      `🗑️ Deselecting ${selectedNumbers.length} cartellas before leaving...`,
+                    );
+                    // Deselect all cartellas
+                    for (const cardNum of selectedNumbers) {
+                      deselectCartella(cardNum);
+                    }
                   }
-                }
 
-                // Reset stake directly — instant, no navigation overlay.
-                onResetToGame?.();
+                  // Reset stake directly — instant, no navigation overlay.
+                  onResetToGame?.();
 
-                // Reset flag after delay
-                setTimeout(() => {
-                  isNavigatingBackRef.current = false;
-                }, 500);
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+                  // Reset flag after delay
+                  setTimeout(() => {
+                    isNavigatingBackRef.current = false;
+                  }, 500);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/70 text-sm font-medium hover:bg-white/20 hover:text-white transition-all"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              Back
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+                Back
+              </button>
+
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                aria-label="Refresh"
+                title="Refresh"
+                className="flex items-center justify-center h-[38px] w-[38px] rounded-xl bg-white/10 border border-white/20 text-white/70 hover:bg-white/20 hover:text-white transition-all disabled:opacity-60"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
 
             {/* Timer */}
             <div
@@ -688,30 +750,13 @@ export default function CartelaSelection({
               </div>
             </div>
 
-            {/* Status */}
-            <div className="text-right">
-              <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Status
+            {/* Derash (prize pool) */}
+            <div className="px-4 py-2 rounded-xl text-center min-w-[80px] bg-gradient-to-b from-amber-400/20 to-amber-500/5 border border-amber-400/40">
+              <div className="text-amber-200/60 text-[10px] uppercase tracking-wider">
+                Derash
               </div>
-              <div
-                className={`text-sm font-bold ${
-                  gameState.phase === "registration"
-                    ? "text-emerald-300"
-                    : gameState.phase === "waiting"
-                      ? "text-amber-300"
-                      : gameState.phase === "running"
-                        ? "text-emerald-400"
-                        : "text-white/60"
-                }`}
-              >
-                {gameState.phase === "registration" &&
-                  (gameState.countdown > 0
-                    ? "Registration Open"
-                    : "Waiting for players")}
-                {gameState.phase === "waiting" && "Waiting for room..."}
-                {gameState.phase === "starting" && "Starting..."}
-                {gameState.phase === "running" && "Game in progress"}
-                {gameState.phase === "announce" && "Game finished"}
+              <div className="text-2xl font-extrabold text-amber-300 leading-tight">
+                {derashAmount}
               </div>
             </div>
           </div>
