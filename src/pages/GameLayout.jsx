@@ -623,8 +623,8 @@ export default function GameLayout({ stake, onNavigate }) {
   // Memoized number board
   const NumberBoard = useMemo(
     () => (
-      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border py-2 border-b-white/10 border-t-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-        <table className="w-full border-collapse">
+      <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl my-2 border border-b-white/10 border-t-white/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+        <table className="w-full border-collapse py-1">
           <tbody>
             {[
               {
@@ -673,7 +673,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <td
                       key={n}
-                      className={`rounded-full text-center text-[12px] py-0.5 font-bold transition-colors duration-150 ${
+                      className={`rounded-full text-center text-[12px] w-5 h-5 flex items-center justify-center m-0.5 font-bold transition-colors duration-150 ${
                         isCurrent
                           ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 rounded-full font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
                           : isCalled
