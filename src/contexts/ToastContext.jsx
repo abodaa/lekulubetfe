@@ -1,54 +1,70 @@
-import React, { createContext, useContext, useState } from 'react';
-import Toast from '../components/Toast';
+import React, { createContext, useContext, useMemo } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
-const ToastContext = createContext();
+// All app toasts now go through the `react-hot-toast` package. The public API
+// (showSuccess / showError / showWarning / ...) is unchanged, so every existing
+// call site keeps working — it just renders package toasts instead of the old
+// custom implementation.
+const ToastContext = createContext(null);
 
-export const useToast = () => {
-    const context = useContext(ToastContext);
-    if (!context) {
-        throw new Error('useToast must be used within a ToastProvider');
-    }
-    return context;
+const baseStyle = {
+  background: "#0f1830",
+  color: "#fff",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: "14px",
+  fontSize: "13px",
+  fontWeight: 600,
+  padding: "10px 14px",
+  boxShadow: "0 8px 28px rgba(0,0,0,0.45)",
+  maxWidth: "92vw",
 };
 
-export const ToastProvider = ({ children }) => {
-    const [toasts, setToasts] = useState([]);
+function makeApi() {
+  return {
+    showSuccess: (message, opts = {}) => toast.success(message, opts),
+    showError: (message, opts = {}) => toast.error(message, opts),
+    showWarning: (message, opts = {}) =>
+      toast(message, { icon: "⚠️", ...opts }),
+    showInfo: (message, opts = {}) => toast(message, { icon: "ℹ️", ...opts }),
+    showLoading: (message, opts = {}) => toast.loading(message, opts),
+    dismiss: (id) => toast.dismiss(id),
+    toast, // escape hatch for advanced/custom toasts
+  };
+}
 
-    const addToast = (message, type = 'error', duration = 3000) => {
-        const id = Date.now() + Math.random();
-        const newToast = { id, message, type, duration };
+export function ToastProvider({ children }) {
+  const api = useMemo(makeApi, []);
+  return (
+    <ToastContext.Provider value={api}>
+      {children}
+      <Toaster
+        position="top-center"
+        gutter={8}
+        toastOptions={{
+          duration: 3000,
+          style: baseStyle,
+          success: {
+            iconTheme: { primary: "#34d399", secondary: "#0f1830" },
+            style: { ...baseStyle, border: "1px solid rgba(52,211,153,0.35)" },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: { primary: "#f87171", secondary: "#0f1830" },
+            style: { ...baseStyle, border: "1px solid rgba(248,113,113,0.35)" },
+          },
+          loading: {
+            iconTheme: { primary: "#fbbf24", secondary: "#0f1830" },
+          },
+        }}
+      />
+    </ToastContext.Provider>
+  );
+}
 
-        setToasts(prev => [...prev, newToast]);
+export function useToast() {
+  // Fall back to the package directly if the provider is somehow absent, so a
+  // toast call can never crash a screen.
+  return useContext(ToastContext) || makeApi();
+}
 
-        // Auto remove after duration
-        setTimeout(() => {
-            removeToast(id);
-        }, duration);
-    };
-
-    const removeToast = (id) => {
-        setToasts(prev => prev.filter(toast => toast.id !== id));
-    };
-
-    const showError = (message, duration = 3000) => addToast(message, 'error', duration);
-    const showSuccess = (message, duration = 3000) => addToast(message, 'success', duration);
-    const showWarning = (message, duration = 3000) => addToast(message, 'warning', duration);
-    const showInfo = (message, duration = 3000) => addToast(message, 'info', duration);
-
-    return (
-        <ToastContext.Provider value={{ addToast, showError, showSuccess, showWarning, showInfo }}>
-            {children}
-            <div className="fixed top-4 right-4 z-50 space-y-2">
-                {toasts.map(toast => (
-                    <Toast
-                        key={toast.id}
-                        message={toast.message}
-                        type={toast.type}
-                        duration={toast.duration}
-                        onClose={() => removeToast(toast.id)}
-                    />
-                ))}
-            </div>
-        </ToastContext.Provider>
-    );
-};
+export default ToastContext;

@@ -18,11 +18,25 @@ export default function CartelaSelection({
   const [cards, setCards] = useState(() => getCachedCartellas() || []);
   const [loading, setLoading] = useState(() => !getCachedCartellas());
   const [error, setError] = useState(null);
-  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletLoading, setWalletLoading] = useState(() => {
+    try {
+      return !localStorage.getItem("lekulu_wallet");
+    } catch {
+      return true;
+    }
+  });
   const [alertBanners, setAlertBanners] = useState([]);
   const alertTimersRef = useRef(new Map());
   const isSelectingRef = useRef(false);
-  const [wallet, setWallet] = useState({ main: 0, bonus: 0 });
+  const [wallet, setWallet] = useState(() => {
+    try {
+      const cached = localStorage.getItem("lekulu_wallet");
+      if (cached) return JSON.parse(cached);
+    } catch {
+      /* ignore */
+    }
+    return { main: 0, bonus: 0 };
+  });
 
   const {
     connected,
@@ -131,15 +145,28 @@ export default function CartelaSelection({
     // Fetch wallet function
     const fetchWallet = async () => {
       if (!sessionId) return;
+      let hadCache = false;
       try {
-        setWalletLoading(true);
+        hadCache = !!localStorage.getItem("lekulu_wallet");
+      } catch {
+        /* ignore */
+      }
+      try {
+        // Only show the blocking loader on a true cold start; otherwise refresh
+        // silently behind the already-displayed cached balance.
+        if (!hadCache) setWalletLoading(true);
         const walletResponse = await apiFetch("/wallet", { sessionId });
-        console.log("Wallet response:", walletResponse); // Debug log
 
         const mainValue = walletResponse.main ?? walletResponse.balance ?? 0;
         const bonusValue = walletResponse.bonus ?? 0;
 
-        setWallet({ main: mainValue, bonus: bonusValue });
+        const next = { main: mainValue, bonus: bonusValue };
+        setWallet(next);
+        try {
+          localStorage.setItem("lekulu_wallet", JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
       } catch (walletErr) {
         console.error("Wallet fetch error:", walletErr);
         // Fallback to profile
@@ -148,17 +175,23 @@ export default function CartelaSelection({
             sessionId,
           });
           if (profileResponse.wallet) {
-            setWallet({
+            const next = {
               main:
                 profileResponse.wallet.main ??
                 profileResponse.wallet.balance ??
                 0,
               bonus: profileResponse.wallet.bonus ?? 0,
-            });
+            };
+            setWallet(next);
+            try {
+              localStorage.setItem("lekulu_wallet", JSON.stringify(next));
+            } catch {
+              /* ignore */
+            }
           }
         } catch (profileErr) {
           console.error("Profile fetch error:", profileErr);
-          setWallet({ main: 0, bonus: 0 });
+          if (!hadCache) setWallet({ main: 0, bonus: 0 });
         }
       } finally {
         setWalletLoading(false);
@@ -171,10 +204,18 @@ export default function CartelaSelection({
   useEffect(() => {
     if (!gameState?.walletUpdate) return;
     const update = gameState.walletUpdate;
-    setWallet((prev) => ({
-      main: update.main ?? prev.main ?? 0,
-      bonus: update.bonus ?? prev.bonus ?? 0,
-    }));
+    setWallet((prev) => {
+      const next = {
+        main: update.main ?? prev.main ?? 0,
+        bonus: update.bonus ?? prev.bonus ?? 0,
+      };
+      try {
+        localStorage.setItem("lekulu_wallet", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   }, [gameState.walletUpdate]);
 
   const [retryCount, setRetryCount] = useState(0);
@@ -267,16 +308,25 @@ export default function CartelaSelection({
       gameState.yourSelections.length > 0;
     const countdownZero =
       typeof gameState?.countdown === "number" && gameState.countdown <= 0;
-    const registrationExpired =
+    // While the phase is still "registration", a 0 countdown means the server
+    // is holding/extending registration to wait for more players — registration
+    // has NOT ended. Show a waiting message (not an "ended" one), and only after
+    // a short grace period so a momentary 0 right before the server extends the
+    // timer doesn't flash the banner.
+    const waitingForPlayers =
       gameState?.phase === "registration" && countdownZero && !hasSelection;
     const msg =
-      "Registration time has ended due to low number of players. Please wait for the next game to start.";
-    setAlertBanners((prev) => {
-      if (registrationExpired && !prev.includes(msg)) return [...prev, msg];
-      if (!registrationExpired && prev.includes(msg))
-        return prev.filter((m) => m !== msg);
-      return prev;
-    });
+      "Waiting for more players to join — the game will start once enough players are in.";
+
+    if (waitingForPlayers) {
+      const t = setTimeout(() => {
+        setAlertBanners((prev) => (prev.includes(msg) ? prev : [...prev, msg]));
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+    setAlertBanners((prev) =>
+      prev.includes(msg) ? prev.filter((m) => m !== msg) : prev,
+    );
   }, [gameState?.phase, gameState?.countdown, gameState?.yourSelections]);
 
   useEffect(() => {
@@ -482,7 +532,9 @@ export default function CartelaSelection({
 
   const timerSeconds =
     gameState.phase === "registration"
-      ? gameState.countdown || 0
+      ? gameState.countdown > 0
+        ? gameState.countdown
+        : "···"
       : gameState.phase === "waiting"
         ? "--"
         : gameState.countdown || 0;
@@ -652,7 +704,10 @@ export default function CartelaSelection({
                         : "text-white/60"
                 }`}
               >
-                {gameState.phase === "registration" && "Registration Open"}
+                {gameState.phase === "registration" &&
+                  (gameState.countdown > 0
+                    ? "Registration Open"
+                    : "Waiting for players")}
                 {gameState.phase === "waiting" && "Waiting for room..."}
                 {gameState.phase === "starting" && "Starting..."}
                 {gameState.phase === "running" && "Game in progress"}
