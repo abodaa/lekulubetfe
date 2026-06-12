@@ -168,14 +168,14 @@ export default function CartellaCard({
     <div
       className={
         size === "fill"
-          ? "h-full w-full flex flex-col"
+          ? "h-full w-full flex flex-col p-5"
           : `${
               size === "small"
                 ? "max-w-[250px]"
                 : isPreview
                   ? "max-w-[280px]"
                   : "max-w-[320px]"
-            } w-full mx-auto aspect-square`
+            } w-full mx-auto aspect-square `
       }
     >
       {/* Card: B-I-N-G-O header and the numbers grid live in ONE panel */}

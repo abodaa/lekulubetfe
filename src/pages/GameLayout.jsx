@@ -27,6 +27,7 @@ import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { SlRefresh } from "react-icons/sl";
 
 // Memoized CartellaCard to prevent unnecessary re-renders
 const MemoizedCartellaCard = React.memo(
@@ -811,20 +812,9 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
-        <header className="px-3 pt-1.5 pb-0.5 flex-shrink-0">
+        <header className="px-3 py-2 my-2 border-b-2 border-white/20 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              {/* <div
-                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${
-                  gameState.phase === "running"
-                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40"
-                    : gameState.phase === "registration"
-                      ? "bg-amber-500/20 text-amber-300 border-amber-400/40"
-                      : "bg-slate-500/20 text-slate-300 border-slate-400/30"
-                }`}
-              >
-                {startCountdown > 0 ? startCountdown : gamePhaseDisplay}
-              </div> */}
               <button
                 onClick={handleSoundToggle}
                 className={`px-2 py-1 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-all ${
@@ -865,9 +855,9 @@ export default function GameLayout({ stake, onNavigate }) {
               </button>
               <button
                 onClick={handleRefresh}
-                className="px-2 py-1 rounded-lg flex items-center justify-center text-xs bg-white/20 text-white/70 font-bold"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-lg bg-white/20 text-white/70 font-bold"
               >
-                <p>Refresh</p>
+                <SlRefresh />
               </button>
             </div>
             {/* Calls count */}
@@ -877,7 +867,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 {calledNumbers.length}/75
               </span>
             </div>
-            <div className="text-right px-2 py-1 rounded-lg bg-white/10 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="text-right flex-shrink-0">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Game
               </div>
