@@ -812,7 +812,7 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
-        <header className="px-3 py-2 my-2 border-b-2 border-white/20 flex-shrink-0">
+        <header className="px-3 py-2 my-2 border-b-1 border-white/10 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <button
@@ -861,12 +861,18 @@ export default function GameLayout({ stake, onNavigate }) {
               </button>
             </div>
             {/* Calls count */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span className="text-white/70 text-xs font-bold whitespace-nowrap">
-                {calledNumbers.length}/75
-              </span>
+            <div className="flex-shrink-0">
+              <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
+                Count
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span className="text-white/70 text-xs font-bold whitespace-nowrap">
+                  {calledNumbers.length}/75
+                </span>
+              </div>
             </div>
+
             <div className="text-right flex-shrink-0">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-bold">
                 Game
@@ -1085,14 +1091,14 @@ export default function GameLayout({ stake, onNavigate }) {
                     <button
                       onClick={() => swiperRef.current?.slidePrev()}
                       aria-label="Previous cartella"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-amber-400/70 text-amber-300 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
+                      className="absolute -left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-white/70 text-white flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
                     >
                       <MdKeyboardArrowLeft size={22} />
                     </button>
                     <button
                       onClick={() => swiperRef.current?.slideNext()}
                       aria-label="Next cartella"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-amber-400/70 text-amber-300 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
+                      className="absolute -right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-white/70 text-white flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 hover:border-amber-300 active:scale-95 transition-all"
                     >
                       <MdKeyboardArrowRight size={22} />
                     </button>
@@ -1126,7 +1132,7 @@ export default function GameLayout({ stake, onNavigate }) {
                         Players
                       </span>
                       <span className="text-white/50 text-xs font-extrabold">
-                        {gameState.playersCount || 0}
+                        {gameState.takenCards?.length || 0}
                       </span>
                     </div>
                   </div>

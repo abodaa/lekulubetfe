@@ -168,7 +168,7 @@ export default function CartellaCard({
     <div
       className={
         size === "fill"
-          ? "h-full w-full flex flex-col p-5"
+          ? "h-full w-full flex flex-col p-6"
           : `${
               size === "small"
                 ? "max-w-[250px]"
