@@ -233,6 +233,13 @@ export function WebSocketProvider({ children }) {
 
     connectionAttemptRef.current = true;
 
+    // Cancel any pending auto-reconnect from a previous (now-superseded) attempt
+    // so we don't end up with two competing sockets.
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
     if (wsRef.current) {
       console.log("Closing existing connection for general connection");
       wsRef.current.close();
@@ -738,7 +745,8 @@ export function WebSocketProvider({ children }) {
           console.log(
             `🔄 Reconnecting WebSocket in ${delay}ms (attempt ${retry + 1})`,
           );
-          setTimeout(() => {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectTimeoutRef.current = null;
             retry++;
             connectionAttemptRef.current = false;
             connect();
@@ -812,7 +820,18 @@ export function WebSocketProvider({ children }) {
           ws.removeEventListener("open", onOpen);
         };
         ws.addEventListener("open", onOpen);
-      } else if (!connected && !isConnecting) {
+      } else {
+        // Socket is missing, closing, or closed. Force a clean reconnect even if
+        // `connected` is still stale-true from a dropped socket (otherwise the
+        // app gets stuck "Not connected" and Refresh does nothing).
+        if (ws) {
+          try {
+            ws.close();
+          } catch (e) {}
+        }
+        wsRef.current = null;
+        connectionAttemptRef.current = false;
+        setConnected(false);
         connectGeneral();
       }
     },
@@ -895,6 +914,33 @@ export function WebSocketProvider({ children }) {
     },
     [connectToStake, connectGeneral, recoverGameStateFromHTTP],
   );
+
+  // Auto-recover the socket when the network comes back or the tab is refocused.
+  // Without this, a connection dropped during an outage that exhausts the retry
+  // loop never reconnects on its own — the user is stuck "Not connected" until a
+  // full reload, and even Refresh can't help if `connected` was left stale.
+  useEffect(() => {
+    if (!safeSessionId) return;
+    const tryRecover = () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false)
+        return;
+      const rs = wsRef.current?.readyState;
+      if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+      const stake = currentStakeRef.current;
+      if (stake) connectToStake(stake);
+      else connectGeneral();
+    };
+    const onOnline = () => tryRecover();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tryRecover();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [safeSessionId, connectToStake, connectGeneral]);
 
   const requestNumberResume = useCallback(() => {
     const ws = wsRef.current;

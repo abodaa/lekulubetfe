@@ -438,9 +438,9 @@ export default function CartelaSelection({
 
       // Check WebSocket connection
       if (!connected || wsReadyState !== WebSocket.OPEN) {
-        showError(
-          "Not connected to game server. Please refresh and try again.",
-        );
+        // Self-heal: kick off a reconnect so the next tap goes through.
+        if (stake) connectToStake(stake);
+        showError("Reconnecting to game server… please try again in a moment.");
         return;
       }
 
