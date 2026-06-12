@@ -673,7 +673,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   return (
                     <td
                       key={n}
-                      className={`rounded-full text-center text-[12px] w-5 h-5 flex items-center justify-center py-0.5 font-bold transition-colors duration-150 ${
+                      className={`rounded-full text-center text-[12px] py-0.5 font-bold transition-colors duration-150 ${
                         isCurrent
                           ? "bg-gradient-to-b from-amber-400 to-orange-500 text-slate-900 rounded-full font-black scale-105 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
                           : isCalled
