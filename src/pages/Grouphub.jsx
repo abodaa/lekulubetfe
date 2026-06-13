@@ -127,7 +127,9 @@ export default function GroupHub({ onNavigate }) {
     group && groupStatus === "in_game" && GAME_PHASES.includes(gameState.phase);
   if (inGame) {
     const stake = group.stake;
-    if (gameState.phase === "running") {
+    // Mirror the public determineGamePage mapping: "starting" belongs with the
+    // running game (numbers are being called), NOT the selection screen.
+    if (gameState.phase === "running" || gameState.phase === "starting") {
       return (
         <GameLayout
           stake={stake}
