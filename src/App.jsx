@@ -12,7 +12,6 @@ import {
   WebSocketProvider,
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
-
 // Secondary tab pages stay lazy (not in the immediate game path).
 const Rules = lazy(() => import("./components/Rules"));
 const Scores = lazy(() => import("./pages/Scores"));
