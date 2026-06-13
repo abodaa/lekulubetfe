@@ -56,6 +56,7 @@ export default function GroupHub({ onNavigate }) {
   } = useWebSocket();
   const { showError, showSuccess, showInfo } = useToast();
 
+    
   const [tab, setTab] = useState("create");
   const [createStake, setCreateStake] = useState(10);
   const [joinCode, setJoinCode] = useState("");
