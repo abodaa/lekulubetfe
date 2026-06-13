@@ -5,7 +5,7 @@ import Game from "./pages/Game"; // eager: default landing page
 import CartelaSelection from "./pages/CartelaSelection.jsx";
 import GameLayout from "./pages/GameLayout.jsx";
 import Winner from "./pages/Winner.jsx";
-import GroupHub from "./pages/GroupHub.jsx";
+import GroupHub from "./pages/Grouphub.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
