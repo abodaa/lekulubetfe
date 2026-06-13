@@ -27,8 +27,7 @@ function localCountdownAnchor(payload = {}) {
     const skew = payload.serverTime != null ? now - payload.serverTime : 0;
     localEndTime = endsAt + skew;
   } else if (payload.countdownSeconds != null) {
-    localEndTime =
-      now + Math.max(0, Math.floor(payload.countdownSeconds)) * 1000;
+    localEndTime = now + Math.max(0, Math.floor(payload.countdownSeconds)) * 1000;
   } else {
     localEndTime = now;
   }
@@ -83,6 +82,7 @@ export function WebSocketProvider({ children }) {
   const [pendingGameStart, setPendingGameStart] = useState(null);
   const rejoinScheduledRef = useRef(false);
   const pendingSendsRef = useRef([]);
+  const cardResyncRef = useRef({ gameId: null, tries: 0 });
 
   const send = useCallback(
     (type, payload) => {
@@ -118,29 +118,37 @@ export function WebSocketProvider({ children }) {
 
   // Countdown timer effect
   useEffect(() => {
+    if (gameState.phase !== "registration" || !gameState.registrationEndTime)
+      return;
+    const endTime = gameState.registrationEndTime;
+    let timeoutId = null;
     let intervalId = null;
 
-    if (gameState.phase === "registration" && gameState.registrationEndTime) {
-      intervalId = setInterval(() => {
-        const now = Date.now();
-        const endTime = gameState.registrationEndTime;
-        const remainingSeconds = Math.max(0, Math.ceil((endTime - now) / 1000));
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      setGameState((prev) =>
+        prev.countdown === remaining ? prev : { ...prev, countdown: remaining },
+      );
+      if (remaining <= 0) {
+        if (intervalId) clearInterval(intervalId);
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
 
-        setGameState((prev) => ({
-          ...prev,
-          countdown: remainingSeconds,
-        }));
-
-        if (remainingSeconds <= 0) {
-          clearInterval(intervalId);
-        }
-      }, 1000);
-    }
+    // Compute immediately (no 1s delay), then align subsequent ticks to the
+    // end-time's whole-second boundaries so every device flips the displayed
+    // number at the same wall-clock instant (endTime is already clock-skew
+    // corrected), eliminating the visible cross-device timer drift.
+    tick();
+    const msToBoundary = (((endTime - Date.now()) % 1000) + 1000) % 1000 || 1000;
+    timeoutId = setTimeout(() => {
+      tick();
+      intervalId = setInterval(tick, 1000);
+    }, msToBoundary);
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      if (timeoutId) clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
     };
   }, [gameState.phase, gameState.registrationEndTime]);
 
@@ -481,23 +489,30 @@ export function WebSocketProvider({ children }) {
                 remaining: serverCountdown,
                 localEndTime: registrationEndTime,
               } = localCountdownAnchor(event.payload);
-              setGameState((prev) => ({
-                ...prev,
-                phase: "registration",
-                gameId: event.payload.gameId,
-                playersCount: event.payload.playersCount || 0,
-                countdown: serverCountdown,
-                registrationEndTime,
-                yourCards: [],
-                yourSelections: [],
-                calledNumbers: [],
-                currentNumber: null,
-                winners: [],
-                takenCards: event.payload.takenCards || [],
-                availableCards: event.payload.availableCards || [],
-                prizePool: 0,
-                totalCartellas: event.payload.totalCartellas || 200,
-              }));
+              setGameState((prev) => {
+                // A running game must never be reverted to selection by a stray,
+                // late, or duplicate registration broadcast. The only way out of
+                // "running" is the game finishing (announce). A genuine new round
+                // is always preceded by the game ending first.
+                if (prev.phase === "running") return prev;
+                return {
+                  ...prev,
+                  phase: "registration",
+                  gameId: event.payload.gameId,
+                  playersCount: event.payload.playersCount || 0,
+                  countdown: serverCountdown,
+                  registrationEndTime,
+                  yourCards: [],
+                  yourSelections: [],
+                  calledNumbers: [],
+                  currentNumber: null,
+                  winners: [],
+                  takenCards: event.payload.takenCards || [],
+                  availableCards: event.payload.availableCards || [],
+                  prizePool: 0,
+                  totalCartellas: event.payload.totalCartellas || 200,
+                };
+              });
               break;
             }
 
@@ -506,17 +521,23 @@ export function WebSocketProvider({ children }) {
                 remaining: serverCountdown,
                 localEndTime: registrationEndTime,
               } = localCountdownAnchor(event.payload);
-              setGameState((prev) => ({
-                ...prev,
-                phase: "registration",
-                gameId: event.payload.gameId || prev.gameId,
-                playersCount:
-                  event.payload.playersCount ?? prev.playersCount ?? 0,
-                countdown: serverCountdown,
-                registrationEndTime,
-                takenCards: event.payload.takenCards || prev.takenCards || [],
-                prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
-              }));
+              setGameState((prev) => {
+                // You can't "extend registration" on a game that's already
+                // running — ignore it so it can't kick a playing client back to
+                // the selection screen.
+                if (prev.phase === "running") return prev;
+                return {
+                  ...prev,
+                  phase: "registration",
+                  gameId: event.payload.gameId || prev.gameId,
+                  playersCount:
+                    event.payload.playersCount ?? prev.playersCount ?? 0,
+                  countdown: serverCountdown,
+                  registrationEndTime,
+                  takenCards: event.payload.takenCards || prev.takenCards || [],
+                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
+                };
+              });
               break;
             }
 
@@ -574,13 +595,25 @@ export function WebSocketProvider({ children }) {
 
             case "number_called":
               setGameState((prev) => {
+                const pid = event.payload.gameId;
+                // Ignore only if we're already in a DIFFERENT running game
+                // (stale numbers from a game we left). Otherwise ADOPT it: a
+                // called number proves the round is live, so recover even if we
+                // missed the one-shot game_started/registration_closed (e.g. a
+                // brief disconnect). This prevents a client being stranded on
+                // the selection screen while numbers stream in.
                 if (
-                  event.payload.gameId &&
-                  event.payload.gameId !== prev.gameId
-                )
+                  pid &&
+                  prev.gameId &&
+                  pid !== prev.gameId &&
+                  prev.phase === "running"
+                ) {
                   return prev;
+                }
                 return {
                   ...prev,
+                  phase: "running",
+                  gameId: pid || prev.gameId,
                   currentNumber: event.payload.number,
                   calledNumbers:
                     event.payload.calledNumbers || event.payload.called || [],
@@ -1060,8 +1093,7 @@ export function WebSocketProvider({ children }) {
   useEffect(() => {
     if (!safeSessionId) return;
     const tryRecover = () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false)
-        return;
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
       const rs = wsRef.current?.readyState;
       if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
       const stake = currentStakeRef.current;
@@ -1079,6 +1111,47 @@ export function WebSocketProvider({ children }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [safeSessionId, connectToStake, connectGeneral]);
+
+  // If we adopted a running game (e.g. via number_called after missing the
+  // one-shot game_started) but we selected cartellas and have no card grids,
+  // pull a fresh snapshot — which includes our cards — once per game (capped).
+  useEffect(() => {
+    if (gameState.phase !== "running") return;
+    const hasCards =
+      Array.isArray(gameState.yourCards) && gameState.yourCards.length > 0;
+    const hadSelections =
+      Array.isArray(gameState.yourSelections) &&
+      gameState.yourSelections.length > 0;
+    if (hasCards || !hadSelections) return;
+    if (cardResyncRef.current.gameId !== gameState.gameId) {
+      cardResyncRef.current = { gameId: gameState.gameId, tries: 0 };
+    }
+    if (cardResyncRef.current.tries >= 3) return;
+    cardResyncRef.current.tries += 1;
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      if (currentGroupCodeRef.current) {
+        ws.send(
+          JSON.stringify({
+            type: "group_join_request",
+            payload: { code: currentGroupCodeRef.current },
+          }),
+        );
+      } else if (currentStakeRef.current) {
+        ws.send(
+          JSON.stringify({
+            type: "join_room",
+            payload: { stake: currentStakeRef.current },
+          }),
+        );
+      }
+    }
+  }, [
+    gameState.phase,
+    gameState.yourCards,
+    gameState.yourSelections,
+    gameState.gameId,
+  ]);
 
   const requestNumberResume = useCallback(() => {
     const ws = wsRef.current;
