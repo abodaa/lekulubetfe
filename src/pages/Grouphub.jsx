@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useWebSocket } from "../contexts/WebSocketContext";
-import { useToast } from "../contexts/ToastContext";
+import { useWebSocket } from "../contexts/WebSocketContext.jsx";
+import { useToast } from "../contexts/ToastContext.jsx";
 import CartelaSelection from "./CartelaSelection.jsx";
 import GameLayout from "./GameLayout.jsx";
 import Winner from "./Winner.jsx";
