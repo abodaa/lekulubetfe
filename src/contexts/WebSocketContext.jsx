@@ -27,12 +27,21 @@ function localCountdownAnchor(payload = {}) {
     const skew = payload.serverTime != null ? now - payload.serverTime : 0;
     localEndTime = endsAt + skew;
   } else if (payload.countdownSeconds != null) {
-    localEndTime = now + Math.max(0, Math.floor(payload.countdownSeconds)) * 1000;
+    localEndTime =
+      now + Math.max(0, Math.floor(payload.countdownSeconds)) * 1000;
   } else {
     localEndTime = now;
   }
   const remaining = Math.max(0, Math.ceil((localEndTime - now) / 1000));
   return { remaining, localEndTime };
+}
+
+function clearStoredGroupCode() {
+  try {
+    sessionStorage.removeItem("lekulu_group_code");
+  } catch {
+    /* ignore */
+  }
 }
 
 export function WebSocketProvider({ children }) {
@@ -48,7 +57,15 @@ export function WebSocketProvider({ children }) {
   // (prevents the socket from tearing down on every number call).
   const resumeRef = useRef(null);
   const currentStakeRef = useRef(null);
-  const currentGroupCodeRef = useRef(null);
+  const currentGroupCodeRef = useRef(
+    (() => {
+      try {
+        return sessionStorage.getItem("lekulu_group_code") || null;
+      } catch {
+        return null;
+      }
+    })(),
+  );
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -140,7 +157,8 @@ export function WebSocketProvider({ children }) {
     // number at the same wall-clock instant (endTime is already clock-skew
     // corrected), eliminating the visible cross-device timer drift.
     tick();
-    const msToBoundary = (((endTime - Date.now()) % 1000) + 1000) % 1000 || 1000;
+    const msToBoundary =
+      (((endTime - Date.now()) % 1000) + 1000) % 1000 || 1000;
     timeoutId = setTimeout(() => {
       tick();
       intervalId = setInterval(tick, 1000);
@@ -786,6 +804,11 @@ export function WebSocketProvider({ children }) {
             case "group_state": {
               const p = event.payload || {};
               currentGroupCodeRef.current = p.code || null;
+              try {
+                if (p.code) sessionStorage.setItem("lekulu_group_code", p.code);
+              } catch {
+                /* ignore */
+              }
               setGroup({
                 code: p.code,
                 stake: p.stake,
@@ -853,6 +876,7 @@ export function WebSocketProvider({ children }) {
             case "group_join_rejected":
             case "group_left":
               currentGroupCodeRef.current = null;
+              clearStoredGroupCode();
               setGroup(null);
               setGroupStatus(null);
               window.dispatchEvent(
@@ -864,6 +888,7 @@ export function WebSocketProvider({ children }) {
 
             case "group_dissolved":
               currentGroupCodeRef.current = null;
+              clearStoredGroupCode();
               setGroup(null);
               setGroupStatus(null);
               setGameState((prev) => ({ ...prev, phase: "waiting" }));
@@ -1093,7 +1118,8 @@ export function WebSocketProvider({ children }) {
   useEffect(() => {
     if (!safeSessionId) return;
     const tryRecover = () => {
-      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      if (typeof navigator !== "undefined" && navigator.onLine === false)
+        return;
       const rs = wsRef.current?.readyState;
       if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
       const stake = currentStakeRef.current;
@@ -1260,6 +1286,7 @@ export function WebSocketProvider({ children }) {
     (code) => {
       enterGroupMode();
       currentGroupCodeRef.current = null;
+      clearStoredGroupCode();
       groupSend("group_join_request", {
         code: String(code || "").toUpperCase(),
       });
@@ -1289,6 +1316,7 @@ export function WebSocketProvider({ children }) {
   const leaveGroup = useCallback(() => {
     groupSend("group_leave", {});
     currentGroupCodeRef.current = null;
+    clearStoredGroupCode();
     setGroup(null);
     setGroupStatus(null);
   }, [groupSend]);

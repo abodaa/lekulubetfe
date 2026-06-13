@@ -62,6 +62,13 @@ export default function GroupHub({ onNavigate }) {
   const [tab, setTab] = useState("create");
   const [createStake, setCreateStake] = useState(10);
   const [joinCode, setJoinCode] = useState("");
+  const [rejoining, setRejoining] = useState(() => {
+    try {
+      return !!sessionStorage.getItem("lekulu_group_code");
+    } catch {
+      return false;
+    }
+  });
 
   // Surface server-side group events as toasts.
   useEffect(() => {
@@ -108,6 +115,26 @@ export default function GroupHub({ onNavigate }) {
       }
     }
   }, [group, groupStatus]);
+
+  // Reload-resume: while waiting for the server to re-admit us into our group,
+  // show a "rejoining" state. Clear it once the group is restored, or give up
+  // after a few seconds (the group no longer exists) and fall back to the menu.
+  useEffect(() => {
+    if (!rejoining) return;
+    if (group) {
+      setRejoining(false);
+      return;
+    }
+    const t = setTimeout(() => {
+      try {
+        sessionStorage.removeItem("lekulu_group_code");
+      } catch {
+        /* ignore */
+      }
+      setRejoining(false);
+    }, 10000);
+    return () => clearTimeout(t);
+  }, [rejoining, group]);
 
   const copyCode = (code) => {
     try {
@@ -332,6 +359,23 @@ export default function GroupHub({ onNavigate }) {
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ---------- REJOINING AFTER RELOAD ----------
+  if (rejoining && !group) {
+    return (
+      <div
+        className={`${PAGE_BG} flex flex-col items-center justify-center p-6`}
+      >
+        <div className={`${CARD} p-8 w-full max-w-sm text-center`}>
+          <div className="w-12 h-12 mx-auto mb-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+          <h2 className="text-lg font-bold mb-1">Rejoining your group…</h2>
+          <p className="text-white/60 text-sm">
+            Reconnecting you to the game you were in.
+          </p>
+        </div>
       </div>
     );
   }

@@ -5,7 +5,7 @@ import Game from "./pages/Game"; // eager: default landing page
 import CartelaSelection from "./pages/CartelaSelection.jsx";
 import GameLayout from "./pages/GameLayout.jsx";
 import Winner from "./pages/Winner.jsx";
-import GroupHub from "./pages/Grouphub.jsx";
+import GroupHub from "./pages/GroupHub.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
@@ -24,7 +24,16 @@ const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
 
 // Inner component that has access to WebSocket context
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState("game");
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Reload-resume: if we were in a private group before the reload, start on
+    // the group screen so we land back in it once the socket re-admits us.
+    try {
+      if (sessionStorage.getItem("lekulu_group_code")) return "group-hub";
+    } catch {
+      /* ignore */
+    }
+    return "game";
+  });
   const [selectedStake, setSelectedStake] = useState(null);
   const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [currentGameId, setCurrentGameId] = useState(null);
