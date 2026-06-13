@@ -8,7 +8,7 @@ import { prefetchCartellas } from "../lib/cartellaCache";
 import { motion } from "framer-motion";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
-import { FaCoins, FaCrown, FaRocket } from "react-icons/fa";
+import { FaCoins, FaCrown, FaRocket, FaUsers } from "react-icons/fa";
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [adminPost, setAdminPost] = useState(null);
@@ -205,6 +205,34 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 </div>
                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
                   <span>Play</span>
+                  <CiPlay1 size={14} />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Play in a Group */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onNavigate?.("group-hub")}
+              className="group relative rounded-xl bg-gradient-to-r from-amber-500/15 to-amber-400/5 backdrop-blur border-2 border-amber-400/40 p-3 cursor-pointer transition-all overflow-hidden"
+            >
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <FaUsers className="text-amber-300 text-lg" />
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-lg">
+                      Play in a Group
+                    </div>
+                    <p className="text-white/40 text-[10px]">
+                      Create or join a private game with friends
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-medium">
+                  <span>Open</span>
                   <CiPlay1 size={14} />
                 </div>
               </div>

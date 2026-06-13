@@ -43,6 +43,7 @@ export function WebSocketProvider({ children }) {
   // (prevents the socket from tearing down on every number call).
   const resumeRef = useRef(null);
   const currentStakeRef = useRef(null);
+  const currentGroupCodeRef = useRef(null);
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -66,9 +67,16 @@ export function WebSocketProvider({ children }) {
   });
   const [lastEvent, setLastEvent] = useState(null);
   const [currentStake, setCurrentStake] = useState(null);
+  // Play in Group state. `group` holds the lobby/membership for the group the
+  // user is currently in (null when not in a group). `groupStatus` is one of
+  // null | "pending" | "lobby" | "in_game".
+  const [group, setGroup] = useState(null);
+  const [groupStatus, setGroupStatus] = useState(null);
+  const [openGroups, setOpenGroups] = useState([]);
   const [messageCount, setMessageCount] = useState(0);
   const [pendingGameStart, setPendingGameStart] = useState(null);
   const rejoinScheduledRef = useRef(false);
+  const pendingSendsRef = useRef([]);
 
   const send = useCallback(
     (type, payload) => {
@@ -277,7 +285,14 @@ export function WebSocketProvider({ children }) {
       // Pass the stake on the handshake so the server can auto-join the room
       // and push the snapshot immediately — saves a full join_room round-trip.
       // (The join_room sent in onopen below is now idempotent server-side.)
-      const stakeQuery = currentStake ? `&stake=${currentStake}` : "";
+      // If the user is in a private group, carry the group code instead so the
+      // server auto-rejoins the group room on (re)connect.
+      const groupCode = currentGroupCodeRef.current;
+      const stakeQuery = groupCode
+        ? `&group=${groupCode}`
+        : currentStake
+          ? `&stake=${currentStake}`
+          : "";
       const wsUrl = `${wsBase}?token=${safeSessionId}${stakeQuery}`;
       console.log("Connecting to general WebSocket:", wsUrl);
 
@@ -291,6 +306,16 @@ export function WebSocketProvider({ children }) {
         connecting = false;
         connectionAttemptRef.current = false;
         retry = 0;
+
+        // Flush any group/action messages queued while the socket was opening.
+        if (pendingSendsRef.current.length) {
+          const queued = pendingSendsRef.current.splice(0);
+          queued.forEach((m) => {
+            try {
+              ws.send(JSON.stringify(m));
+            } catch (e) {}
+          });
+        }
 
         heartbeat = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -718,6 +743,107 @@ export function WebSocketProvider({ children }) {
               );
               break;
 
+            case "group_state": {
+              const p = event.payload || {};
+              currentGroupCodeRef.current = p.code || null;
+              setGroup({
+                code: p.code,
+                stake: p.stake,
+                ownerId: p.ownerId,
+                isOwner: !!p.isOwner,
+                phase: p.phase,
+                isOpen: !!p.isOpen,
+                members: p.members || [],
+                pending: p.pending || [],
+                memberCount: p.memberCount || 0,
+                you: p.you,
+              });
+              setGroupStatus(p.phase === "lobby" ? "lobby" : "in_game");
+              if (p.phase === "lobby") {
+                // A round just ended (or hasn't started) — clear the game slice
+                // so GroupHub shows the lobby, not the previous board/winner.
+                setGameState((prev) => ({
+                  ...prev,
+                  phase: "lobby",
+                  gameId: null,
+                  calledNumbers: [],
+                  currentNumber: null,
+                  winners: [],
+                  youWon: false,
+                  yourPrize: 0,
+                  yourCards: [],
+                  yourSelections: [],
+                  takenCards: [],
+                  countdown: 0,
+                  registrationEndTime: null,
+                }));
+              }
+              break;
+            }
+
+            case "group_join_pending": {
+              const p = event.payload || {};
+              currentGroupCodeRef.current = p.code || null;
+              setGroupStatus("pending");
+              setGroup((prev) => ({
+                ...(prev || {}),
+                code: p.code,
+                stake: p.stake,
+                phase: "lobby",
+                isOwner: false,
+              }));
+              break;
+            }
+
+            case "group_join_requested":
+              // Owner-side: surface a quick toast; the pending list itself
+              // arrives via the following group_state broadcast.
+              window.dispatchEvent(
+                new CustomEvent("groupJoinRequested", {
+                  detail: event.payload,
+                }),
+              );
+              break;
+
+            case "group_join_approved":
+              // The server follows this with a group_state that flips us into the
+              // lobby; nothing else to do here.
+              break;
+
+            case "group_join_rejected":
+            case "group_left":
+              currentGroupCodeRef.current = null;
+              setGroup(null);
+              setGroupStatus(null);
+              window.dispatchEvent(
+                new CustomEvent("groupClosed", {
+                  detail: { reason: event.type, ...(event.payload || {}) },
+                }),
+              );
+              break;
+
+            case "group_dissolved":
+              currentGroupCodeRef.current = null;
+              setGroup(null);
+              setGroupStatus(null);
+              setGameState((prev) => ({ ...prev, phase: "waiting" }));
+              window.dispatchEvent(
+                new CustomEvent("groupClosed", {
+                  detail: { reason: "group_dissolved" },
+                }),
+              );
+              break;
+
+            case "group_list":
+              setOpenGroups(event.payload?.groups || []);
+              break;
+
+            case "group_error":
+              window.dispatchEvent(
+                new CustomEvent("groupError", { detail: event.payload }),
+              );
+              break;
+
             default:
               console.log("Unhandled WS event:", event.type);
           }
@@ -778,6 +904,11 @@ export function WebSocketProvider({ children }) {
   const connectToStake = useCallback(
     (stake) => {
       if (!safeSessionId || !stake) return;
+      // While in a private group, ignore public stake joins entirely. The group
+      // connection is managed via the group code on the socket URL, and the
+      // in-game screens (which call connectToStake on their own) must not pull
+      // the user out of the group room into a public one.
+      if (currentGroupCodeRef.current) return;
       const isSameStake = currentStake === stake;
 
       if (!isSameStake) {
@@ -1014,6 +1145,78 @@ export function WebSocketProvider({ children }) {
     [send],
   );
 
+  // ---- Play in Group actions ----
+  // Sends even if the socket is still opening: queues + (re)connects, then the
+  // onopen handler flushes the queue.
+  const groupSend = useCallback(
+    (type, payload = {}) => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type, payload }));
+        } catch (e) {}
+        return;
+      }
+      pendingSendsRef.current.push({ type, payload });
+      if (!connectionAttemptRef.current) connectGeneral();
+    },
+    [connectGeneral],
+  );
+
+  const enterGroupMode = useCallback(() => {
+    // Make sure we don't carry a public stake into the group connection.
+    setCurrentStake(null);
+    currentStakeRef.current = null;
+  }, []);
+
+  const createGroup = useCallback(
+    (stake) => {
+      enterGroupMode();
+      groupSend("group_create", { stake: Number(stake) });
+    },
+    [enterGroupMode, groupSend],
+  );
+  const requestJoinGroup = useCallback(
+    (code) => {
+      enterGroupMode();
+      currentGroupCodeRef.current = null;
+      groupSend("group_join_request", {
+        code: String(code || "").toUpperCase(),
+      });
+    },
+    [enterGroupMode, groupSend],
+  );
+  const approveJoin = useCallback(
+    (userId) => groupSend("group_approve", { userId }),
+    [groupSend],
+  );
+  const rejectJoin = useCallback(
+    (userId) => groupSend("group_reject", { userId }),
+    [groupSend],
+  );
+  const setGroupStake = useCallback(
+    (stake) => groupSend("group_set_stake", { stake: Number(stake) }),
+    [groupSend],
+  );
+  const setGroupOpen = useCallback(
+    (isOpen) => groupSend("group_set_open", { isOpen: !!isOpen }),
+    [groupSend],
+  );
+  const startGroup = useCallback(
+    () => groupSend("group_start", {}),
+    [groupSend],
+  );
+  const leaveGroup = useCallback(() => {
+    groupSend("group_leave", {});
+    currentGroupCodeRef.current = null;
+    setGroup(null);
+    setGroupStatus(null);
+  }, [groupSend]);
+  const listOpenGroups = useCallback(
+    () => groupSend("group_list_open", {}),
+    [groupSend],
+  );
+
   const value = {
     connected,
     gameState,
@@ -1033,6 +1236,19 @@ export function WebSocketProvider({ children }) {
     forceReconnect,
     requestNumberResume,
     recoverGameStateFromHTTP,
+    // Play in Group
+    group,
+    groupStatus,
+    openGroups,
+    createGroup,
+    requestJoinGroup,
+    approveJoin,
+    rejectJoin,
+    setGroupStake,
+    setGroupOpen,
+    startGroup,
+    leaveGroup,
+    listOpenGroups,
   };
 
   return (
