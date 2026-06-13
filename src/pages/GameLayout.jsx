@@ -117,7 +117,8 @@ export default function GameLayout({ stake, onNavigate }) {
     return false;
   }, []);
 
-  const { connected, gameState, claimBingo, connectToStake } = useWebSocket();
+  const { connected, gameState, claimBingo, connectToStake, group } =
+    useWebSocket();
 
   const currentPrizePool = gameState.prizePool || 0;
   const calledNumbers = gameState.calledNumbers || [];
@@ -812,6 +813,20 @@ export default function GameLayout({ stake, onNavigate }) {
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
+        {group?.code && (
+          <div className="mx-3 mt-2 -mb-1 flex items-center justify-between rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5">
+            <span className="flex items-center gap-2 text-amber-200 text-[11px] font-semibold">
+              <span className="opacity-70">Group</span>
+              <span className="tracking-[0.2em] font-extrabold text-amber-300">
+                {group.code}
+              </span>
+            </span>
+            <span className="text-amber-100/80 text-[11px] font-semibold">
+              {(group.members || []).filter((m) => m.online).length}/
+              {group.memberCount || (group.members || []).length} players
+            </span>
+          </div>
+        )}
         <header className="px-3 py-2 my-2 border-b-1 border-white/10 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">

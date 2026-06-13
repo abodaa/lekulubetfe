@@ -17,17 +17,23 @@ const WebSocketContext = createContext();
 // local clock as a last resort.
 function localCountdownAnchor(payload = {}) {
   const endsAt = payload.endsAt ?? payload.registrationEndTime ?? null;
-  let remaining;
-  if (payload.countdownSeconds != null) {
-    remaining = Math.max(0, Math.floor(payload.countdownSeconds));
-  } else if (endsAt != null && payload.serverTime != null) {
-    remaining = Math.max(0, Math.ceil((endsAt - payload.serverTime) / 1000));
-  } else if (endsAt != null) {
-    remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+  const now = Date.now();
+  let localEndTime;
+  if (endsAt != null) {
+    // Prefer the server's ABSOLUTE end time, translated into this device's clock
+    // via serverTime. Every client then counts down to the same instant,
+    // regardless of receipt latency or local clock differences — keeping all
+    // joined players' timers in sync.
+    const skew = payload.serverTime != null ? now - payload.serverTime : 0;
+    localEndTime = endsAt + skew;
+  } else if (payload.countdownSeconds != null) {
+    localEndTime =
+      now + Math.max(0, Math.floor(payload.countdownSeconds)) * 1000;
   } else {
-    remaining = 0;
+    localEndTime = now;
   }
-  return { remaining, localEndTime: Date.now() + remaining * 1000 };
+  const remaining = Math.max(0, Math.ceil((localEndTime - now) / 1000));
+  return { remaining, localEndTime };
 }
 
 export function WebSocketProvider({ children }) {
@@ -398,6 +404,7 @@ export function WebSocketProvider({ children }) {
                   localEndTime: registrationEndTime,
                 } = localCountdownAnchor({
                   endsAt:
+                    event.payload.endsAt ||
                     event.payload.nextStartAt ||
                     event.payload.registrationEndTime,
                   serverTime: event.payload.serverTime,

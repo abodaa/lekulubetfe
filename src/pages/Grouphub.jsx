@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useWebSocket } from "../contexts/WebSocketContext.jsx";
-import { useToast } from "../contexts/ToastContext.jsx";
+import { useWebSocket } from "../contexts/WebSocketContext";
+import { useToast } from "../contexts/ToastContext";
+import { useAuth } from "../lib/auth/AuthProvider";
 import CartelaSelection from "./CartelaSelection.jsx";
 import GameLayout from "./GameLayout.jsx";
 import Winner from "./Winner.jsx";
+import { prefetchCartellas } from "../lib/cartellaCache";
 
 const STAKES = [10, 20, 50];
 const GAME_PHASES = ["registration", "starting", "running", "announce"];
@@ -55,8 +57,8 @@ export default function GroupHub({ onNavigate }) {
     listOpenGroups,
   } = useWebSocket();
   const { showError, showSuccess, showInfo } = useToast();
+  const { sessionId } = useAuth();
 
-    
   const [tab, setTab] = useState("create");
   const [createStake, setCreateStake] = useState(10);
   const [joinCode, setJoinCode] = useState("");
@@ -94,6 +96,19 @@ export default function GroupHub({ onNavigate }) {
     }
   }, [group, tab, listOpenGroups]);
 
+  // Warm the static cartella-layout cache while sitting in the lobby so the
+  // board renders instantly when the round starts — for the owner too, who
+  // otherwise jumps straight from "Start" into a cold fetch.
+  useEffect(() => {
+    if (group && groupStatus === "lobby") {
+      try {
+        if (sessionId) prefetchCartellas(sessionId);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [group, groupStatus]);
+
   const copyCode = (code) => {
     try {
       navigator.clipboard?.writeText(code);
@@ -104,7 +119,12 @@ export default function GroupHub({ onNavigate }) {
   };
 
   // ---------- IN-GAME: reuse the proven screens ----------
-  const inGame = group && GAME_PHASES.includes(gameState.phase);
+  // Drive this off the authoritative group status (set by the server's
+  // group_state), NOT a possibly-stale gameState.phase from earlier public play
+  // — otherwise the owner/joiner can be thrown into cartella selection before a
+  // round has actually started.
+  const inGame =
+    group && groupStatus === "in_game" && GAME_PHASES.includes(gameState.phase);
   if (inGame) {
     const stake = group.stake;
     if (gameState.phase === "running") {
@@ -368,25 +388,23 @@ export default function GroupHub({ onNavigate }) {
           <div className="space-y-3">
             <div className={`${CARD} p-5`}>
               <h2 className="font-bold mb-3">Join with a code</h2>
-              <div className="flex gap-2">
-                <input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  maxLength={5}
-                  placeholder="ABCDE"
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-center tracking-[0.3em] font-bold uppercase placeholder:text-white/25 focus:outline-none focus:border-amber-400/50"
-                />
-                <button
-                  onClick={() =>
-                    joinCode.length >= 4
-                      ? requestJoinGroup(joinCode)
-                      : showError("Enter a valid group code.")
-                  }
-                  className="px-5 rounded-xl font-bold bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950"
-                >
-                  Join
-                </button>
-              </div>
+              <input
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                maxLength={5}
+                placeholder="ABCDE"
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-center tracking-[0.3em] font-bold uppercase placeholder:text-white/25 focus:outline-none focus:border-amber-400/50"
+              />
+              <button
+                onClick={() =>
+                  joinCode.length >= 4
+                    ? requestJoinGroup(joinCode)
+                    : showError("Enter a valid group code.")
+                }
+                className="w-full mt-3 py-3 rounded-xl font-bold bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950"
+              >
+                Request to join
+              </button>
             </div>
 
             <div className={`${CARD} p-5`}>

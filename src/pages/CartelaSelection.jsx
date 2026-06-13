@@ -48,6 +48,7 @@ export default function CartelaSelection({
     wsReadyState,
     isConnecting,
     lastEvent,
+    group,
   } = useWebSocket();
 
   const hasConnectedRef = useRef(false);
@@ -642,6 +643,21 @@ export default function CartelaSelection({
       )}
 
       <div className="max-w-md mx-auto w-full flex flex-col flex-1">
+        {/* Group banner */}
+        {group?.code && (
+          <div className="mx-4 mt-3 -mb-1 flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2">
+            <span className="flex items-center gap-2 text-amber-200 text-xs font-semibold">
+              <span className="opacity-70">Group</span>
+              <span className="tracking-[0.2em] font-extrabold text-amber-300">
+                {group.code}
+              </span>
+            </span>
+            <span className="text-amber-100/80 text-xs font-semibold">
+              {(group.members || []).filter((m) => m.online).length}/
+              {group.memberCount || (group.members || []).length} players
+            </span>
+          </div>
+        )}
         {/* Header */}
         <header className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
