@@ -116,7 +116,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => joinStake(10)}
-              className="group relative rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 cursor-pointer transition-all overflow-hidden"
+              className="group relative rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 cursor-pointer transition-all"
             >
               <div className="absolute -top-1 -right-1 z-50">
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
