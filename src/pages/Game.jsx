@@ -118,6 +118,11 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               onClick={() => joinStake(10)}
               className="group relative rounded-xl bg-white/5 backdrop-blur border border-white/10 p-3 cursor-pointer transition-all overflow-hidden"
             >
+              <div className="absolute -top-1 -right-1 z-50">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
+                  POPULAR
+                </div>
+              </div>
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3">
@@ -129,10 +134,13 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                       <span className="text-white font-bold text-lg">
                         10 ETB
                       </span>
-                      <span className="text-[10px] text-white/30">Starter</span>
+                      <span className="text-[10px] text-white/30">
+                        {" "}
+                        Good Choice{" "}
+                      </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
-                      Perfect for beginners
+                      Most players choice
                     </p>
                   </div>
                 </div>
@@ -150,11 +158,6 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               onClick={() => joinStake(20)}
               className="group relative rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 backdrop-blur border-2 border-blue-400/40 p-3 cursor-pointer transition-all"
             >
-              <div className="absolute -top-1 -right-1 z-50">
-                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
-                  POPULAR
-                </div>
-              </div>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex items-center gap-3">
@@ -171,7 +174,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                       </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
-                      Most players choice
+                      Good for regular players
                     </p>
                   </div>
                 </div>
@@ -200,7 +203,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                       <span className="text-white font-bold text-lg">
                         50 ETB
                       </span>
-                      <span className="text-[10px] text-white/30">VIP</span>
+                      <span className="text-[10px] text-white/30">
+                        High Stake
+                      </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
                       For high rollers
@@ -231,7 +236,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                     You're in a group ({activeGroupCode})
                   </div>
                   <p className="text-emerald-200/70 text-[11px] leading-tight">
-                    Tap “Play in a Group” below to rejoin your game.
+                    Tap to rejoin your game.
                   </p>
                 </div>
               </motion.div>
