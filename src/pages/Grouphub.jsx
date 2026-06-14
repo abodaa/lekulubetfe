@@ -50,6 +50,7 @@ export default function GroupHub({ onNavigate }) {
     createGroup,
     requestJoinGroup,
     rejoinGroup,
+    exitGroup,
     approveJoin,
     rejectJoin,
     setGroupStake,
@@ -152,6 +153,14 @@ export default function GroupHub({ onNavigate }) {
   };
 
   // ---------- IN-GAME: reuse the proven screens ----------
+  // Back from a group game returns to the stake-selection home and leaves group
+  // MODE (membership is kept, so the home screen offers "rejoin via Play in
+  // Group"), mirroring the public game's back behavior.
+  const goHomeFromGroup = () => {
+    exitGroup?.();
+    onNavigate?.("game", true);
+  };
+
   // Drive this off the authoritative group status (set by the server's
   // group_state), NOT a possibly-stale gameState.phase from earlier public play
   // — otherwise the owner/joiner can be thrown into cartella selection before a
@@ -166,7 +175,7 @@ export default function GroupHub({ onNavigate }) {
       return (
         <GameLayout
           stake={stake}
-          onNavigate={(p) => p === "game" && leaveGroup()}
+          onNavigate={(p) => p === "game" && goHomeFromGroup()}
         />
       );
     }
@@ -261,14 +270,26 @@ export default function GroupHub({ onNavigate }) {
               <p className="text-white/40 text-xs">Set by the group owner.</p>
             )}
             {isOwner && (
-              <label className="flex items-center gap-2 mt-3 text-xs text-white/60">
-                <input
-                  type="checkbox"
-                  checked={!!group.isOpen}
-                  onChange={(e) => setGroupOpen(e.target.checked)}
-                />
-                List this group publicly so anyone can request to join
-              </label>
+              <button
+                type="button"
+                onClick={() => setGroupOpen(!group.isOpen)}
+                className="flex items-center justify-between w-full mt-3 gap-3 text-left"
+              >
+                <span className="text-xs text-white/60">
+                  List this group publicly so anyone can request to join
+                </span>
+                <span
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
+                    group.isOpen ? "bg-emerald-500" : "bg-white/20"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
+                      group.isOpen ? "translate-x-[22px]" : "translate-x-0.5"
+                    }`}
+                  />
+                </span>
+              </button>
             )}
           </div>
 

@@ -831,6 +831,27 @@ export default function GameLayout({ stake, onNavigate }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <button
+                onClick={() => onNavigate?.("game", true)}
+                aria-label="Back to stake selection"
+                title="Leave game"
+                className="w-7 h-7 rounded-full flex items-center justify-center bg-white/15 text-white/80 hover:bg-white/25 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <button
                 onClick={handleSoundToggle}
                 className={`px-2 py-1 rounded-lg flex items-center justify-center gap-1 text-xs font-bold transition-all ${
                   isSoundOn

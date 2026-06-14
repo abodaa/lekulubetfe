@@ -5,6 +5,7 @@ import { useWebSocket } from "../contexts/WebSocketContext";
 import lbLogo from "../assets/lb.png";
 import { apiFetch, getApiBase } from "../lib/api/client";
 import { prefetchCartellas } from "../lib/cartellaCache";
+import { loadGroupCode } from "../lib/groupSession";
 import { motion } from "framer-motion";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
@@ -12,6 +13,9 @@ import { FaCoins, FaCrown, FaRocket, FaUsers } from "react-icons/fa";
 
 export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [adminPost, setAdminPost] = useState(null);
+  // A remembered group means the user can rejoin via Play in Group (set on
+  // mount; the home screen is freshly mounted whenever we navigate here).
+  const [activeGroupCode] = useState(() => loadGroupCode());
   const apiBase = getApiBase();
   const { sessionId } = useAuth();
   useWebSocket();
@@ -209,6 +213,29 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 </div>
               </div>
             </motion.div>
+
+            {/* In a group — rejoin hint */}
+            {activeGroupCode && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onNavigate?.("group-hub")}
+                className="flex items-center gap-3 rounded-xl bg-emerald-500/15 border border-emerald-400/40 p-3 cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-500/25 flex items-center justify-center flex-shrink-0">
+                  <FaUsers className="text-emerald-300" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-emerald-100 font-bold text-sm">
+                    You're in a group ({activeGroupCode})
+                  </div>
+                  <p className="text-emerald-200/70 text-[11px] leading-tight">
+                    Tap “Play in a Group” below to rejoin your game.
+                  </p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Play in a Group */}
             <motion.div
