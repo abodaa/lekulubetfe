@@ -12,7 +12,6 @@ import {
   WebSocketProvider,
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
-import { loadGroupCode } from "./lib/groupSession";
 
 // Secondary tab pages stay lazy (not in the immediate game path).
 const Rules = lazy(() => import("./components/Rules"));
@@ -25,11 +24,7 @@ const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
 
 // Inner component that has access to WebSocket context
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState(() => {
-    // Reload-resume: if we were in a private group before the reload, start on
-    // the group screen so we land back in it once the socket re-admits us.
-    return loadGroupCode() ? "group-hub" : "game";
-  });
+  const [currentPage, setCurrentPage] = useState("game");
   const [selectedStake, setSelectedStake] = useState(null);
   const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [currentGameId, setCurrentGameId] = useState(null);
@@ -37,7 +32,7 @@ function AppContent() {
   const [connectionTimeout, setConnectionTimeout] = useState(false);
 
   // Access WebSocket context for smart navigation
-  const { gameState, connected } = useWebSocket();
+  const { gameState, connected, exitGroup } = useWebSocket();
   const { showSuccess } = useToast();
 
   // Clear localStorage stake on mount to always start fresh
@@ -195,6 +190,10 @@ function AppContent() {
   }, []);
 
   const handleStakeSelected = (stake) => {
+    // Selecting a public stake always leads to a public game, even if the user
+    // has an active/remembered group. Leaving group mode re-enables the public
+    // connection (connectToStake is a no-op while in a group).
+    exitGroup?.();
     setSelectedStake(stake);
     setCurrentPage("cartela-selection");
   };

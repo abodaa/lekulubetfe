@@ -49,6 +49,7 @@ export default function GroupHub({ onNavigate }) {
     gameState,
     createGroup,
     requestJoinGroup,
+    rejoinGroup,
     approveJoin,
     rejectJoin,
     setGroupStake,
@@ -110,6 +111,20 @@ export default function GroupHub({ onNavigate }) {
       }
     }
   }, [group, groupStatus]);
+
+  // On opening "Play in Group", if we have a remembered group and aren't
+  // already in one, ask the server to re-admit us (re-enters group mode). This
+  // is the ONLY path that auto-redirects into a group — public stake selection
+  // never does.
+  useEffect(() => {
+    if (group) return;
+    if (loadGroupCode()) {
+      setRejoining(true);
+      rejoinGroup();
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reload-resume: while waiting for the server to re-admit us into our group,
   // show a "rejoining" state. Clear it once the group is restored, or give up

@@ -58,7 +58,12 @@ export function WebSocketProvider({ children }) {
   // (prevents the socket from tearing down on every number call).
   const resumeRef = useRef(null);
   const currentStakeRef = useRef(null);
-  const currentGroupCodeRef = useRef(loadGroupCode());
+  // Active group code (drives the &group= reconnect URL and makes public
+  // connectToStake a no-op while in a group). Intentionally NOT seeded from
+  // storage: a stored code only means "rejoin is available via Play in Group",
+  // not "I'm currently in group mode" — otherwise public stake selection gets
+  // hijacked into the group after a reload.
+  const currentGroupCodeRef = useRef(null);
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -1264,6 +1269,32 @@ export function WebSocketProvider({ children }) {
     currentStakeRef.current = null;
   }, []);
 
+  // Re-admit to a remembered group when the user opens "Play in Group". Unlike
+  // requestJoinGroup, this enters group mode (sets the active code, so the
+  // reused in-game screens stay in the group) and does NOT clear the stored
+  // code. Server treats an existing member's join request as a re-admit.
+  const rejoinGroup = useCallback(
+    (code) => {
+      const c = String(code || loadGroupCode() || "").toUpperCase();
+      if (!c) return false;
+      enterGroupMode();
+      currentGroupCodeRef.current = c;
+      groupSend("group_join_request", { code: c });
+      return true;
+    },
+    [enterGroupMode, groupSend],
+  );
+
+  // Leave group MODE on the client without abandoning membership, so selecting a
+  // public stake always goes to a public game. The stored code is kept so the
+  // user can still rejoin later via Play in Group. Clearing the active code also
+  // re-enables connectToStake (which is a no-op while in a group).
+  const exitGroup = useCallback(() => {
+    currentGroupCodeRef.current = null;
+    setGroup(null);
+    setGroupStatus(null);
+  }, []);
+
   const createGroup = useCallback(
     (stake) => {
       enterGroupMode();
@@ -1339,6 +1370,8 @@ export function WebSocketProvider({ children }) {
     openGroups,
     createGroup,
     requestJoinGroup,
+    rejoinGroup,
+    exitGroup,
     approveJoin,
     rejectJoin,
     setGroupStake,
