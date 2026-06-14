@@ -7,6 +7,11 @@ import React, {
   useCallback,
 } from "react";
 import { useAuth } from "../lib/auth/AuthProvider";
+import {
+  loadGroupCode,
+  saveGroupCode,
+  clearGroupCode,
+} from "../lib/groupSession";
 
 const WebSocketContext = createContext();
 
@@ -37,11 +42,7 @@ function localCountdownAnchor(payload = {}) {
 }
 
 function clearStoredGroupCode() {
-  try {
-    sessionStorage.removeItem("lekulu_group_code");
-  } catch {
-    /* ignore */
-  }
+  clearGroupCode();
 }
 
 export function WebSocketProvider({ children }) {
@@ -57,15 +58,7 @@ export function WebSocketProvider({ children }) {
   // (prevents the socket from tearing down on every number call).
   const resumeRef = useRef(null);
   const currentStakeRef = useRef(null);
-  const currentGroupCodeRef = useRef(
-    (() => {
-      try {
-        return sessionStorage.getItem("lekulu_group_code") || null;
-      } catch {
-        return null;
-      }
-    })(),
-  );
+  const currentGroupCodeRef = useRef(loadGroupCode());
 
   const safeSessionId = sessionId;
   const [gameState, setGameState] = useState({
@@ -804,11 +797,7 @@ export function WebSocketProvider({ children }) {
             case "group_state": {
               const p = event.payload || {};
               currentGroupCodeRef.current = p.code || null;
-              try {
-                if (p.code) sessionStorage.setItem("lekulu_group_code", p.code);
-              } catch {
-                /* ignore */
-              }
+              if (p.code) saveGroupCode(p.code);
               setGroup({
                 code: p.code,
                 stake: p.stake,

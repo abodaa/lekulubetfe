@@ -5,13 +5,14 @@ import Game from "./pages/Game"; // eager: default landing page
 import CartelaSelection from "./pages/CartelaSelection.jsx";
 import GameLayout from "./pages/GameLayout.jsx";
 import Winner from "./pages/Winner.jsx";
-import GroupHub from "./pages/Grouphub.jsx";
+import GroupHub from "./pages/GroupHub.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
   WebSocketProvider,
   useWebSocket,
 } from "./contexts/WebSocketContext.jsx";
+import { loadGroupCode } from "./lib/groupSession";
 
 // Secondary tab pages stay lazy (not in the immediate game path).
 const Rules = lazy(() => import("./components/Rules"));
@@ -27,12 +28,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState(() => {
     // Reload-resume: if we were in a private group before the reload, start on
     // the group screen so we land back in it once the socket re-admits us.
-    try {
-      if (sessionStorage.getItem("lekulu_group_code")) return "group-hub";
-    } catch {
-      /* ignore */
-    }
-    return "game";
+    return loadGroupCode() ? "group-hub" : "game";
   });
   const [selectedStake, setSelectedStake] = useState(null);
   const [selectedCartelas, setSelectedCartelas] = useState([]);

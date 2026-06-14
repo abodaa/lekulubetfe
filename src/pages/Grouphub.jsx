@@ -6,6 +6,7 @@ import CartelaSelection from "./CartelaSelection.jsx";
 import GameLayout from "./GameLayout.jsx";
 import Winner from "./Winner.jsx";
 import { prefetchCartellas } from "../lib/cartellaCache";
+import { loadGroupCode, clearGroupCode } from "../lib/groupSession";
 
 const STAKES = [10, 20, 50];
 const GAME_PHASES = ["registration", "starting", "running", "announce"];
@@ -62,13 +63,7 @@ export default function GroupHub({ onNavigate }) {
   const [tab, setTab] = useState("create");
   const [createStake, setCreateStake] = useState(10);
   const [joinCode, setJoinCode] = useState("");
-  const [rejoining, setRejoining] = useState(() => {
-    try {
-      return !!sessionStorage.getItem("lekulu_group_code");
-    } catch {
-      return false;
-    }
-  });
+  const [rejoining, setRejoining] = useState(() => !!loadGroupCode());
 
   // Surface server-side group events as toasts.
   useEffect(() => {
@@ -126,11 +121,7 @@ export default function GroupHub({ onNavigate }) {
       return;
     }
     const t = setTimeout(() => {
-      try {
-        sessionStorage.removeItem("lekulu_group_code");
-      } catch {
-        /* ignore */
-      }
+      clearGroupCode();
       setRejoining(false);
     }, 10000);
     return () => clearTimeout(t);
