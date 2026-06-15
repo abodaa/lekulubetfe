@@ -15,15 +15,18 @@ import {
   FaExclamationTriangle,
   FaArrowLeft,
   FaGift,
+  FaPercent,
 } from "react-icons/fa";
 import { MdAdminPanelSettings } from "react-icons/md";
 import AdminBonus from "./AdminBonus";
+import AdminPromotions from "./AdminPromotions";
 
 function AdminNav({ current, onNavigate }) {
   const tabs = [
     { key: "home", label: "Home", icon: <FaHome size={16} /> },
     { key: "users", label: "Users", icon: <FaUsers size={16} /> },
     { key: "bonus", label: "Bonus", icon: <FaGift size={16} /> },
+    { key: "promos", label: "Promos", icon: <FaPercent size={16} /> },
     { key: "stats", label: "Stats", icon: <FaChartBar size={16} /> },
   ];
 
@@ -236,6 +239,7 @@ export default function AdminLayout({ onNavigate }) {
         {tab === "home" && <AdminHome />}
         {tab === "users" && <AdminUserBalanceAccess />}
         {tab === "bonus" && <AdminBonus />}
+        {tab === "promos" && <AdminPromotions />}
         {tab === "stats" && <AdminStats />}
       </main>
 
