@@ -170,8 +170,9 @@ export default function AdminPromotions() {
       ? new Date(d).toLocaleString("en-GB", {
           day: "numeric",
           month: "short",
-          hour: "2-digit",
+          hour: "numeric",
           minute: "2-digit",
+          hour12: true,
         })
       : "—";
 

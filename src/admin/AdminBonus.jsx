@@ -13,6 +13,7 @@ import {
   FaExclamationCircle,
   FaSpinner,
   FaPlusCircle,
+  FaMinusCircle,
   FaHistory,
 } from "react-icons/fa";
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
@@ -26,6 +27,7 @@ export default function AdminBonus() {
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusReason, setBonusReason] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [mode, setMode] = useState("add"); // "add" | "deduct"
   const [feedback, setFeedback] = useState(null);
   const [bonusHistory, setBonusHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -82,6 +84,8 @@ export default function AdminBonus() {
     setShowHistory(false);
   };
 
+  const isDeduct = mode === "deduct";
+
   const handleAddBonus = async (e) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -98,7 +102,7 @@ export default function AdminBonus() {
     if (amount > 10000) {
       setFeedback({
         type: "error",
-        message: "Maximum bonus amount is 10,000 ETB per transaction.",
+        message: "Maximum amount is 10,000 ETB per transaction.",
       });
       return;
     }
@@ -106,19 +110,30 @@ export default function AdminBonus() {
     setIsAdding(true);
     setFeedback(null);
 
+    const endpoint = isDeduct ? "bonus-deduct" : "bonus-add";
+
     try {
       const response = await apiFetch(
-        `/admin/users/${selectedUser.id}/bonus-add`,
+        `/admin/users/${selectedUser.id}/${endpoint}`,
         {
           method: "POST",
           body: {
             amount: amount,
-            reason: bonusReason.trim() || "Admin credit",
+            reason:
+              bonusReason.trim() ||
+              (isDeduct ? "Admin adjustment" : "Admin credit"),
           },
         },
       );
 
       if (response.success) {
+        // For a deduct the backend clamps at 0 and returns the real amount.
+        const applied = isDeduct
+          ? response.deducted != null
+            ? response.deducted
+            : amount
+          : amount;
+
         // Update user's wallet in the results list
         setResults((prev) =>
           prev.map((user) =>
@@ -127,7 +142,9 @@ export default function AdminBonus() {
                   ...user,
                   wallet: {
                     ...user.wallet,
-                    bonus: (user.wallet?.bonus || 0) + amount,
+                    bonus: isDeduct
+                      ? Math.max(0, (user.wallet?.bonus || 0) - applied)
+                      : (user.wallet?.bonus || 0) + applied,
                   },
                 }
               : user,
@@ -138,20 +155,22 @@ export default function AdminBonus() {
         setBonusReason("");
         setFeedback({
           type: "success",
-          message: `Successfully added ETB ${amount.toLocaleString()} to bonus wallet.`,
+          message: isDeduct
+            ? `Successfully deducted ETB ${applied.toLocaleString()} from bonus wallet.`
+            : `Successfully added ETB ${applied.toLocaleString()} to bonus wallet.`,
         });
 
         // Refresh bonus history
         fetchBonusHistory(selectedUser.id);
       }
     } catch (error) {
-      console.error("Admin add bonus failed:", error);
+      console.error("Admin bonus update failed:", error);
       setFeedback({
         type: "error",
         message:
           error?.message === "api_error_400"
             ? "Invalid request. Check the amount."
-            : "Failed to add bonus. Please try again.",
+            : `Failed to ${isDeduct ? "deduct" : "add"} bonus. Please try again.`,
       });
     } finally {
       setIsAdding(false);
@@ -362,9 +381,43 @@ export default function AdminBonus() {
 
               {/* Add Bonus Form */}
               <form onSubmit={handleAddBonus} className="space-y-3">
+                {/* Add / Deduct toggle */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("add");
+                      setFeedback(null);
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
+                      !isDeduct
+                        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                        : "bg-white/10 text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    <FaPlusCircle size={11} />
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("deduct");
+                      setFeedback(null);
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
+                      isDeduct
+                        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg"
+                        : "bg-white/10 text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    <FaMinusCircle size={11} />
+                    Deduct
+                  </button>
+                </div>
+
                 <div>
                   <label className="text-white/50 text-[10px] font-medium mb-1 block">
-                    Bonus Amount (ETB)
+                    {isDeduct ? "Deduct Amount (ETB)" : "Bonus Amount (ETB)"}
                   </label>
                   <input
                     type="number"
@@ -387,7 +440,8 @@ export default function AdminBonus() {
                       onClick={() => setBonusAmount(amt.toString())}
                       className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-[9px] hover:bg-white/20 transition-all"
                     >
-                      +{amt}
+                      {isDeduct ? "-" : "+"}
+                      {amt}
                     </button>
                   ))}
                 </div>
@@ -421,17 +475,25 @@ export default function AdminBonus() {
                   <button
                     type="submit"
                     disabled={isAdding || !bonusAmount}
-                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                    className={`flex-1 py-2 rounded-xl text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 ${
+                      isDeduct
+                        ? "bg-gradient-to-r from-red-500 to-rose-600"
+                        : "bg-gradient-to-r from-purple-500 to-pink-500"
+                    }`}
                   >
                     {isAdding ? (
                       <>
                         <FaSpinner className="animate-spin" size={10} />
-                        Adding...
+                        {isDeduct ? "Deducting..." : "Adding..."}
                       </>
                     ) : (
                       <>
-                        <FaPlusCircle size={10} />
-                        Add Bonus
+                        {isDeduct ? (
+                          <FaMinusCircle size={10} />
+                        ) : (
+                          <FaPlusCircle size={10} />
+                        )}
+                        {isDeduct ? "Deduct Bonus" : "Add Bonus"}
                       </>
                     )}
                   </button>
