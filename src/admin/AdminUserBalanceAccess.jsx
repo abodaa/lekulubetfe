@@ -228,13 +228,13 @@ export default function AdminUserBalanceAccess() {
                         @{selectedUser.username}
                       </span>
                     )}
-                    <span className="text-white/20 text-[9px]">
+                    <span className="text-white text-[10px]">
                       ID: {selectedUser.telegramId}
                     </span>
                   </div>
                   {selectedUser.phone && (
-                    <div className="text-white/40 text-[10px] mt-0.5">
-                      📱 {selectedUser.phone}
+                    <div className="text-white text-[11px] mt-0.5">
+                      {selectedUser.phone}
                     </div>
                   )}
                 </div>

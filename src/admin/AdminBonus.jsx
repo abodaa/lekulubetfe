@@ -297,12 +297,12 @@ export default function AdminBonus() {
                           <p className="text-white text-sm font-medium">
                             {user.firstName} {user.lastName}
                           </p>
-                          <p className="text-white/30 text-[10px]">
+                          <p className="text-white text-[10px]">
                             @{user.username || "no username"}
                           </p>
                           {user.phone && (
-                            <p className="text-white/30 text-[10px]">
-                              📱 {user.phone}
+                            <p className="text-white text-[11px]">
+                              {user.phone}
                             </p>
                           )}
                         </div>
