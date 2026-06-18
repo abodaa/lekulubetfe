@@ -85,7 +85,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
           </div>
         </div>
 
-        <main className="px-4 pb-24 pt-16">
+        <main className="px-4 pb-32 pt-16">
           {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -93,11 +93,11 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             transition={{ duration: 0.5 }}
             className="text-center mb-10 mt-4"
           >
-            <div className="relative inline-block mb-4">
+            {/* <div className="relative inline-block mb-4">
               <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 backdrop-blur border border-white/20 flex items-center justify-center shadow-xl">
                 <span className="text-4xl">🎲</span>
               </div>
-            </div>
+            </div> */}
             <h1 className="text-2xl font-bold text-white mb-2">
               Let's Play Bingo!
             </h1>
