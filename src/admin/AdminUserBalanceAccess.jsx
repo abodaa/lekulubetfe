@@ -224,7 +224,7 @@ export default function AdminUserBalanceAccess() {
                   </h4>
                   <div className="flex items-center gap-2 mt-0.5">
                     {selectedUser.username && (
-                      <span className="text-white/30 text-[9px]">
+                      <span className="text-white text-[9px]">
                         @{selectedUser.username}
                       </span>
                     )}
@@ -438,13 +438,13 @@ export default function AdminUserBalanceAccess() {
                             {user.firstName} {user.lastName}
                           </p>
                           {user.username && (
-                            <p className="text-white/30 text-[10px] truncate">
+                            <p className="text-white text-[10px] truncate">
                               @{user.username}
                             </p>
                           )}
                           {user.phone && (
-                            <p className="text-white/30 text-[10px] truncate">
-                              📱 {user.phone}
+                            <p className="text-white text-[11px] truncate">
+                              {user.phone}
                             </p>
                           )}
                         </div>

@@ -486,8 +486,17 @@ export function WebSocketProvider({ children }) {
                   countdown: serverCountdown,
                   registrationEndTime,
                   yourCards: phase === "registration" ? [] : finalCards,
+                  // On reconnect/refresh during registration, restore the
+                  // user's own selected cartellas from the server snapshot so
+                  // they render as "mine" (selected/removable) instead of
+                  // falling through to "taken" (red). Cards aren't assigned
+                  // until the game starts, so yourCards stays empty here.
                   yourSelections:
-                    phase === "registration" ? [] : finalSelections,
+                    phase === "registration"
+                      ? Array.isArray(snapshotSelections)
+                        ? snapshotSelections
+                        : prev.yourSelections || []
+                      : finalSelections,
                   totalCartellas:
                     event.payload.totalCartellas || prev.totalCartellas || 200,
                   ...(phase === "registration"

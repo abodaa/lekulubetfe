@@ -233,7 +233,7 @@ export default function Scores({ onNavigate }) {
               </div>
             ) : (
               <div className="divide-y divide-white/5">
-                {leaderboardRows.slice(0, 20).map((player, index) => {
+                {leaderboardRows.slice(0, 10).map((player, index) => {
                   const isTop3 = index < 3;
                   const rank = index + 1;
 
@@ -279,7 +279,7 @@ export default function Scores({ onNavigate }) {
           {leaderboardRows.length > 0 && (
             <div className="mt-3 text-center">
               <p className="text-white/20 text-[9px]">
-                Showing top {Math.min(leaderboardRows.length, 20)} players
+                Showing top {Math.min(leaderboardRows.length, 10)} players
               </p>
             </div>
           )}

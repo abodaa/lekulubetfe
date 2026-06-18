@@ -345,13 +345,13 @@ export default function AdminBonus() {
                   <h4 className="text-white font-semibold text-sm">
                     {selectedUser.firstName} {selectedUser.lastName}
                   </h4>
-                  <p className="text-white/30 text-[10px]">
+                  <p className="text-white text-[10px]">
                     @{selectedUser.username || "no username"} · ID:{" "}
                     {selectedUser.telegramId}
                   </p>
                   {selectedUser.phone && (
-                    <p className="text-white/40 text-[10px]">
-                      📱 {selectedUser.phone}
+                    <p className="text-white text-[11px]">
+                      {selectedUser.phone}
                     </p>
                   )}
                 </div>
