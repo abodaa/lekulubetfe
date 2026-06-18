@@ -462,7 +462,7 @@ export default function AdminStats() {
       green: "from-emerald-500/20 to-green-600/20 border-emerald-500/30",
       amber: "from-amber-500/20 to-orange-600/20 border-amber-500/30",
       red: "from-red-500/20 to-rose-600/20 border-red-500/30",
-      purple: "from-purple-500/20 to-pink-600/20 border-purple-500/30",
+      purple: "from-amber-500/20 to-emerald-600/20 border-amber-400/30",
       cyan: "from-cyan-500/20 to-blue-600/20 border-cyan-500/30",
     };
     const textColors = {
@@ -470,7 +470,7 @@ export default function AdminStats() {
       green: "text-emerald-400",
       amber: "text-amber-400",
       red: "text-red-400",
-      purple: "text-purple-400",
+      purple: "text-amber-400",
       cyan: "text-cyan-400",
     };
 
@@ -511,7 +511,7 @@ export default function AdminStats() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       <div className="max-w-md mx-auto px-4 pb-24 pt-4">
         {/* Period Selector Tabs - Top */}
         <motion.div
@@ -618,8 +618,8 @@ export default function AdminStats() {
           className="mb-4"
         >
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <FaWallet className="text-purple-400" size={12} />
+            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <FaWallet className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
               Wallet Totals (All Time)
@@ -647,7 +647,7 @@ export default function AdminStats() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden mb-4"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden mb-4"
         >
           <div className="px-3 py-2 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
@@ -657,7 +657,7 @@ export default function AdminStats() {
           <div className="overflow-x-auto max-h-96 overflow-y-auto">
             {!isLoading && currentTableData.length > 0 ? (
               <table className="w-full text-[10px]">
-                <thead className="border-b border-white/10 sticky top-0 bg-purple-900/90">
+                <thead className="border-b border-white/10 sticky top-0 bg-[#0e1830]/95">
                   <tr>
                     <th className="text-left py-2 px-2 text-white/30 font-medium">
                       {activePeriod === "daily"
@@ -744,7 +744,7 @@ export default function AdminStats() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden"
         >
           <div className="px-3 py-2 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
@@ -818,7 +818,7 @@ export default function AdminStats() {
                                 game.whoWon === "Real"
                                   ? "bg-emerald-500/20 text-emerald-400"
                                   : game.whoWon === "Bot"
-                                    ? "bg-purple-500/20 text-purple-400"
+                                    ? "bg-amber-500/20 text-amber-400"
                                     : "bg-yellow-500/20 text-yellow-400"
                               }`}
                             >
