@@ -99,33 +99,15 @@ body {
   flex-direction: column;
 }
 
-/* Cheerful BINGO button effects */
-
-/* Confetti burst */
-
-/* Button press pop */
-
-/* Star burst */
-
-/* *********************************************888 */
-
-/* Safe area padding for Telegram Mini App */
-
 .pt-safe {
   padding-top: env(safe-area-inset-top);
   padding-top: constant(safe-area-inset-top);
 }
 
-/* Slow bounce animation for hero icon */
-
-/* Safe area padding for Telegram Mini App */
-
 .pt-safe {
   padding-top: env(safe-area-inset-top);
   padding-top: constant(safe-area-inset-top);
 }
-
-/* Ensure nav layout even without utilities */
 
 .nav-wrap nav {
   max-width: 640px;
@@ -138,7 +120,6 @@ body {
   flex: 1;
   display: flex;
   min-width: 0;
-  /* Prevent flex items from growing beyond container */
 }
 
 .bottom-nav li:first-child {
@@ -172,40 +153,6 @@ body {
   white-space: nowrap;
   max-width: 100%;
 }
-
-/* Admin Pages CSS - Mobile First */
-
-/* Tablet and up */
-
-/* Smooth transitions for number board updates */
-
-/* Cartella card cell smooth updates */
-
-/* Prevent layout shift during sync */
-
-/* Desktop and up */
-
-/* Tablet and up */
-
-/* Desktop and up */
-
-/* Tablet and up */
-
-/* Desktop and up */
-
-/* AdminHome specific styles to prevent overflow */
-
-/* Balance Page overflow fixes */
-
-/* Stats Page overflow fixes */
-
-/* Mobile-first: Base styles for mobile */
-
-/* Tablet and up - more space */
-
-/* Desktop and up - even more space */
-
-/* Balance Page Styles */
 
 .admin-user-search-input {
   flex: 1;
@@ -265,16 +212,6 @@ body {
   font-weight: 600;
 }
 
-/* Tablet and up */
-
-/* Stats Page Styles */
-
-/* Tablet and up - wider tables */
-
-/* Desktop and up - even wider */
-
-/* Responsive column widths */
-
 .bottom-nav li button {
   appearance: none;
   -webkit-appearance: none;
@@ -293,12 +230,6 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* App header styling */
-
-/* Stake card styling to match the image design */
-
-/* Rules page quick styles */
 
 .panel {
   border-radius: 16px;
@@ -397,21 +328,9 @@ body {
   gap: 6px;
 }
 
-/* Status chip to mirror bottom-nav glass style */
-
-/* Stats panel */
-
 .stat {
   text-align: center;
 }
-
-/* Entrance animations */
-
-/* Micro animations */
-
-/* Cartela selection styles */
-
-/* Taken cartella styles */
 
 .cartela-number-btn.bg-red-600 {
   background: rgba(220, 38, 38, 0.9) !important;
@@ -425,44 +344,6 @@ body {
   transform: none;
   box-shadow: none;
 }
-
-/* Your selected cartella styles */
-
-/* Toast notification animations */
-
-/* Mobile-first Cartela Selection Layout - Joy Bingo style: 9 per row, reduced gap to avoid overflow */
-
-/* Header buttons matching image */
-
-/* Wallet boxes matching image */
-
-/* Timer box matching image */
-
-/* Mobile responsive adjustments */
-
-/* Cartela Selection Light Theme Styles (matching image) */
-
-/* Normal (unselected) - light purple background with black text */
-
-/* Selected - green background with white text (own selected cards) */
-
-/* Taken by another player - red/disabled style */
-
-/* Mobile responsive for light theme */
-
-/* Beautiful Cartela Card Styles */
-
-/* When two cartelas are displayed side by side, make them fit evenly */
-
-/* Cartela header letter colors - match left BINGO grid */
-
-/* Winner screen only: drawn numbers that are NOT part of the winning pattern (Joy Bingo–style yellow) */
-
-/* Missed BINGO window: winning pattern at previous call — show in red only */
-
-/* Responsive adjustments */
-
-/* Profile cards layout and styles (explicit CSS to avoid utility purge issues) */
 
 .profile-card .title {
   display: flex;
@@ -599,32 +480,6 @@ body {
   transform: translateX(1.5rem);
 }
 
-/* Enhanced GameLayout Styles */
-
-/* Joy Bingo Light Purple Background */
-
-/* Override app-container background for GameLayout */
-
-/* Light Purple Info Bar */
-
-/* Timer box - Joy Bingo style: large, bold orange number, no label */
-
-/* BINGO Grid Container */
-
-/* BINGO Letter Squares */
-
-/* BINGO Number Buttons */
-
-/* Game Status Box */
-
-/* Game Controls Bar - One Line */
-
-/* Big 3-2-1 countdown inside the status box */
-
-/* Auto-Mark Toggle Switch (Toggle Switch Style) */
-
-/* Sound Toggle Button (Loudspeaker) */
-
 .sound-on {
   background: #3b82f6; /* Blue when ON */
   color: white;
@@ -642,32 +497,10 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
-/* Recent Numbers - Joy Bingo style: empty placeholder before calls, circular buttons when numbers called */
-
-/* Joy Bingo colors: B=yellow, I=green, N=blue, G=red, O=purple */
-
-/* User Cartelas Container - Full Width Below Columns */
-
-/* Reduced padding when user has exactly 2 cartelas */
-
-/* Ensure two-cartelas grid fits within container */
-
-/* Single cartela card container - ensure it fits within right column */
-
-/* Constrain single cartela card to fit within container */
-
-/* User Cartelas Container - Inside Right Column (kept for backward compatibility) */
-
 .watch-mode-indicator svg {
   color: #8b5cf6;
   opacity: 0.8;
 }
-
-/* Compact variant for top info bar */
-
-/* Hide scrollbars for horizontal scroll containers */
-
-/* Mobile-first responsive adjustments */
 
 @media (max-width: 480px) {
   /* GameLayout mobile adjustments */
@@ -746,5 +579,3 @@ body {
 .alert-dismiss-btn:active {
   transform: scale(0.95);
 }
-
-/* Slide-in animation for alerts */

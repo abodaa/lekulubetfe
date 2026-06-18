@@ -322,7 +322,7 @@ function AppContent() {
     <div className="App">
       <Suspense
         fallback={
-          <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+          <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
             <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           </div>
         }
