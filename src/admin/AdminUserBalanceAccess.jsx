@@ -97,6 +97,15 @@ export default function AdminUserBalanceAccess() {
       return;
     }
 
+    const currentMain = Number(selectedUser.wallet?.main || 0);
+    if (isDeduct && value > currentMain) {
+      setFeedback({
+        type: "error",
+        message: `Cannot deduct more than the current Main balance (${currentMain.toLocaleString()} ETB).`,
+      });
+      return;
+    }
+
     const mainDelta = isDeduct ? -value : value;
 
     setIsAdjusting(true);
