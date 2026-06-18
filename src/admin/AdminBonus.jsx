@@ -107,6 +107,17 @@ export default function AdminBonus() {
       return;
     }
 
+    if (isDeduct) {
+      const currentBonus = Number(selectedUser.wallet?.bonus || 0);
+      if (amount > currentBonus) {
+        setFeedback({
+          type: "error",
+          message: `Cannot deduct more than the current Bonus balance (${currentBonus.toLocaleString()} ETB).`,
+        });
+        return;
+      }
+    }
+
     setIsAdding(true);
     setFeedback(null);
 
@@ -169,7 +180,9 @@ export default function AdminBonus() {
         type: "error",
         message:
           error?.message === "api_error_400"
-            ? "Invalid request. Check the amount."
+            ? isDeduct
+              ? "Cannot deduct more than the current Bonus balance."
+              : "Invalid request. Check the amount."
             : `Failed to ${isDeduct ? "deduct" : "add"} bonus. Please try again.`,
       });
     } finally {
