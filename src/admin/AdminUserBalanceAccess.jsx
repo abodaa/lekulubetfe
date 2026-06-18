@@ -5,7 +5,6 @@ import {
   FaSearch,
   FaUser,
   FaWallet,
-  FaCoins,
   FaSave,
   FaUndo,
   FaEdit,
@@ -25,7 +24,6 @@ export default function AdminUserBalanceAccess() {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [adjustment, setAdjustment] = useState({
     mainDelta: "",
-    playDelta: "",
     reason: "",
   });
   const [isAdjusting, setIsAdjusting] = useState(false);
@@ -79,7 +77,6 @@ export default function AdminUserBalanceAccess() {
     setSelectedUserId(userId);
     setAdjustment({
       mainDelta: "",
-      playDelta: "",
       reason: "",
     });
     setFeedback(null);
@@ -105,17 +102,16 @@ export default function AdminUserBalanceAccess() {
     if (!selectedUser) return;
 
     const mainDelta = getNumber(adjustment.mainDelta);
-    const playDelta = getNumber(adjustment.playDelta);
 
-    if (Number.isNaN(mainDelta) || Number.isNaN(playDelta)) {
-      setFeedback({ type: "error", message: "Amounts must be valid numbers." });
+    if (Number.isNaN(mainDelta)) {
+      setFeedback({ type: "error", message: "Amount must be a valid number." });
       return;
     }
 
-    if (mainDelta === 0 && playDelta === 0) {
+    if (mainDelta === 0) {
       setFeedback({
         type: "error",
-        message: "Add or subtract at least one amount before saving.",
+        message: "Add or subtract an amount before saving.",
       });
       return;
     }
@@ -130,7 +126,7 @@ export default function AdminUserBalanceAccess() {
           method: "POST",
           body: {
             mainDelta,
-            playDelta,
+            playDelta: 0,
             reason: adjustment.reason || "",
           },
         },
@@ -150,7 +146,6 @@ export default function AdminUserBalanceAccess() {
       setAdjustment((prev) => ({
         ...prev,
         mainDelta: "",
-        playDelta: "",
       }));
 
       setFeedback({ type: "success", message: "Wallet updated successfully." });
@@ -170,17 +165,11 @@ export default function AdminUserBalanceAccess() {
 
   const hasPendingChanges = () => {
     const mainDelta = getNumber(adjustment.mainDelta);
-    const playDelta = getNumber(adjustment.playDelta);
-    return (
-      (!Number.isNaN(mainDelta) && mainDelta !== 0) ||
-      (!Number.isNaN(playDelta) && playDelta !== 0)
-    );
+    return !Number.isNaN(mainDelta) && mainDelta !== 0;
   };
 
   const canReset =
-    adjustment.mainDelta !== "" ||
-    adjustment.playDelta !== "" ||
-    (adjustment.reason || "").trim() !== "";
+    adjustment.mainDelta !== "" || (adjustment.reason || "").trim() !== "";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -256,32 +245,25 @@ export default function AdminUserBalanceAccess() {
                       ID: {selectedUser.telegramId}
                     </span>
                   </div>
+                  {selectedUser.phone && (
+                    <div className="text-white/40 text-[10px] mt-0.5">
+                      📱 {selectedUser.phone}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Wallet Balances */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-white/5 rounded-xl p-2 text-center">
+              {/* Wallet Balance */}
+              <div className="mb-4">
+                <div className="bg-white/5 rounded-xl p-3 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <FaWallet className="text-blue-400" size={12} />
                     <span className="text-white/40 text-[9px] uppercase">
                       Main
                     </span>
                   </div>
-                  <div className="text-white font-bold text-sm">
+                  <div className="text-white font-bold text-lg">
                     {Number(selectedUser.wallet?.main || 0).toLocaleString()}{" "}
-                    ETB
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-xl p-2 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <FaCoins className="text-emerald-400" size={12} />
-                    <span className="text-white/40 text-[9px] uppercase">
-                      Play
-                    </span>
-                  </div>
-                  <div className="text-white font-bold text-sm">
-                    {Number(selectedUser.wallet?.play || 0).toLocaleString()}{" "}
                     ETB
                   </div>
                 </div>
@@ -289,37 +271,20 @@ export default function AdminUserBalanceAccess() {
 
               {/* Adjustment Form */}
               <form onSubmit={handleAdjustmentSubmit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-white/50 text-[10px] font-medium mb-1 block">
-                      Main Adjustment
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={adjustment.mainDelta}
-                      onChange={(event) =>
-                        updateAdjustmentField("mainDelta", event.target.value)
-                      }
-                      placeholder="+/- amount"
-                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-white/50 text-[10px] font-medium mb-1 block">
-                      Play Adjustment
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={adjustment.playDelta}
-                      onChange={(event) =>
-                        updateAdjustmentField("playDelta", event.target.value)
-                      }
-                      placeholder="+/- amount"
-                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all"
-                    />
-                  </div>
+                <div>
+                  <label className="text-white/50 text-[10px] font-medium mb-1 block">
+                    Main Adjustment
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={adjustment.mainDelta}
+                    onChange={(event) =>
+                      updateAdjustmentField("mainDelta", event.target.value)
+                    }
+                    placeholder="+/- amount"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all"
+                  />
                 </div>
 
                 <textarea
@@ -338,7 +303,6 @@ export default function AdminUserBalanceAccess() {
                     onClick={() => {
                       setAdjustment({
                         mainDelta: "",
-                        playDelta: "",
                         reason: "",
                       });
                       setFeedback(null);
@@ -416,7 +380,6 @@ export default function AdminUserBalanceAccess() {
             <div className="divide-y divide-white/10">
               {results.map((user) => {
                 const main = Number(user.wallet?.main || 0).toLocaleString();
-                const play = Number(user.wallet?.play || 0).toLocaleString();
                 const isSelected = selectedUserId === user.id;
 
                 return (
@@ -440,6 +403,11 @@ export default function AdminUserBalanceAccess() {
                               @{user.username}
                             </p>
                           )}
+                          {user.phone && (
+                            <p className="text-white/30 text-[10px] truncate">
+                              📱 {user.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 mr-3">
@@ -447,12 +415,6 @@ export default function AdminUserBalanceAccess() {
                           <p className="text-white/40 text-[9px]">Main</p>
                           <p className="text-white text-xs font-semibold">
                             {main}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white/40 text-[9px]">Play</p>
-                          <p className="text-white text-xs font-semibold">
-                            {play}
                           </p>
                         </div>
                       </div>

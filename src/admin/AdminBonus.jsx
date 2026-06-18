@@ -16,7 +16,7 @@ import {
   FaMinusCircle,
   FaHistory,
 } from "react-icons/fa";
-import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
+import { GiMoneyStack } from "react-icons/gi";
 
 export default function AdminBonus() {
   const [query, setQuery] = useState("");
@@ -287,6 +287,11 @@ export default function AdminBonus() {
                           <p className="text-white/30 text-[10px]">
                             @{user.username || "no username"}
                           </p>
+                          {user.phone && (
+                            <p className="text-white/30 text-[10px]">
+                              📱 {user.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -328,8 +333,14 @@ export default function AdminBonus() {
                     {selectedUser.firstName} {selectedUser.lastName}
                   </h4>
                   <p className="text-white/30 text-[10px]">
-                    ID: {selectedUser.telegramId}
+                    @{selectedUser.username || "no username"} · ID:{" "}
+                    {selectedUser.telegramId}
                   </p>
+                  {selectedUser.phone && (
+                    <p className="text-white/40 text-[10px]">
+                      📱 {selectedUser.phone}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => fetchBonusHistory(selectedUser.id)}
@@ -341,7 +352,7 @@ export default function AdminBonus() {
               </div>
 
               {/* Current Wallet */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-1 gap-3 mb-4">
                 <div className="bg-white/5 rounded-xl p-2 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <GiMoneyStack className="text-blue-400" size={12} />
@@ -354,16 +365,6 @@ export default function AdminBonus() {
                 </div>
                 <div className="bg-white/5 rounded-xl p-2 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <GiPlayButton className="text-emerald-400" size={12} />
-                    <span className="text-white/40 text-[9px]">Play</span>
-                  </div>
-                  <div className="text-white font-bold text-sm">
-                    {Number(selectedUser.wallet?.play || 0).toLocaleString()}{" "}
-                    ETB
-                  </div>
-                </div>
-                <div className="bg-white/5 rounded-xl p-2 text-center col-span-2">
-                  <div className="flex items-center justify-center gap-1 mb-1">
                     <FaGift className="text-purple-400" size={12} />
                     <span className="text-white/40 text-[9px]">
                       Bonus Wallet
@@ -374,7 +375,7 @@ export default function AdminBonus() {
                     ETB
                   </div>
                   <div className="text-white/20 text-[8px] mt-1">
-                    Non-withdrawable | Used when Main & Play are empty
+                    Non-withdrawable | Used when Main is empty
                   </div>
                 </div>
               </div>
