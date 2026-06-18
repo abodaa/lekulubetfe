@@ -63,7 +63,7 @@ function AdminNav({ current, onNavigate }) {
                   {t.label}
                 </span>
                 {current === t.key && (
-                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-yellow-400 to-pink-500 rounded-full" />
+                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full" />
                 )}
               </button>
             </li>
@@ -154,7 +154,7 @@ export default function AdminLayout({ onNavigate }) {
 
   if (isAdmin === null) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="relative mb-6">
             <div className="w-16 h-16 mx-auto rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -191,7 +191,7 @@ export default function AdminLayout({ onNavigate }) {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center px-4">
         <div className="text-center">
           <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
             <FaLock className="text-red-400" size={32} />
@@ -202,7 +202,7 @@ export default function AdminLayout({ onNavigate }) {
           </p>
           <button
             onClick={handleGoToGame}
-            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
+            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium shadow-lg shadow-amber-500/30 hover:scale-105 transition-all active:scale-95"
           >
             <span className="flex items-center gap-2">
               <FaGamepad size={14} />
@@ -215,9 +215,9 @@ export default function AdminLayout({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#0e1830]/90 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">

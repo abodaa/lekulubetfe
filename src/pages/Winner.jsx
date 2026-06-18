@@ -132,10 +132,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
               >
                 <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-full px-3 py-1 text-emerald-200 font-bold text-sm">
                   {idx === 0 && (
-                    <FaCrown
-                      className="inline mr-1 text-amber-400"
-                      size={12}
-                    />
+                    <FaCrown className="inline mr-1 text-amber-400" size={12} />
                   )}
                   {winner.name || `Cartella #${winner.cartelaNumber}`}
                 </div>
@@ -152,7 +149,9 @@ export default function Winner({ onNavigate, onResetToGame }) {
           {isCurrentUserWinner && (
             <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30">
               <GiConfirmed size={12} className="text-emerald-400" />
-              <span className="text-emerald-400 text-xs font-bold">You won!</span>
+              <span className="text-emerald-400 text-xs font-bold">
+                You won!
+              </span>
             </div>
           )}
         </div>

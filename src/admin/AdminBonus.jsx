@@ -201,7 +201,7 @@ export default function AdminBonus() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       <div className="max-w-md mx-auto px-4 pb-24 pt-4">
         {/* Header */}
         <motion.div
@@ -210,8 +210,8 @@ export default function AdminBonus() {
           className="mb-4"
         >
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-              <FaGift className="text-purple-400" size={12} />
+            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <FaGift className="text-amber-400" size={12} />
             </div>
             <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
               Bonus Wallet Management
@@ -223,7 +223,7 @@ export default function AdminBonus() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-4"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4 mb-4"
         >
           <div className="flex items-center gap-2 mb-3">
             <FaSearch className="text-white/30" size={12} />
@@ -232,7 +232,7 @@ export default function AdminBonus() {
 
           <input
             type="text"
-            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-all"
+            className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-all"
             placeholder="Search by name, username, or Telegram ID..."
             value={query}
             onChange={(event) => handleSearchInput(event.target.value)}
@@ -257,7 +257,7 @@ export default function AdminBonus() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden mb-4"
+            className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden mb-4"
           >
             <div className="px-3 py-2 border-b border-white/10">
               <span className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
@@ -272,7 +272,7 @@ export default function AdminBonus() {
                 return (
                   <div
                     key={user.id}
-                    className={`p-3 cursor-pointer transition-all ${isSelected ? "bg-purple-500/20" : "hover:bg-white/5"}`}
+                    className={`p-3 cursor-pointer transition-all ${isSelected ? "bg-amber-500/20" : "hover:bg-white/5"}`}
                     onClick={() => handleSelectUser(user.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -296,7 +296,7 @@ export default function AdminBonus() {
                       </div>
                       <div className="text-right">
                         <p className="text-white/40 text-[9px]">Bonus</p>
-                        <p className="text-purple-400 text-sm font-bold">
+                        <p className="text-amber-400 text-sm font-bold">
                           {bonus} ETB
                         </p>
                       </div>
@@ -321,11 +321,11 @@ export default function AdminBonus() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-4"
+              className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4 mb-4"
             >
               {/* User Info */}
               <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 flex items-center justify-center">
                   <FaUserCircle className="text-white" size={20} />
                 </div>
                 <div>
@@ -365,12 +365,12 @@ export default function AdminBonus() {
                 </div>
                 <div className="bg-white/5 rounded-xl p-2 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <FaGift className="text-purple-400" size={12} />
+                    <FaGift className="text-amber-400" size={12} />
                     <span className="text-white/40 text-[9px]">
                       Bonus Wallet
                     </span>
                   </div>
-                  <div className="text-purple-400 font-bold text-lg">
+                  <div className="text-amber-400 font-bold text-lg">
                     {Number(selectedUser.wallet?.bonus || 0).toLocaleString()}{" "}
                     ETB
                   </div>
@@ -428,7 +428,7 @@ export default function AdminBonus() {
                     value={bonusAmount}
                     onChange={(e) => setBonusAmount(e.target.value)}
                     placeholder="Enter amount"
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-all"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-all"
                   />
                 </div>
 
@@ -456,7 +456,7 @@ export default function AdminBonus() {
                     value={bonusReason}
                     onChange={(e) => setBonusReason(e.target.value)}
                     placeholder="e.g., Promotion, Daily Reward, Compensation"
-                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-all"
+                    className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-all"
                   />
                 </div>
 
@@ -479,7 +479,7 @@ export default function AdminBonus() {
                     className={`flex-1 py-2 rounded-xl text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 ${
                       isDeduct
                         ? "bg-gradient-to-r from-red-500 to-rose-600"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500"
+                        : "bg-gradient-to-r from-amber-500 to-amber-600"
                     }`}
                   >
                     {isAdding ? (
@@ -532,12 +532,12 @@ export default function AdminBonus() {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 rounded-2xl border border-white/10 w-full max-w-sm max-h-[80vh] overflow-hidden"
+              className="bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] rounded-2xl border border-white/10 w-full max-w-sm max-h-[80vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FaGift className="text-purple-400" size={14} />
+                  <FaGift className="text-amber-400" size={14} />
                   <h3 className="text-white font-semibold text-sm">
                     Bonus History
                   </h3>
@@ -580,7 +580,7 @@ export default function AdminBonus() {
                             <p className="text-white/40 text-[8px] uppercase">
                               Bonus Balance
                             </p>
-                            <p className="text-purple-400 text-xs font-bold">
+                            <p className="text-amber-400 text-xs font-bold">
                               {tx.balanceAfter?.bonus || 0} ETB
                             </p>
                           </div>

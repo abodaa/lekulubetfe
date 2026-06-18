@@ -186,10 +186,10 @@ export default function AdminPromotions() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-4"
+        className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4 mb-4"
       >
         <h2 className="text-white text-lg font-bold mb-3 flex items-center gap-2">
-          <FaGift className="text-pink-400" size={16} />
+          <FaGift className="text-amber-400" size={16} />
           Create Promotion
         </h2>
 
@@ -432,7 +432,7 @@ export default function AdminPromotions() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4"
+        className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4"
       >
         <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider mb-3">
           Promotions

@@ -13,6 +13,8 @@ import {
   FaSpinner,
   FaTimesCircle,
   FaUserCircle,
+  FaPlusCircle,
+  FaMinusCircle,
 } from "react-icons/fa";
 import { MdDeleteForever, MdMoneyOff } from "react-icons/md";
 
@@ -22,12 +24,14 @@ export default function AdminUserBalanceAccess() {
   const [results, setResults] = useState([]);
   const [searchError, setSearchError] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
-  const [adjustment, setAdjustment] = useState({
-    mainDelta: "",
-    reason: "",
-  });
+  const [mode, setMode] = useState("add"); // "add" | "deduct"
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+
+  const isDeduct = mode === "deduct";
+  const quickAmounts = [10, 20, 50, 100, 200, 500];
 
   const selectedUser = useMemo(
     () => results.find((user) => user.id === selectedUserId) || null,
@@ -75,46 +79,25 @@ export default function AdminUserBalanceAccess() {
 
   const handleSelectUser = (userId) => {
     setSelectedUserId(userId);
-    setAdjustment({
-      mainDelta: "",
-      reason: "",
-    });
+    setAmount("");
+    setReason("");
     setFeedback(null);
-  };
-
-  const updateAdjustmentField = (field, value) => {
-    setAdjustment((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const getNumber = (value) => {
-    if (value === "" || value === null || value === undefined) {
-      return 0;
-    }
-    const num = Number(value);
-    return Number.isNaN(num) ? NaN : num;
   };
 
   const handleAdjustmentSubmit = async (event) => {
     event.preventDefault();
     if (!selectedUser) return;
 
-    const mainDelta = getNumber(adjustment.mainDelta);
-
-    if (Number.isNaN(mainDelta)) {
-      setFeedback({ type: "error", message: "Amount must be a valid number." });
-      return;
-    }
-
-    if (mainDelta === 0) {
+    const value = Number(amount);
+    if (Number.isNaN(value) || value <= 0) {
       setFeedback({
         type: "error",
-        message: "Add or subtract an amount before saving.",
+        message: "Enter a valid amount greater than 0.",
       });
       return;
     }
+
+    const mainDelta = isDeduct ? -value : value;
 
     setIsAdjusting(true);
     setFeedback(null);
@@ -127,7 +110,7 @@ export default function AdminUserBalanceAccess() {
           body: {
             mainDelta,
             playDelta: 0,
-            reason: adjustment.reason || "",
+            reason: reason || "",
           },
         },
       );
@@ -143,12 +126,13 @@ export default function AdminUserBalanceAccess() {
         );
       }
 
-      setAdjustment((prev) => ({
-        ...prev,
-        mainDelta: "",
-      }));
-
-      setFeedback({ type: "success", message: "Wallet updated successfully." });
+      setAmount("");
+      setFeedback({
+        type: "success",
+        message: isDeduct
+          ? `Deducted ${value.toLocaleString()} ETB from Main wallet.`
+          : `Added ${value.toLocaleString()} ETB to Main wallet.`,
+      });
     } catch (error) {
       console.error("Admin wallet adjustment failed:", error);
       setFeedback({
@@ -156,23 +140,17 @@ export default function AdminUserBalanceAccess() {
         message:
           error?.message === "api_error_400"
             ? "Update rejected. Check the entered values."
-            : "Failed to update wallet. Please try again.",
+            : `Failed to ${isDeduct ? "deduct" : "add"}. Please try again.`,
       });
     } finally {
       setIsAdjusting(false);
     }
   };
 
-  const hasPendingChanges = () => {
-    const mainDelta = getNumber(adjustment.mainDelta);
-    return !Number.isNaN(mainDelta) && mainDelta !== 0;
-  };
-
-  const canReset =
-    adjustment.mainDelta !== "" || (adjustment.reason || "").trim() !== "";
+  const canReset = amount !== "" || reason.trim() !== "";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       <div className="max-w-md mx-auto px-4 pb-24 pt-4">
         {/* Search Section */}
         <motion.div
@@ -180,10 +158,10 @@ export default function AdminUserBalanceAccess() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-4"
         >
-          <div className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4">
+          <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                <FaSearch className="text-purple-400" size={12} />
+              <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <FaSearch className="text-amber-400" size={12} />
               </div>
               <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
                 Search Users
@@ -194,7 +172,7 @@ export default function AdminUserBalanceAccess() {
               <input
                 id="admin-user-search-input"
                 type="text"
-                className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-all pr-10"
+                className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-all pr-10"
                 placeholder="Search by name, username, or Telegram ID..."
                 value={query}
                 onChange={(event) => handleSearchInput(event.target.value)}
@@ -224,11 +202,11 @@ export default function AdminUserBalanceAccess() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-4"
+              className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4 mb-4"
             >
               {/* User Header */}
               <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 flex items-center justify-center shadow-lg">
                   <FaUserCircle className="text-white" size={24} />
                 </div>
                 <div className="flex-1">
@@ -269,31 +247,77 @@ export default function AdminUserBalanceAccess() {
                 </div>
               </div>
 
-              {/* Adjustment Form */}
+              {/* Adjustment Form — Add / Deduct on Main wallet */}
               <form onSubmit={handleAdjustmentSubmit} className="space-y-3">
+                {/* Add / Deduct toggle */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("add");
+                      setFeedback(null);
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
+                      !isDeduct
+                        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
+                        : "bg-white/10 text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    <FaPlusCircle size={11} />
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("deduct");
+                      setFeedback(null);
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${
+                      isDeduct
+                        ? "bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-lg"
+                        : "bg-white/10 text-white/40 hover:text-white/60"
+                    }`}
+                  >
+                    <FaMinusCircle size={11} />
+                    Deduct
+                  </button>
+                </div>
+
                 <div>
                   <label className="text-white/50 text-[10px] font-medium mb-1 block">
-                    Main Adjustment
+                    {isDeduct ? "Deduct from Main (ETB)" : "Add to Main (ETB)"}
                   </label>
                   <input
                     type="number"
-                    step="0.01"
-                    value={adjustment.mainDelta}
-                    onChange={(event) =>
-                      updateAdjustmentField("mainDelta", event.target.value)
-                    }
-                    placeholder="+/- amount"
+                    step="1"
+                    min="1"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Enter amount"
                     className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all"
                   />
                 </div>
 
+                {/* Quick Amount Buttons */}
+                <div className="flex flex-wrap gap-1">
+                  {quickAmounts.map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setAmount(amt.toString())}
+                      className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-[9px] hover:bg-white/20 transition-all"
+                    >
+                      {isDeduct ? "-" : "+"}
+                      {amt}
+                    </button>
+                  ))}
+                </div>
+
                 <textarea
                   rows={2}
-                  placeholder="Reason for adjustment (optional)"
-                  value={adjustment.reason}
-                  onChange={(event) =>
-                    updateAdjustmentField("reason", event.target.value)
-                  }
+                  placeholder="Reason (optional)"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all resize-none"
                 />
 
@@ -301,10 +325,8 @@ export default function AdminUserBalanceAccess() {
                   <button
                     type="button"
                     onClick={() => {
-                      setAdjustment({
-                        mainDelta: "",
-                        reason: "",
-                      });
+                      setAmount("");
+                      setReason("");
                       setFeedback(null);
                     }}
                     disabled={isAdjusting || !canReset}
@@ -315,18 +337,26 @@ export default function AdminUserBalanceAccess() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isAdjusting || !hasPendingChanges()}
-                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                    disabled={isAdjusting || !amount}
+                    className={`flex-1 py-2 rounded-xl text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 ${
+                      isDeduct
+                        ? "bg-gradient-to-r from-red-500 to-rose-600"
+                        : "bg-gradient-to-r from-emerald-500 to-green-600"
+                    }`}
                   >
                     {isAdjusting ? (
                       <>
                         <FaSpinner className="animate-spin" size={10} />
-                        Saving...
+                        {isDeduct ? "Deducting..." : "Adding..."}
                       </>
                     ) : (
                       <>
-                        <FaSave size={10} />
-                        Save
+                        {isDeduct ? (
+                          <FaMinusCircle size={10} />
+                        ) : (
+                          <FaPlusCircle size={10} />
+                        )}
+                        {isDeduct ? "Deduct" : "Add"}
                       </>
                     )}
                   </button>
@@ -358,7 +388,7 @@ export default function AdminUserBalanceAccess() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 overflow-hidden"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden"
         >
           <div className="px-4 py-3 border-b border-white/10">
             <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
@@ -386,7 +416,7 @@ export default function AdminUserBalanceAccess() {
                   <div
                     key={user.id}
                     className={`p-3 transition-all ${
-                      isSelected ? "bg-purple-500/20" : "hover:bg-white/5"
+                      isSelected ? "bg-amber-500/20" : "hover:bg-white/5"
                     }`}
                   >
                     <div className="flex items-center justify-between">

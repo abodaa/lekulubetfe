@@ -63,9 +63,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   // Show initial screen when no stake is selected
   if (!selectedStake) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
         {/* Fixed Header*/}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/95 to-transparent backdrop-blur-md py-2 px-4">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#0e1830]/95 to-transparent backdrop-blur-md py-2 px-4">
           <div className="flex items-center justify-between max-w-md mx-auto">
             <img
               src={lbLogo}
@@ -337,7 +337,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
 
   // If stake is selected, this component shouldn't be rendered
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center px-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -352,7 +352,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
         </p>
         <button
           onClick={() => onNavigate?.("cartela-selection")}
-          className="px-5 py-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium shadow-lg shadow-pink-500/30 hover:scale-105 transition-all active:scale-95"
+          className="px-5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium shadow-lg shadow-amber-500/30 hover:scale-105 transition-all active:scale-95"
         >
           Go to Cartella Selection →
         </button>

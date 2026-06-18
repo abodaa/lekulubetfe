@@ -97,16 +97,16 @@ export default function AdminHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       <div className="max-w-md mx-auto px-4 py-10">
         {/* Create Post Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4 mb-4"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4 mb-4"
         >
           <h2 className="text-white text-lg font-bold mb-3 flex items-center gap-2">
-            <FaBullhorn className="text-pink-400" size={16} />
+            <FaBullhorn className="text-amber-400" size={16} />
             Create Announcement
           </h2>
 
@@ -235,7 +235,7 @@ export default function AdminHome() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-4"
+          className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-4"
         >
           <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider mb-3 flex items-center gap-2">
             Currently Active
@@ -248,7 +248,7 @@ export default function AdminHome() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-3 border border-purple-500/30"
+                className="bg-gradient-to-r from-amber-500/10 to-emerald-500/10 rounded-xl p-3 border border-amber-400/30"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">

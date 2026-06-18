@@ -152,9 +152,9 @@ export default function History({ onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md pt-safe px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#0e1830]/90 to-transparent backdrop-blur-md pt-safe px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -175,7 +175,7 @@ export default function History({ onNavigate }) {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-3 gap-3 mb-6"
           >
-            <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
               <FaGamepad className="text-white/40 mx-auto mb-1" size={14} />
               <div className="text-white font-bold text-lg">
                 {userStats.totalGamesPlayed}
@@ -184,7 +184,7 @@ export default function History({ onNavigate }) {
                 Games
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
               <FaTrophy className="text-yellow-400 mx-auto mb-1" size={14} />
               <div className="text-yellow-400 font-bold text-lg">
                 {userStats.totalGamesWon}
@@ -193,7 +193,7 @@ export default function History({ onNavigate }) {
                 Wins
               </div>
             </div>
-            <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
               <GiConfirmed className="text-green-400 mx-auto mb-1" size={14} />
               <div className="text-green-400 font-bold text-lg">
                 {userStats.winRate}%
@@ -248,7 +248,7 @@ export default function History({ onNavigate }) {
                 return (
                   <div
                     key={game?.id || idx}
-                    className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3"
+                    className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">

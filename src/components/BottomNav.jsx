@@ -43,7 +43,7 @@ export default function BottomNav({ current, onNavigate }) {
                   {t.label}
                 </span>
                 {current === t.key && (
-                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-yellow-400 to-pink-500 rounded-full" />
+                  <span className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full" />
                 )}
               </button>
             </li>

@@ -166,14 +166,14 @@ export default function Profile({ onNavigate }) {
   }, [fetchProfileData]);
 
   const StatCard = ({ icon, label, value, sublabel, color = "white" }) => (
-    <div className="bg-white/5 backdrop-blur rounded-xl border border-white/10 p-3 text-center">
+    <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
       <div className="flex items-center justify-center mb-2">
         <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
           {icon}
         </div>
       </div>
       <div
-        className={`text-white font-bold text-lg ${color === "green" ? "text-green-400" : color === "yellow" ? "text-yellow-400" : color === "purple" ? "text-purple-400" : "text-white"}`}
+        className={`text-white font-bold text-lg ${color === "green" ? "text-green-400" : color === "yellow" ? "text-yellow-400" : color === "purple" ? "text-amber-400" : "text-white"}`}
       >
         {value}
       </div>
@@ -186,12 +186,10 @@ export default function Profile({ onNavigate }) {
     </div>
   );
 
- 
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-purple-900/80 to-transparent backdrop-blur-md px-4 py-3">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-[#0e1830]/90 to-transparent backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between max-w-md mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -213,7 +211,7 @@ export default function Profile({ onNavigate }) {
           className="text-center mb-6"
         >
           <div className="relative inline-block mb-3">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center border-2 border-white/20 shadow-xl">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center border-2 border-white/20 shadow-xl">
               <span className="text-white text-3xl font-bold">{initials}</span>
             </div>
             {profileData.user?.isRegistered && (
@@ -264,7 +262,7 @@ export default function Profile({ onNavigate }) {
               />
 
               <StatCard
-                icon={<FaGift size={16} className="text-purple-400" />}
+                icon={<FaGift size={16} className="text-amber-400" />}
                 label="Bonus Wallet"
                 value={`${profileData.wallet.bonus?.toLocaleString() || 0} ETB`}
                 sublabel="Promotional funds"
@@ -301,8 +299,8 @@ export default function Profile({ onNavigate }) {
               className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4 mb-4"
             >
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <FaUsers size={12} className="text-purple-400" />
+                <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <FaUsers size={12} className="text-amber-400" />
                 </div>
                 <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
                   Referral Program
@@ -318,7 +316,9 @@ export default function Profile({ onNavigate }) {
                   </p>
                 </div>
                 <div className="text-center flex-1 border-x border-white/10">
-                  <p className="text-white/40 text-[9px] uppercase">Invitee Registration Rewards</p>
+                  <p className="text-white/40 text-[9px] uppercase">
+                    Invitee Registration Rewards
+                  </p>
                   <p className="text-green-400 text-lg font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
                   </p>
@@ -361,7 +361,7 @@ export default function Profile({ onNavigate }) {
 
               {/* Estimated Rewards */}
               {/* {inviteStats.estimatedDepositRewards > 0 && (
-                <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg p-2 mb-3">
+                <div className="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 rounded-lg p-2 mb-3">
                   <div className="flex items-center justify-between">
                     <span className="text-white/50 text-xs">
                       Est. Deposit Rewards
