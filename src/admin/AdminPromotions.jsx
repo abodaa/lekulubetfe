@@ -205,7 +205,7 @@ export default function AdminPromotions() {
             }`}
           >
             <FaPercent size={12} />
-            Cashback / Happy Hour
+            Cashback
           </button>
           <button
             type="button"
