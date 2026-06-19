@@ -9,7 +9,6 @@ import {
   FaWallet,
   FaCoins,
   FaChartLine,
-  FaRobot,
   FaCalendarAlt,
   FaCalendarWeek,
   //   FaCalendarMonth,
@@ -33,9 +32,9 @@ export default function AdminStats() {
     totalGames: 0,
     totalDeposits: 0,
     totalWithdrawals: 0,
-    botWins: 0,
   });
   const [activePeriod, setActivePeriod] = useState("daily");
+  const [peakTimes, setPeakTimes] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -59,6 +58,12 @@ export default function AdminStats() {
         "/admin/stats/game-history?days=7",
       ).catch(() => ({ games: [] }));
       setGameHistory(gameHistoryRes?.games || []);
+
+      // Fetch peak activity (hour-of-day & day-of-week), last 30 days
+      const peakRes = await apiFetch("/admin/stats/peak-times?days=30").catch(
+        () => null,
+      );
+      setPeakTimes(peakRes || null);
 
       // Fetch wallet totals
       const [totalMainRes, totalPlayRes] = await Promise.all([
@@ -108,7 +113,6 @@ export default function AdminStats() {
         totalGames: overviewRes?.today?.totalGames || 0,
         totalDeposits: depositTotals?.completedTotal || 0,
         totalWithdrawals: 0,
-        botWins: todayRes?.botWinningsFromRealGames || 0,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -121,103 +125,36 @@ export default function AdminStats() {
   const getFilteredData = () => {
     if (!dailyStats.length) return todayData;
 
-    const now = new Date();
+    const slice =
+      activePeriod === "monthly"
+        ? dailyStats.slice(-30)
+        : activePeriod === "all"
+          ? dailyStats
+          : dailyStats.slice(-7); // daily & weekly both use last 7 days
 
-    if (activePeriod === "daily") {
-      // Last 7 days
-      const last7Days = dailyStats.slice(-7);
-      return {
-        systemRevenue: last7Days.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: last7Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: last7Days.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: last7Days.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
-    } else if (activePeriod === "weekly") {
-      // Current week (last 7 days matches weekly in this context)
-      const last7Days = dailyStats.slice(-7);
-      return {
-        systemRevenue: last7Days.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: last7Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: last7Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: last7Days.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: last7Days.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: last7Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
-    } else if (activePeriod === "monthly") {
-      // Last 30 days
-      const last30Days = dailyStats.slice(-30);
-      return {
-        systemRevenue: last30Days.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: last30Days.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: last30Days.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: last30Days.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: last30Days.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: last30Days.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
-    } else {
-      // All time (all available data)
-      return {
-        systemRevenue: dailyStats.reduce(
-          (sum, d) => sum + (d.systemRevenue || 0),
-          0,
-        ),
-        totalPlayers: dailyStats.reduce(
-          (sum, d) => sum + (d.totalPlayers || 0),
-          0,
-        ),
-        totalGames: dailyStats.reduce((sum, d) => sum + (d.totalGames || 0), 0),
-        totalDeposits: dailyStats.reduce(
-          (sum, d) => sum + (d.totalDeposits || 0),
-          0,
-        ),
-        totalWithdrawals: dailyStats.reduce(
-          (sum, d) => sum + (d.totalWithdrawals || 0),
-          0,
-        ),
-        botWins: dailyStats.reduce((sum, d) => sum + (d.botGamesWon || 0), 0),
-      };
-    }
+    const sum = (k) => slice.reduce((s, d) => s + (Number(d[k]) || 0), 0);
+
+    return {
+      systemRevenue: sum("systemRevenue"), // nominal game cut (20%)
+      realStakeIn: sum("realStakeIn"), // real cash staked
+      bonusWagered: sum("bonusWagered"), // promo money staked
+      prizesOut: sum("prizesOut"), // real prizes paid out
+      realRevenue: sum("realRevenue"), // realStakeIn - prizesOut
+      totalPlayers: sum("totalPlayers"),
+      totalGames: sum("totalGames"),
+      totalDeposits: sum("totalDeposits"),
+      totalWithdrawals: sum("totalWithdrawals"),
+    };
   };
 
   const overviewData = getFilteredData();
+
+  // Precise money formatter: thousands separators + exactly 2 decimals.
+  const money = (n) =>
+    Number(n || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   const getPeriodTitle = () => {
     if (activePeriod === "daily") return "Last 7 Days";
@@ -456,6 +393,36 @@ export default function AdminStats() {
           ? "Monthly Statistics"
           : "Yearly Statistics";
 
+  const formatHour = (h) => {
+    const hr = h % 12 === 0 ? 12 : h % 12;
+    return `${hr} ${h < 12 ? "AM" : "PM"}`;
+  };
+  const formatHourShort = (h) =>
+    `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "a" : "p"}`;
+
+  const PeakBars = ({ data }) => {
+    const max = Math.max(1, ...data.map((d) => d.value));
+    return (
+      <div className="flex items-end gap-[2px] h-24">
+        {data.map((d, i) => (
+          <div
+            key={i}
+            className="flex-1 flex flex-col items-center justify-end h-full"
+            title={d.full}
+          >
+            <div
+              className="w-full rounded-t bg-gradient-to-t from-amber-500/40 to-amber-400"
+              style={{ height: `${Math.max(3, (d.value / max) * 100)}%` }}
+            />
+            <span className="mt-1 text-[8px] text-white/40 leading-none">
+              {d.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
       blue: "from-blue-500/20 to-blue-600/20 border-blue-500/30",
@@ -562,9 +529,39 @@ export default function AdminStats() {
           <div className="grid grid-cols-2 gap-2">
             <StatCard
               icon={<GiProfit size={14} />}
-              label="System Revenue"
-              value={`ETB ${isLoading ? "..." : overviewData.systemRevenue.toLocaleString()}`}
+              label="Real Revenue"
+              value={`ETB ${isLoading ? "..." : money(overviewData.realRevenue)}`}
+              color="green"
+              subtext={
+                !isLoading
+                  ? `Cut ${money(overviewData.systemRevenue)} − Bonus ${money(overviewData.bonusWagered)}`
+                  : null
+              }
+            />
+            <StatCard
+              icon={<GiCash size={14} />}
+              label="Game Cut (nominal)"
+              value={`ETB ${isLoading ? "..." : money(overviewData.systemRevenue)}`}
               color="amber"
+              subtext={!isLoading ? "20% house cut on pots" : null}
+            />
+            <StatCard
+              icon={<FaMoneyBillWave size={14} />}
+              label="Bonus Wagered"
+              value={`ETB ${isLoading ? "..." : money(overviewData.bonusWagered)}`}
+              color="purple"
+              subtext={!isLoading ? "promo money staked, not real cash" : null}
+            />
+            <StatCard
+              icon={<FaMoneyBillWave size={14} />}
+              label="Prizes Paid Out"
+              value={`ETB ${isLoading ? "..." : money(overviewData.prizesOut)}`}
+              color="red"
+              subtext={
+                !isLoading
+                  ? `Real staked: ETB ${money(overviewData.realStakeIn)}`
+                  : null
+              }
             />
             <StatCard
               icon={<FaUsers size={14} />}
@@ -585,29 +582,85 @@ export default function AdminStats() {
             <StatCard
               icon={<GiCash size={14} />}
               label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : overviewData.totalDeposits.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : money(overviewData.totalDeposits)}`}
               color="green"
               subtext={
                 !isLoading
-                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${todayDepositMeta.pendingTotal.toFixed(2)})`
+                  ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${money(todayDepositMeta.pendingTotal)})`
                   : null
               }
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : overviewData.totalWithdrawals.toLocaleString()}`}
+              value={`ETB ${isLoading ? "..." : money(overviewData.totalWithdrawals)}`}
               color="red"
             />
-            <StatCard
-              icon={<FaRobot size={14} />}
-              label="Bot Wins"
-              value={
-                isLoading ? "..." : (overviewData.botWins || 0).toLocaleString()
-              }
-              color="purple"
-            />
           </div>
+        </motion.div>
+
+        {/* Peak Activity */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="mb-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+              <FaChartLine className="text-amber-400" size={12} />
+            </div>
+            <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
+              Peak Activity (Last 30 Days)
+            </h3>
+          </div>
+
+          {peakTimes && peakTimes.totalGames > 0 ? (
+            <div className="space-y-3">
+              <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white/70 text-xs font-medium">
+                    Peak hours of day
+                  </span>
+                  <span className="text-amber-400 text-xs font-semibold">
+                    Busiest:{" "}
+                    {peakTimes.peakHour != null
+                      ? formatHour(peakTimes.peakHour)
+                      : "—"}
+                  </span>
+                </div>
+                <PeakBars
+                  data={peakTimes.hours.map((h) => ({
+                    label: formatHourShort(h.hour),
+                    value: h.games,
+                    full: `${formatHour(h.hour)} · ${h.games} games · ${h.players} players`,
+                  }))}
+                />
+              </div>
+
+              <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white/70 text-xs font-medium">
+                    Peak days of week
+                  </span>
+                  <span className="text-amber-400 text-xs font-semibold">
+                    Busiest: {peakTimes.peakDayOfWeek || "—"}
+                  </span>
+                </div>
+                <PeakBars
+                  data={peakTimes.daysOfWeek.map((d) => ({
+                    label: d.name.slice(0, 3),
+                    value: d.games,
+                    full: `${d.name} · ${d.games} games · ${d.players} players`,
+                  }))}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-2xl border border-white/10 p-4 text-center text-white/50 text-xs">
+              {isLoading ? "Loading peak activity…" : "No game activity yet."}
+            </div>
+          )}
         </motion.div>
 
         {/* Wallet Totals - All Time (Static) */}
