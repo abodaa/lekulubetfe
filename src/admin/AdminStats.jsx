@@ -21,7 +21,7 @@ export default function AdminStats() {
   const [dailyStats, setDailyStats] = useState([]);
   const [gameHistory, setGameHistory] = useState([]);
   const [totalMainWallet, setTotalMainWallet] = useState(0);
-  const [totalPlayWallet, setTotalPlayWallet] = useState(0);
+  const [totalBonusWallet, setTotalBonusWallet] = useState(0);
   const [todayDepositMeta, setTodayDepositMeta] = useState({
     pendingCount: 0,
     pendingTotal: 0,
@@ -66,16 +66,16 @@ export default function AdminStats() {
       setPeakTimes(peakRes || null);
 
       // Fetch wallet totals
-      const [totalMainRes, totalPlayRes] = await Promise.all([
+      const [totalMainRes, totalBonusRes] = await Promise.all([
         apiFetch("/admin/stats/wallets/total-main").catch(() => ({
           totalMain: 0,
         })),
-        apiFetch("/admin/stats/wallets/total-play").catch(() => ({
-          totalPlay: 0,
+        apiFetch("/admin/stats/wallets/total-bonus").catch(() => ({
+          totalBonus: 0,
         })),
       ]);
       setTotalMainWallet(totalMainRes?.totalMain || 0);
-      setTotalPlayWallet(totalPlayRes?.totalPlay || 0);
+      setTotalBonusWallet(totalBonusRes?.totalBonus || 0);
 
       // Fetch today's overview
       const todayRes = await apiFetch("/admin/stats/today").catch(() => ({
@@ -126,11 +126,13 @@ export default function AdminStats() {
     if (!dailyStats.length) return todayData;
 
     const slice =
-      activePeriod === "monthly"
-        ? dailyStats.slice(-30)
-        : activePeriod === "all"
-          ? dailyStats
-          : dailyStats.slice(-7); // daily & weekly both use last 7 days
+      activePeriod === "daily"
+        ? dailyStats.slice(-1) // today only
+        : activePeriod === "weekly"
+          ? dailyStats.slice(-7)
+          : activePeriod === "monthly"
+            ? dailyStats.slice(-30)
+            : dailyStats; // yearly / all-time (within fetched window)
 
     const sum = (k) => slice.reduce((s, d) => s + (Number(d[k]) || 0), 0);
 
@@ -157,7 +159,7 @@ export default function AdminStats() {
     });
 
   const getPeriodTitle = () => {
-    if (activePeriod === "daily") return "Last 7 Days";
+    if (activePeriod === "daily") return "Today";
     if (activePeriod === "weekly") return "This Week";
     if (activePeriod === "monthly") return "This Month";
     return "All Time";
@@ -687,9 +689,9 @@ export default function AdminStats() {
             />
             <StatCard
               icon={<FaCoins size={14} />}
-              label="Play Wallet"
-              value={`ETB ${isLoading ? "..." : totalPlayWallet.toFixed(2)}`}
-              color="cyan"
+              label="Bonus Wallet"
+              value={`ETB ${isLoading ? "..." : money(totalBonusWallet)}`}
+              color="amber"
             />
           </div>
         </motion.div>
