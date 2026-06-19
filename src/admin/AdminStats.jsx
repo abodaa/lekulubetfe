@@ -873,9 +873,9 @@ export default function AdminStats() {
                         <th className="text-right py-1 px-2 text-white/30 font-medium">
                           System Cut
                         </th>
-                        <th className="text-center py-1 px-2 text-white/30 font-medium">
+                        {/* <th className="text-center py-1 px-2 text-white/30 font-medium">
                           Winner
-                        </th>
+                        </th> */}
                         <th className="text-right py-1 px-2 text-white/30 font-medium">
                           Net
                         </th>
@@ -902,7 +902,7 @@ export default function AdminStats() {
                           <td className="text-right py-1 px-2 text-amber-400">
                             ETB {(game.systemRevenue ?? 0).toFixed(2)}
                           </td>
-                          <td className="text-center py-1 px-2">
+                          {/* <td className="text-center py-1 px-2">
                             <span
                               className={`px-1.5 py-0.5 rounded-full text-[8px] font-medium ${
                                 game.whoWon === "Real"
@@ -914,7 +914,7 @@ export default function AdminStats() {
                             >
                               {game.whoWon || "—"}
                             </span>
-                          </td>
+                          </td> */}
                           <td className="text-right py-1 px-2 text-cyan-400">
                             ETB {(game.netRevenue ?? 0).toFixed(2)}
                           </td>
