@@ -294,7 +294,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <img
                     src={adminPost.url}
                     alt={adminPost.caption || "Announcement"}
-                    className="w-full h-36 object-cover"
+                    className="w-full aspect-auto object-cover"
                     onError={(e) => {
                       e.target.src = lbLogo;
                       e.target.alt = "Lekulu Bingo Logo";
@@ -303,7 +303,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 ) : (
                   <video
                     src={adminPost.url}
-                    className="w-full h-36 object-cover"
+                    className="w-full aspect-auto object-cover"
                     controls
                     muted
                     playsInline
