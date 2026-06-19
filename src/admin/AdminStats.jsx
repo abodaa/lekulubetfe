@@ -16,6 +16,15 @@ import {
 } from "react-icons/fa";
 import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+} from "recharts";
 
 export default function AdminStats() {
   const [dailyStats, setDailyStats] = useState([]);
@@ -402,28 +411,49 @@ export default function AdminStats() {
   const formatHourShort = (h) =>
     `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "a" : "p"}`;
 
-  const PeakBars = ({ data }) => {
-    const max = Math.max(1, ...data.map((d) => d.value));
+  const PeakTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) return null;
+    const d = payload[0].payload;
     return (
-      <div className="flex items-end gap-[2px] h-24">
-        {data.map((d, i) => (
-          <div
-            key={i}
-            className="flex-1 flex flex-col items-center justify-end h-full"
-            title={d.full}
-          >
-            <div
-              className="w-full rounded-t bg-gradient-to-t from-amber-500/40 to-amber-400"
-              style={{ height: `${Math.max(3, (d.value / max) * 100)}%` }}
-            />
-            <span className="mt-1 text-[8px] text-white/40 leading-none">
-              {d.label}
-            </span>
-          </div>
-        ))}
+      <div className="rounded-lg border border-white/10 bg-[#0e1830] px-3 py-2 shadow-lg">
+        <p className="text-white text-xs font-semibold">{d.full}</p>
+        <p className="text-amber-400 text-[11px]">{d.games} games</p>
+        <p className="text-white/60 text-[11px]">{d.players} players</p>
       </div>
     );
   };
+
+  const PeakChart = ({ data, xInterval = 0 }) => (
+    <div className="h-40 -ml-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+          <XAxis
+            dataKey="label"
+            interval={xInterval}
+            tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 9 }}
+            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            tickLine={false}
+          />
+          <YAxis
+            allowDecimals={false}
+            width={24}
+            tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 9 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            cursor={{ fill: "rgba(255,255,255,0.05)" }}
+            content={<PeakTooltip />}
+          />
+          <Bar dataKey="games" radius={[3, 3, 0, 0]}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={d.isPeak ? "#34d399" : "#f59e0b"} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 
   const StatCard = ({ icon, label, value, color = "blue", subtext = null }) => {
     const colorClasses = {
@@ -631,11 +661,14 @@ export default function AdminStats() {
                       : "—"}
                   </span>
                 </div>
-                <PeakBars
+                <PeakChart
+                  xInterval={2}
                   data={peakTimes.hours.map((h) => ({
                     label: formatHourShort(h.hour),
-                    value: h.games,
-                    full: `${formatHour(h.hour)} · ${h.games} games · ${h.players} players`,
+                    full: formatHour(h.hour),
+                    games: h.games,
+                    players: h.players,
+                    isPeak: h.hour === peakTimes.peakHour,
                   }))}
                 />
               </div>
@@ -649,11 +682,13 @@ export default function AdminStats() {
                     Busiest: {peakTimes.peakDayOfWeek || "—"}
                   </span>
                 </div>
-                <PeakBars
+                <PeakChart
                   data={peakTimes.daysOfWeek.map((d) => ({
                     label: d.name.slice(0, 3),
-                    value: d.games,
-                    full: `${d.name} · ${d.games} games · ${d.players} players`,
+                    full: d.name,
+                    games: d.games,
+                    players: d.players,
+                    isPeak: d.name === peakTimes.peakDayOfWeek,
                   }))}
                 />
               </div>
