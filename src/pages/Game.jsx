@@ -74,16 +74,6 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
               alt="Lekulu Bingo Logo"
               className="w-10 h-10 object-contain rounded-full flex items-center justify-center border border-white/20"
             />
-            {/* <button
-              onClick={() => onNavigate?.("rules")}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-semibold hover:bg-white/20 transition-all active:scale-95"
-            >
-              <span className="flex items-center gap-1">
-                <span>
-                  <GrInfo />
-                </span>
-              </span>
-            </button> */}
           </div>
         </div>
 
@@ -95,11 +85,6 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             transition={{ duration: 0.5 }}
             className="text-center mb-10 mt-4"
           >
-            <div className="relative inline-block mb-4">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 backdrop-blur border border-white/20 flex items-center justify-center shadow-xl">
-                <span className="text-4xl">🎲</span>
-              </div>
-            </div>
             <h1 className="text-2xl font-bold text-white mb-2">
               {t("game.lets_play")}
             </h1>
