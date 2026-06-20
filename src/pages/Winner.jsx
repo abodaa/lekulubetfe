@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
+import { useT } from "../contexts/LanguageContext";
 import CartellaCard from "../components/CartellaCard";
 import { FaTrophy, FaCrown, FaClock } from "react-icons/fa";
 import { GiConfirmed, GiTrophyCup } from "react-icons/gi";
@@ -9,6 +10,7 @@ import { playBingoSound } from "../lib/audio/numberSounds";
 export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
   const { sessionId } = useAuth();
+  const t = useT();
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
@@ -82,22 +84,26 @@ export default function Winner({ onNavigate, onResetToGame }) {
             <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-amber-500/20 flex items-center justify-center">
               <GiTrophyCup className="text-amber-400" size={28} />
             </div>
-            <h1 className="text-white font-bold text-2xl mb-2">Game Over</h1>
-            <p className="text-white/40 text-sm">No winners this round</p>
+            <h1 className="text-white font-bold text-2xl mb-2">
+              {t("winner.game_over")}
+            </h1>
+            <p className="text-white/40 text-sm">{t("winner.no_winners")}</p>
           </div>
 
           <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] py-5 px-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <FaClock className="text-white/30" size={14} />
               <p className="text-white/40 text-xs uppercase tracking-wider">
-                Next Game
+                {t("winner.next_game")}
               </p>
             </div>
             <div className="text-white font-bold text-5xl">
               {countdown > 0 ? countdown : "--"}
             </div>
             <p className="text-white/30 text-xs mt-2">
-              {countdown > 0 ? `Starting in ${countdown}s` : "Preparing..."}
+              {countdown > 0
+                ? t("winner.starting_in_s", { s: countdown })
+                : t("winner.preparing")}
             </p>
           </div>
         </div>
@@ -138,7 +144,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                 </div>
                 {winner.prize && (
                   <span className="text-amber-400 text-xs font-medium">
-                    won {winner.prize} ETB
+                    {t("winner.won_lower", { prize: winner.prize })}
                   </span>
                 )}
               </div>
@@ -150,7 +156,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
             <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30">
               <GiConfirmed size={12} className="text-emerald-400" />
               <span className="text-emerald-400 text-xs font-bold">
-                You won!
+                {t("winner.you_won")}
               </span>
             </div>
           )}
@@ -176,11 +182,11 @@ export default function Winner({ onNavigate, onResetToGame }) {
                       Cartella #{boardNumber}
                     </span>
                     <span className="text-emerald-400 text-xs font-medium">
-                      Won {prize} ETB
+                      {t("winner.won_cap", { prize })}
                     </span>
                   </div>
                   <span className="text-white/40 text-xs">
-                    {winner.name || "Player"}
+                    {winner.name || t("common.player")}
                   </span>
                 </div>
                 <div className="flex justify-center">
@@ -203,7 +209,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
                         Cartella #{boardNumber}
                       </p>
                       <p className="text-emerald-400 text-xs font-bold mt-1">
-                        Won {prize} ETB
+                        {t("winner.won_cap", { prize })}
                       </p>
                     </div>
                   )}
@@ -218,7 +224,7 @@ export default function Winner({ onNavigate, onResetToGame }) {
           <div className="flex items-center justify-center gap-2 mb-1">
             <FaClock className="text-white/30" size={12} />
             <p className="text-white/40 text-[10px] uppercase tracking-wider">
-              Next Game
+              {t("winner.next_game")}
             </p>
           </div>
           <div className="text-white font-bold text-4xl">
@@ -226,8 +232,8 @@ export default function Winner({ onNavigate, onResetToGame }) {
           </div>
           <p className="text-white/30 text-[10px] mt-1">
             {countdown > 0
-              ? `Starting in ${countdown} seconds`
-              : "Preparing next game..."}
+              ? t("winner.starting_in_seconds", { s: countdown })
+              : t("winner.preparing_next")}
           </p>
         </div>
       </div>

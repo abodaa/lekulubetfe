@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { apiFetch } from "../lib/api/client";
+import { useT } from "../contexts/LanguageContext";
 import { motion } from "framer-motion";
 import {
   FaHistory,
@@ -14,6 +15,7 @@ import { GiConfirmed } from "react-icons/gi";
 
 export default function History({ onNavigate }) {
   const { sessionId, user } = useAuth();
+  const t = useT();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -127,7 +129,7 @@ export default function History({ onNavigate }) {
         console.log("Stats calculated:", { totalGames, gamesWon, winRate });
       } catch (error) {
         console.error("Failed to fetch game history:", error);
-        setError("Unable to load your game history right now.");
+        setError(t("history.load_error"));
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
@@ -161,7 +163,7 @@ export default function History({ onNavigate }) {
               <FaHistory className="text-yellow-400" size={14} />
             </div>
             <span className="text-white/70 text-xs font-medium">
-              GAME HISTORY
+              {t("history.header")}
             </span>
           </div>
         </div>
@@ -181,7 +183,7 @@ export default function History({ onNavigate }) {
                 {userStats.totalGamesPlayed}
               </div>
               <div className="text-white/30 text-[9px] uppercase tracking-wider">
-                Games
+                {t("scores.games")}
               </div>
             </div>
             <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
@@ -190,7 +192,7 @@ export default function History({ onNavigate }) {
                 {userStats.totalGamesWon}
               </div>
               <div className="text-white/30 text-[9px] uppercase tracking-wider">
-                Wins
+                {t("scores.wins")}
               </div>
             </div>
             <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl rounded-xl border border-white/10 shadow-[0_6px_24px_rgba(0,0,0,0.3)] p-3 text-center">
@@ -199,7 +201,7 @@ export default function History({ onNavigate }) {
                 {userStats.winRate}%
               </div>
               <div className="text-white/30 text-[9px] uppercase tracking-wider">
-                Win Rate
+                {t("profile.win_rate")}
               </div>
             </div>
           </motion.div>
@@ -217,7 +219,7 @@ export default function History({ onNavigate }) {
               onClick={() => window.location.reload()}
               className="px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-[10px] font-medium hover:bg-red-500/30 transition-all"
             >
-              Try Again
+              {t("common.try_again")}
             </button>
           </motion.div>
         )}
@@ -229,7 +231,7 @@ export default function History({ onNavigate }) {
           transition={{ delay: 0.1 }}
         >
           <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider mb-2 px-1">
-            Recent Games
+            {t("history.recent")}
           </h3>
 
           {loading ? (
@@ -239,7 +241,7 @@ export default function History({ onNavigate }) {
           ) : !games || games.length === 0 ? (
             <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-8 text-center">
               <FaGamepad className="text-white/20 mx-auto mb-2" size={24} />
-              <p className="text-white/30 text-xs">No games played yet</p>
+              <p className="text-white/30 text-xs">{t("history.no_games")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -265,7 +267,9 @@ export default function History({ onNavigate }) {
                         </div>
                         <div>
                           <p className="text-white text-xs font-medium">
-                            Game {game?.gameId || "N/A"}
+                            {t("history.game_label", {
+                              id: game?.gameId || t("common.na"),
+                            })}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             <FaCalendarAlt className="text-white/20" size={8} />
@@ -282,19 +286,23 @@ export default function History({ onNavigate }) {
                             : "bg-red-500/20 text-red-400"
                         }`}
                       >
-                        {isWin ? "WON" : "LOST"}
+                        {isWin ? t("history.won") : t("history.lost")}
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-[10px]">
                       <div className="flex items-center gap-3">
                         <div>
-                          <span className="text-white/30">Stake:</span>
+                          <span className="text-white/30">
+                            {t("history.stake")}
+                          </span>
                           <span className="text-white ml-1">
                             {game?.stake || 0} ETB
                           </span>
                         </div>
                         <div>
-                          <span className="text-white/30">Prize:</span>
+                          <span className="text-white/30">
+                            {t("history.prize")}
+                          </span>
                           <span className="text-green-400 ml-1">
                             {game?.userResult?.prize || 0} ETB
                           </span>

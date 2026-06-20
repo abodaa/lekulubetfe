@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider.jsx";
+import { useT } from "../contexts/LanguageContext.jsx";
 import { apiFetch } from "../lib/api/client.js";
 import { motion } from "framer-motion";
 import {
@@ -16,6 +17,7 @@ import { FiArrowDownLeft, FiArrowUpRight } from "react-icons/fi";
 
 export default function Wallet({ onNavigate }) {
   const { sessionId, user, isLoading: authLoading } = useAuth();
+  const t = useT();
   const [wallet, setWallet] = useState({
     main: 0,
     play: 0,
@@ -160,7 +162,9 @@ export default function Wallet({ onNavigate }) {
             <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
               <FaWallet className="text-yellow-400" size={14} />
             </div>
-            <span className="text-white/70 text-xs font-medium">MY WALLET</span>
+            <span className="text-white/70 text-xs font-medium">
+              {t("wallet.header")}
+            </span>
           </div>
         </div>
       </div>
@@ -195,12 +199,16 @@ export default function Wallet({ onNavigate }) {
               {displayRegistered ? (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
                   <FaCheckCircle className="text-green-400" size={10} />
-                  <span className="text-green-400 text-xs">Verified</span>
+                  <span className="text-green-400 text-xs">
+                    {t("wallet.verified")}
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/20">
                   <FaCheckCircle className="text-green-400" size={10} />
-                  <span className="text-green-400 text-xs">Verified</span>
+                  <span className="text-green-400 text-xs">
+                    {t("wallet.verified")}
+                  </span>
                 </div>
               )}
             </div>
@@ -224,7 +232,7 @@ export default function Wallet({ onNavigate }) {
               }`}
             >
               <FaWallet size={12} />
-              Balance
+              {t("wallet.tab_balance")}
             </button>
             <button
               onClick={() => setActiveTab("history")}
@@ -235,7 +243,7 @@ export default function Wallet({ onNavigate }) {
               }`}
             >
               <FaHistory size={12} />
-              History
+              {t("wallet.tab_history")}
             </button>
           </div>
         </motion.div>
@@ -259,10 +267,12 @@ export default function Wallet({ onNavigate }) {
                     <GiMoneyStack className="text-blue-400" size={16} />
                   </div>
                   <span className="text-white/60 text-xs uppercase tracking-wider">
-                    Main Wallet
+                    {t("wallet.main")}
                   </span>
                 </div>
-                <span className="text-white/50 text-xs">Withdrawable</span>
+                <span className="text-white/50 text-xs">
+                  {t("wallet.withdrawable")}
+                </span>
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.main?.toLocaleString() || 0}{" "}
@@ -278,17 +288,19 @@ export default function Wallet({ onNavigate }) {
                     <FaCoins className="text-amber-400" size={16} />
                   </div>
                   <span className="text-white/60 text-xs uppercase tracking-wider">
-                    Bonus Wallet
+                    {t("wallet.bonus")}
                   </span>
                 </div>
-                <span className="text-white/50 text-xs">Promotional</span>
+                <span className="text-white/50 text-xs">
+                  {t("wallet.promotional")}
+                </span>
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.bonus?.toLocaleString() || 0}{" "}
                 <span className="text-white/40 text-sm">ETB</span>
               </div>
               <div className="text-white/30 text-xs mt-1">
-                Used when Main & Play are empty
+                {t("wallet.bonus_hint")}
               </div>
             </div>
 
@@ -300,10 +312,12 @@ export default function Wallet({ onNavigate }) {
                     <FaCoins className="text-yellow-400" size={16} />
                   </div>
                   <span className="text-white/60 text-xs uppercase tracking-wider">
-                    Coins
+                    {t("wallet.coins")}
                   </span>
                 </div>
-                <span className="text-white/50 text-xs">Earn from bets</span>
+                <span className="text-white/50 text-xs">
+                  {t("wallet.earn_from_bets")}
+                </span>
               </div>
               <div className="text-yellow-400 text-2xl font-bold">
                 {wallet.coins?.toLocaleString() || 0}
@@ -319,7 +333,7 @@ export default function Wallet({ onNavigate }) {
             <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
               <div className="px-3 py-2 border-b border-white/5">
                 <h3 className="text-white/40 text-[10px] font-medium uppercase tracking-wider">
-                  Recent Transactions
+                  {t("wallet.recent_tx")}
                 </h3>
               </div>
 
@@ -332,7 +346,7 @@ export default function Wallet({ onNavigate }) {
                   <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
                     <FaHistory className="text-white/20" size={24} />
                   </div>
-                  <p className="text-white/50 text-xs">No transactions yet</p>
+                  <p className="text-white/50 text-xs">{t("wallet.no_tx")}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-white/5">
@@ -358,12 +372,12 @@ export default function Wallet({ onNavigate }) {
                               <p className="text-white text-xs font-medium">
                                 {transaction.description ||
                                   (transaction.type === "deposit"
-                                    ? "Deposit"
+                                    ? t("tx.deposit")
                                     : transaction.type === "game_win"
-                                      ? "Game Win"
+                                      ? t("tx.game_win")
                                       : transaction.type === "game_bet"
-                                        ? "Game Bet"
-                                        : "Transaction")}
+                                        ? t("tx.game_bet")
+                                        : t("tx.transaction"))}
                               </p>
                               <p className="text-white/40 text-[9px]">
                                 {new Date(
@@ -385,8 +399,8 @@ export default function Wallet({ onNavigate }) {
                             </p>
                             <p className="text-white/40 text-[9px] uppercase">
                               {transaction.status === "completed" || isPositive
-                                ? "Success"
-                                : transaction.status || "Pending"}
+                                ? t("tx.success")
+                                : transaction.status || t("tx.pending")}
                             </p>
                           </div>
                         </div>

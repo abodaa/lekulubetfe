@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { apiFetch } from "../lib/api/client";
+import { useT } from "../contexts/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTrophy,
@@ -16,6 +17,7 @@ import { GiTrophy } from "react-icons/gi";
 
 export default function Scores({ onNavigate }) {
   const { sessionId, user } = useAuth();
+  const t = useT();
   const [userStats, setUserStats] = useState({
     totalGamesPlayed: 0,
     totalGamesWon: 0,
@@ -107,10 +109,26 @@ export default function Scores({ onNavigate }) {
   };
 
   const filterOptions = [
-    { key: "alltime", label: "All Time", icon: <GiTrophy size={12} /> },
-    { key: "monthly", label: "Month", icon: <FaCalendarAlt size={12} /> },
-    { key: "weekly", label: "Week", icon: <FaCalendarAlt size={12} /> },
-    { key: "daily", label: "Day", icon: <FaCalendarAlt size={12} /> },
+    {
+      key: "alltime",
+      label: t("scores.filter_alltime"),
+      icon: <GiTrophy size={12} />,
+    },
+    {
+      key: "monthly",
+      label: t("scores.filter_month"),
+      icon: <FaCalendarAlt size={12} />,
+    },
+    {
+      key: "weekly",
+      label: t("scores.filter_week"),
+      icon: <FaCalendarAlt size={12} />,
+    },
+    {
+      key: "daily",
+      label: t("scores.filter_day"),
+      icon: <FaCalendarAlt size={12} />,
+    },
   ];
 
   return (
@@ -123,7 +141,7 @@ export default function Scores({ onNavigate }) {
               <FaTrophy className="text-yellow-400" size={14} />
             </div>
             <span className="text-white/70 text-xs font-medium">
-              LEADERBOARD
+              {t("scores.header")}
             </span>
           </div>
         </div>
@@ -152,9 +170,11 @@ export default function Scores({ onNavigate }) {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-sm">
-                    {user?.firstName || "Player"}
+                    {user?.firstName || t("common.player")}
                   </h3>
-                  <p className="text-white/50 text-xs">Your Stats</p>
+                  <p className="text-white/50 text-xs">
+                    {t("scores.your_stats")}
+                  </p>
                 </div>
               </div>
               {/* <div className="flex items-center gap-1 text-white/90 text-sm border border-white/20 rounded-full px-2 py-1">
@@ -169,7 +189,7 @@ export default function Scores({ onNavigate }) {
                   {userStats.totalGamesPlayed}
                 </div>
                 <div className="text-white/50 text-xs uppercase tracking-wider">
-                  Played
+                  {t("scores.played")}
                 </div>
               </div>
               <div className="text-center">
@@ -177,7 +197,7 @@ export default function Scores({ onNavigate }) {
                   {userStats.totalGamesWon}
                 </div>
                 <div className="text-white/50 text-xs uppercase tracking-wider">
-                  Wins
+                  {t("scores.wins")}
                 </div>
               </div>
               <div className="text-center">
@@ -185,7 +205,7 @@ export default function Scores({ onNavigate }) {
                   {userStats.winRate}%
                 </div>
                 <div className="text-white/50 text-xs uppercase tracking-wider">
-                  Win Rate
+                  {t("profile.win_rate")}
                 </div>
               </div>
             </div>
@@ -199,7 +219,9 @@ export default function Scores({ onNavigate }) {
           transition={{ duration: 0.5, delay: 0.1 }}
         >
           <div className="mb-3">
-            <h2 className="text-white font-bold text-sm mb-3">Top Players</h2>
+            <h2 className="text-white font-bold text-sm mb-3">
+              {t("scores.top_players")}
+            </h2>
             <div className="flex items-center justify-between gap-1 bg-white/5 rounded-full p-0.5">
               {filterOptions.map((opt) => (
                 <button
@@ -229,7 +251,7 @@ export default function Scores({ onNavigate }) {
                 <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-white/5 flex items-center justify-center">
                   <FaTrophy className="text-white/50" size={24} />
                 </div>
-                <p className="text-white/50 text-xs">No leaderboard data</p>
+                <p className="text-white/50 text-xs">{t("scores.no_data")}</p>
               </div>
             ) : (
               <div className="divide-y divide-white/5">
@@ -258,7 +280,7 @@ export default function Scores({ onNavigate }) {
                             {player.name}
                           </p>
                           <p className="text-white/50 text-xs">
-                            {player.wins} wins
+                            {t("scores.wins_count", { n: player.wins })}
                           </p>
                         </div>
                       </div>
@@ -266,7 +288,9 @@ export default function Scores({ onNavigate }) {
                         <p className="text-white font-bold text-sm">
                           {player.played}
                         </p>
-                        <p className="text-white/50 text-xs">Games</p>
+                        <p className="text-white/50 text-xs">
+                          {t("scores.games")}
+                        </p>
                       </div>
                     </div>
                   );
@@ -279,7 +303,9 @@ export default function Scores({ onNavigate }) {
           {leaderboardRows.length > 0 && (
             <div className="mt-3 text-center">
               <p className="text-white/20 text-[9px]">
-                Showing top {Math.min(leaderboardRows.length, 10)} players
+                {t("scores.showing_top", {
+                  n: Math.min(leaderboardRows.length, 10),
+                })}
               </p>
             </div>
           )}

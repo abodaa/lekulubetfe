@@ -7,6 +7,7 @@ import { apiFetch, getApiBase } from "../lib/api/client";
 import { prefetchCartellas } from "../lib/cartellaCache";
 import { loadGroupCode } from "../lib/groupSession";
 import { motion } from "framer-motion";
+import { useT } from "../contexts/LanguageContext";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
 import { FaCoins, FaCrown, FaRocket, FaUsers } from "react-icons/fa";
@@ -18,6 +19,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
   const [activeGroupCode] = useState(() => loadGroupCode());
   const apiBase = getApiBase();
   const { sessionId } = useAuth();
+  const t = useT();
   useWebSocket();
 
   // Warm the static cartella-layout cache while the player is picking a stake,
@@ -85,7 +87,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
           </div>
         </div>
 
-        <main className="px-4 pb-32 pt-16">
+        <main className="px-4 pb-24 pt-16">
           {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -93,15 +95,15 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             transition={{ duration: 0.5 }}
             className="text-center mb-10 mt-4"
           >
-            {/* <div className="relative inline-block mb-4">
+            <div className="relative inline-block mb-4">
               <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 backdrop-blur border border-white/20 flex items-center justify-center shadow-xl">
                 <span className="text-4xl">🎲</span>
               </div>
-            </div> */}
+            </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              Let's Play Bingo!
+              {t("game.lets_play")}
             </h1>
-            <p className="text-white/40 text-sm">Select your stake amount</p>
+            <p className="text-white/40 text-sm">{t("game.select_stake")}</p>
           </motion.div>
 
           {/* Stake Cards */}
@@ -120,7 +122,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
             >
               <div className="absolute -top-1 -right-1 z-50">
                 <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[8px] font-bold px-2 py-0.5 rounded-bl-lg rounded-tr-lg">
-                  POPULAR
+                  {t("game.popular")}
                 </div>
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -136,16 +138,16 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                       </span>
                       <span className="text-[10px] text-white/30">
                         {" "}
-                        Good Choice{" "}
+                        {t("game.good_choice")}{" "}
                       </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
-                      Most players choice
+                      {t("game.most_players")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
-                  <span>Play</span>
+                  <span>{t("game.play")}</span>
                   <CiPlay1 size={14} />
                 </div>
               </div>
@@ -170,16 +172,16 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                         20 ETB
                       </span>
                       <span className="text-[10px] text-yellow-400/70">
-                        Best Value
+                        {t("game.best_value")}
                       </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
-                      Good for regular players
+                      {t("game.good_regular")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-medium">
-                  <span>Play</span>
+                  <span>{t("game.play")}</span>
                   <CiPlay1 size={14} />
                 </div>
               </div>
@@ -204,16 +206,16 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                         50 ETB
                       </span>
                       <span className="text-[10px] text-white/30">
-                        High Stake
+                        {t("game.high_stake")}
                       </span>
                     </div>
                     <p className="text-white/30 text-[10px]">
-                      For high rollers
+                      {t("game.high_rollers")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
-                  <span>Play</span>
+                  <span>{t("game.play")}</span>
                   <CiPlay1 size={14} />
                 </div>
               </div>
@@ -233,10 +235,10 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-emerald-100 font-bold text-sm">
-                    You're in a group ({activeGroupCode})
+                    {t("game.in_group", { code: activeGroupCode })}
                   </div>
                   <p className="text-emerald-200/70 text-[11px] leading-tight">
-                    Tap to rejoin your game.
+                    {t("game.tap_rejoin")}
                   </p>
                 </div>
               </motion.div>
@@ -256,15 +258,15 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   </div>
                   <div>
                     <div className="text-white font-bold text-lg">
-                      Play in a Group
+                      {t("game.play_in_group")}
                     </div>
                     <p className="text-white/40 text-[10px]">
-                      Create or join a private game with friends
+                      {t("game.create_join")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-medium">
-                  <span>Open</span>
+                  <span>{t("game.open")}</span>
                   <CiPlay1 size={14} />
                 </div>
               </div>
@@ -283,7 +285,9 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 <div className="px-3 py-2 flex items-center gap-2 border-b border-white/5">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <div className="flex items-center justify-between gap-5">
-                    <p className="text-white text-sm uppercase">Announcement</p>
+                    <p className="text-white text-sm uppercase">
+                      {t("game.announcement")}
+                    </p>
                     <p className="text-white/50 text-xs">
                       {new Date(adminPost.createdAt).toLocaleString()}
                     </p>
@@ -294,7 +298,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <img
                     src={adminPost.url}
                     alt={adminPost.caption || "Announcement"}
-                    className="w-full aspect-auto object-cover"
+                    className="w-full h-36 object-cover"
                     onError={(e) => {
                       e.target.src = lbLogo;
                       e.target.alt = "Lekulu Bingo Logo";
@@ -303,7 +307,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                 ) : (
                   <video
                     src={adminPost.url}
-                    className="w-full aspect-auto object-cover"
+                    className="w-full h-36 object-cover"
                     controls
                     muted
                     playsInline
@@ -346,15 +350,15 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
         <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
           <span className="text-3xl">⚠️</span>
         </div>
-        <h2 className="text-white text-lg font-bold mb-1">Navigation Error</h2>
-        <p className="text-white/40 text-xs mb-4">
-          You have a stake selected but are on the wrong page.
-        </p>
+        <h2 className="text-white text-lg font-bold mb-1">
+          {t("game.nav_error")}
+        </h2>
+        <p className="text-white/40 text-xs mb-4">{t("game.nav_error_desc")}</p>
         <button
           onClick={() => onNavigate?.("cartela-selection")}
           className="px-5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium shadow-lg shadow-amber-500/30 hover:scale-105 transition-all active:scale-95"
         >
-          Go to Cartella Selection →
+          {t("game.go_cartela")}
         </button>
       </motion.div>
     </div>

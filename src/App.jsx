@@ -7,7 +7,7 @@ import GameLayout from "./pages/GameLayout.jsx";
 import Winner from "./pages/Winner.jsx";
 import GroupHub from "./pages/Grouphub.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
-import { LanguageProvider } from "./contexts/Languagecontext.jsx";
+import { LanguageProvider } from "./contexts/LanguageContext.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
   WebSocketProvider,
