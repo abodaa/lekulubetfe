@@ -276,7 +276,7 @@ export default function Wallet({ onNavigate }) {
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.main?.toLocaleString() || 0}{" "}
-                <span className="text-white/40 text-sm">ETB</span>
+                <span className="text-white/40 text-sm">{t("common.etb")}</span>
               </div>
             </div>
 
@@ -297,7 +297,7 @@ export default function Wallet({ onNavigate }) {
               </div>
               <div className="text-white text-2xl font-bold">
                 {wallet.bonus?.toLocaleString() || 0}{" "}
-                <span className="text-white/40 text-sm">ETB</span>
+                <span className="text-white/40 text-sm">{t("common.etb")}</span>
               </div>
               <div className="text-white/30 text-xs mt-1">
                 {t("wallet.bonus_hint")}
@@ -395,7 +395,7 @@ export default function Wallet({ onNavigate }) {
                               {isPositive
                                 ? `+${transaction.amount}`
                                 : `${transaction.amount}`}{" "}
-                              ETB
+                              {t("common.etb")}
                             </p>
                             <p className="text-white/40 text-[9px] uppercase">
                               {transaction.status === "completed" || isPositive

@@ -944,7 +944,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   Derash
                 </span>
                 <span className="text-amber-300 font-extrabold text-sm leading-tight whitespace-nowrap">
-                  {currentPrizePool || 0} ETB
+                  {currentPrizePool || 0} {t("common.etb")}
                 </span>
               </div>
 

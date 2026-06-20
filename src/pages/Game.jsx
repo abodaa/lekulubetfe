@@ -119,7 +119,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-bold text-lg">
-                        10 ETB
+                        10 {t("common.etb")}
                       </span>
                       <span className="text-[10px] text-white/30">
                         {" "}
@@ -154,7 +154,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-bold text-lg">
-                        20 ETB
+                        20 {t("common.etb")}
                       </span>
                       <span className="text-[10px] text-yellow-400/70">
                         {t("game.best_value")}
@@ -188,7 +188,7 @@ export default function Game({ onNavigate, onStakeSelected, selectedStake }) {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-bold text-lg">
-                        50 ETB
+                        50 {t("common.etb")}
                       </span>
                       <span className="text-[10px] text-white/30">
                         {t("game.high_stake")}

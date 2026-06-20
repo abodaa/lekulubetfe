@@ -296,7 +296,7 @@ export default function History({ onNavigate }) {
                             {t("history.stake")}
                           </span>
                           <span className="text-white ml-1">
-                            {game?.stake || 0} ETB
+                            {game?.stake || 0} {t("common.etb")}
                           </span>
                         </div>
                         <div>
@@ -304,7 +304,7 @@ export default function History({ onNavigate }) {
                             {t("history.prize")}
                           </span>
                           <span className="text-green-400 ml-1">
-                            {game?.userResult?.prize || 0} ETB
+                            {game?.userResult?.prize || 0} {t("common.etb")}
                           </span>
                         </div>
                       </div>

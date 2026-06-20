@@ -595,7 +595,7 @@ export default function CartelaSelection({
           <p className="text-white/80 text-lg font-medium">
             Loading cartellas...
           </p>
-          <p className="text-white/40 text-sm mt-1">Stake: {stake} ETB</p>
+          <p className="text-white/40 text-sm mt-1">Stake: {stake} {t("common.etb")}</p>
         </div>
       </div>
     );

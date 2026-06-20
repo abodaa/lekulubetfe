@@ -134,7 +134,8 @@ export default function Profile({ onNavigate }) {
           totalRewards: inviteRes.totalRewards || 0,
           totalDepositsFromInvited: inviteRes.totalDepositsFromInvited || 0,
           estimatedDepositRewards: inviteRes.estimatedDepositRewards || 0,
-          rewardRate: inviteRes.rewardRate || "1 ETB per registration",
+          rewardRate:
+            inviteRes.rewardRate || `1 ${t("common.etb")} per registration`,
           rewardWallet: inviteRes.rewardWallet || "Main Wallet (Withdrawable)",
           inviteCode: inviteRes.inviteCode || null,
         });
@@ -259,14 +260,14 @@ export default function Profile({ onNavigate }) {
               <StatCard
                 icon={<GiMoneyStack size={16} className="text-blue-400" />}
                 label={t("wallet.main")}
-                value={`${profileData.wallet.main?.toLocaleString() || 0} ETB`}
+                value={`${profileData.wallet.main?.toLocaleString() || 0} ${t("common.etb")}`}
                 sublabel={t("wallet.main_sub")}
               />
 
               <StatCard
                 icon={<FaGift size={16} className="text-amber-400" />}
                 label={t("wallet.bonus")}
-                value={`${profileData.wallet.bonus?.toLocaleString() || 0} ETB`}
+                value={`${profileData.wallet.bonus?.toLocaleString() || 0} ${t("common.etb")}`}
                 sublabel={t("wallet.bonus_sub")}
                 // color="purple"
               />
@@ -359,19 +360,10 @@ export default function Profile({ onNavigate }) {
                     {t("profile.reg_rewards")}
                   </p>
                   <p className="text-green-400 text-lg font-bold">
-                    {inviteStats.totalRewards?.toLocaleString() || 0} ETB
+                    {inviteStats.totalRewards?.toLocaleString() || 0}{" "}
+                    {t("common.etb")}
                   </p>
                 </div>
-                {/* <div className="text-center flex-1">
-                  <p className="text-white/40 text-[9px] uppercase">
-                    Invite Deposits
-                  </p>
-                  <p className="text-amber-400 text-lg font-bold">
-                    {inviteStats.totalDepositsFromInvited?.toLocaleString() ||
-                      0}{" "}
-                    ETB
-                  </p>
-                </div> */}
               </div>
 
               {/* Reward Rate Info */}
@@ -384,7 +376,8 @@ export default function Profile({ onNavigate }) {
                     </span>
                   </div> */}
                   <span className="text-yellow-400 text-xs font-medium">
-                    {inviteStats.rewardRate || "1 ETB per registration"}
+                    {inviteStats.rewardRate ||
+                      `1 ${t("common.etb")} per registration`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-1">
@@ -399,65 +392,6 @@ export default function Profile({ onNavigate }) {
                   </span>
                 </div>
               </div>
-
-              {/* Estimated Rewards */}
-              {/* {inviteStats.estimatedDepositRewards > 0 && (
-                <div className="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 rounded-lg p-2 mb-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/50 text-xs">
-                      Est. Deposit Rewards
-                    </span>
-                    <span className="text-green-400 text-xs font-bold">
-                      +{inviteStats.estimatedDepositRewards.toFixed(2)} ETB
-                    </span>
-                  </div>
-                </div>
-              )} */}
-
-              {/* Invite Code
-              {inviteStats.inviteCode ? (
-                <div className="bg-white/5 rounded-lg p-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FaLink size={12} className="text-white/30" />
-                    <span className="text-white/60 text-xs font-mono">
-                      {inviteStats.inviteCode}
-                    </span>
-                  </div>
-                  <button
-                    onClick={copyInviteLink}
-                    className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-xs hover:bg-white/20 transition-all"
-                  >
-                    Copy Link
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-white/5 rounded-lg p-2 text-center">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await apiFetch(
-                          "/user/generate-invite-code",
-                          {
-                            sessionId,
-                            method: "POST",
-                          },
-                        );
-                        if (res && res.inviteCode) {
-                          setInviteStats((prev) => ({
-                            ...prev,
-                            inviteCode: res.inviteCode,
-                          }));
-                        }
-                      } catch (err) {
-                        console.error("Failed to generate invite code:", err);
-                      }
-                    }}
-                    className="text-yellow-400 text-xs hover:text-yellow-300"
-                  >
-                    Generate Invite Code →
-                  </button>
-                </div>
-              )} */}
             </motion.div>
           </>
         )}
