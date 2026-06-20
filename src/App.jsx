@@ -5,8 +5,9 @@ import Game from "./pages/Game"; // eager: default landing page
 import CartelaSelection from "./pages/CartelaSelection.jsx";
 import GameLayout from "./pages/GameLayout.jsx";
 import Winner from "./pages/Winner.jsx";
-import GroupHub from "./pages/Grouphub.jsx";
+import GroupHub from "./pages/GroupHub.jsx";
 import { AuthProvider } from "./lib/auth/AuthProvider.jsx";
+import { LanguageProvider } from "./contexts/Languagecontext.jsx";
 import { ToastProvider, useToast } from "./contexts/ToastContext.jsx";
 import {
   WebSocketProvider,
@@ -346,11 +347,13 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <WebSocketProvider>
-          <AppContent />
-        </WebSocketProvider>
-      </ToastProvider>
+      <LanguageProvider>
+        <ToastProvider>
+          <WebSocketProvider>
+            <AppContent />
+          </WebSocketProvider>
+        </ToastProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

@@ -160,6 +160,7 @@ export function AuthProvider({ children }) {
           phone: prof.user.phone,
           isRegistered: prof.user.isRegistered,
           role: prof.user.role,
+          language: prof.user.language || "en",
         };
         setUser(merged);
         localStorage.setItem("user", JSON.stringify(merged));
@@ -258,7 +259,7 @@ export function AuthProvider({ children }) {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           {/* Animated Logo */}
           <div className="relative mb-8">
@@ -297,7 +298,7 @@ export function AuthProvider({ children }) {
   // Access restricted
   if (!sessionId || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center px-4">
         <div className="w-full max-w-sm text-center">
           {/* Icon */}
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">

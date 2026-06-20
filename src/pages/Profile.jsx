@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 import { apiFetch } from "../lib/api/client";
 import { motion } from "framer-motion";
 import {
@@ -45,6 +46,7 @@ export default function Profile({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, sessionId, isLoading: authLoading } = useAuth();
+  const { t, lang, setLang } = useLanguage();
 
   const displayName =
     profileData.user?.firstName || user?.firstName || "Player";
@@ -155,7 +157,7 @@ export default function Profile({ onNavigate }) {
       }
     } catch (error) {
       console.error("Failed to fetch profile data:", error);
-      setError(`Failed to load profile. Please try again.`);
+      setError(t("profile.load_error"));
     } finally {
       setLoading(false);
     }
@@ -196,7 +198,7 @@ export default function Profile({ onNavigate }) {
               <FaUserCircle className="text-yellow-400" size={14} />
             </div>
             <span className="text-white/70 text-xs font-medium">
-              MY PROFILE
+              {t("profile.header")}
             </span>
           </div>
         </div>
@@ -223,7 +225,7 @@ export default function Profile({ onNavigate }) {
           <h1 className="text-white text-xl font-bold">{displayName}</h1>
           {profileData.user?.isRegistered && (
             <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-[10px] font-medium">
-              Verified User
+              {t("profile.verified")}
             </span>
           )}
         </motion.div>
@@ -242,7 +244,7 @@ export default function Profile({ onNavigate }) {
               onClick={fetchProfileData}
               className="px-4 py-1.5 rounded-full bg-white/10 text-white text-xs font-medium hover:bg-white/20 transition-all"
             >
-              Try Again
+              {t("common.try_again")}
             </button>
           </div>
         ) : (
@@ -256,39 +258,74 @@ export default function Profile({ onNavigate }) {
             >
               <StatCard
                 icon={<GiMoneyStack size={16} className="text-blue-400" />}
-                label="Main Wallet"
+                label={t("wallet.main")}
                 value={`${profileData.wallet.main?.toLocaleString() || 0} ETB`}
-                sublabel="Withdrawable"
+                sublabel={t("wallet.main_sub")}
               />
 
               <StatCard
                 icon={<FaGift size={16} className="text-amber-400" />}
-                label="Bonus Wallet"
+                label={t("wallet.bonus")}
                 value={`${profileData.wallet.bonus?.toLocaleString() || 0} ETB`}
-                sublabel="Promotional funds"
+                sublabel={t("wallet.bonus_sub")}
                 // color="purple"
               />
               <StatCard
                 icon={<FaCoins size={16} className="text-yellow-400" />}
-                label="Coins"
+                label={t("wallet.coins")}
                 value={profileData.wallet.coins?.toLocaleString() || 0}
-                sublabel="Earned from bets"
+                sublabel={t("wallet.coins_sub")}
                 // color="yellow"
               />
               <StatCard
                 icon={<FaGamepad size={16} className="text-emerald-400" />}
-                label="Games Played"
+                label={t("profile.games_played")}
                 value={profileData.user.totalGamesPlayed.toLocaleString() || 0}
-                sublabel="Games you've played"
+                sublabel={t("profile.games_played_sub")}
                 // color="green"
               />
               <StatCard
                 icon={<FaTrophy size={16} className="text-yellow-400" />}
-                label="Games Won"
+                label={t("profile.games_won")}
                 value={profileData.user.totalGamesWon.toLocaleString() || 0}
-                sublabel="Games you've won"
+                sublabel={t("profile.games_won_sub")}
                 // color="yellow"
               />
+            </motion.div>
+
+            {/* Language Switcher */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.12 }}
+              className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4 mb-4"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <span className="text-xs">🌐</span>
+                </div>
+                <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
+                  {t("lang.title")}
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { code: "en", label: t("lang.english") },
+                  { code: "am", label: t("lang.amharic") },
+                ].map((opt) => (
+                  <button
+                    key={opt.code}
+                    onClick={() => setLang(opt.code)}
+                    className={`py-2 rounded-lg text-sm font-medium border transition-all ${
+                      lang === opt.code
+                        ? "bg-amber-500/20 border-amber-400/40 text-amber-300"
+                        : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </motion.div>
 
             {/* Invite Stats Section */}
@@ -303,21 +340,23 @@ export default function Profile({ onNavigate }) {
                   <FaUsers size={12} className="text-amber-400" />
                 </div>
                 <h3 className="text-white/70 text-xs font-medium uppercase tracking-wider">
-                  Referral Program
+                  {t("profile.referral")}
                 </h3>
               </div>
 
               {/* Stats Row */}
               <div className="flex justify-between items-center mb-3">
                 <div className="text-center flex-1">
-                  <p className="text-white/40 text-[9px] uppercase">Invites</p>
+                  <p className="text-white/40 text-[9px] uppercase">
+                    {t("profile.invites")}
+                  </p>
                   <p className="text-white text-lg font-bold">
                     {inviteStats.totalInvites || 0}
                   </p>
                 </div>
                 <div className="text-center flex-1 border-x border-white/10">
                   <p className="text-white/40 text-[9px] uppercase">
-                    Invitee Registration Rewards
+                    {t("profile.reg_rewards")}
                   </p>
                   <p className="text-green-400 text-lg font-bold">
                     {inviteStats.totalRewards?.toLocaleString() || 0} ETB
@@ -351,7 +390,9 @@ export default function Profile({ onNavigate }) {
                 <div className="flex items-center justify-between mt-1">
                   <div className="flex items-center gap-2">
                     <FaMoneyBillWave size={10} className="text-emerald-400" />
-                    <span className="text-white/50 text-xs">Credited to</span>
+                    <span className="text-white/50 text-xs">
+                      {t("profile.credited_to")}
+                    </span>
                   </div>
                   <span className="text-emerald-400 text-xs font-medium">
                     {inviteStats.rewardWallet || "Main Wallet (Withdrawable)"}
