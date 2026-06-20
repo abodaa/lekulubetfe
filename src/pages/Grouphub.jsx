@@ -18,30 +18,6 @@ const PAGE_BG =
 const CARD =
   "rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.35)]";
 
-function StakePills({ value, onChange, disabled }) {
-  return (
-    <div className="grid grid-cols-3 gap-2">
-      {STAKES.map((s) => {
-        const active = Number(value) === s;
-        return (
-          <button
-            key={s}
-            disabled={disabled}
-            onClick={() => onChange(s)}
-            className={`py-3 rounded-xl border font-bold transition-all ${
-              active
-                ? "bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 border-amber-300/50 shadow-[0_4px_14px_rgba(245,158,11,0.35)]"
-                : "bg-white/5 border-white/15 text-white/80 hover:bg-white/10"
-            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {s} ETB
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function GroupHub({ onNavigate }) {
   const {
     group,
@@ -68,6 +44,30 @@ export default function GroupHub({ onNavigate }) {
   const [createStake, setCreateStake] = useState(10);
   const [joinCode, setJoinCode] = useState("");
   const [rejoining, setRejoining] = useState(() => !!loadGroupCode());
+
+  function StakePills({ value, onChange, disabled }) {
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {STAKES.map((s, t) => {
+          const active = Number(value) === s;
+          return (
+            <button
+              key={s}
+              disabled={disabled}
+              onClick={() => onChange(s)}
+              className={`py-3 rounded-xl border font-bold transition-all ${
+                active
+                  ? "bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 border-amber-300/50 shadow-[0_4px_14px_rgba(245,158,11,0.35)]"
+                  : "bg-white/5 border-white/15 text-white/80 hover:bg-white/10"
+              } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+            >
+              {s} {t("common.etb")}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   // Surface server-side group events as toasts.
   useEffect(() => {
@@ -264,7 +264,7 @@ export default function GroupHub({ onNavigate }) {
               </span>
               {!isOwner && (
                 <span className="text-amber-300 font-bold">
-                  {group.stake} ETB
+                  {group.stake} {t("common.etb")}
                 </span>
               )}
             </div>
@@ -501,7 +501,8 @@ export default function GroupHub({ onNavigate }) {
                           {g.code}
                         </div>
                         <div className="text-xs text-white/50 truncate">
-                          {g.ownerName} · {g.stake} ETB · {g.memberCount}{" "}
+                          {g.ownerName} · {g.stake} {t("common.etb")} ·{" "}
+                          {g.memberCount}{" "}
                           {g.memberCount === 1
                             ? t("gh.player_one")
                             : t("gh.player_many")}
