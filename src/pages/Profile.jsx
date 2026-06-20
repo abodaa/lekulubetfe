@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
-import { useLanguage } from "../contexts/LanguageContext";
+import { useLanguage } from "../contexts/Languagecontext";
 import { apiFetch } from "../lib/api/client";
 import { motion } from "framer-motion";
 import {

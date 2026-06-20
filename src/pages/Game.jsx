@@ -7,7 +7,7 @@ import { apiFetch, getApiBase } from "../lib/api/client";
 import { prefetchCartellas } from "../lib/cartellaCache";
 import { loadGroupCode } from "../lib/groupSession";
 import { motion } from "framer-motion";
-import { useT } from "../contexts/LanguageContext";
+import { useT } from "../contexts/Languagecontext";
 import { GrInfo } from "react-icons/gr";
 import { CiPlay1 } from "react-icons/ci";
 import { FaCoins, FaCrown, FaRocket, FaUsers } from "react-icons/fa";

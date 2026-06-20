@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
-import { useT } from "../contexts/LanguageContext";
+import { useT } from "../contexts/Languagecontext";
 import CartellaCard from "../components/CartellaCard";
 import { FaTrophy, FaCrown, FaClock } from "react-icons/fa";
 import { GiConfirmed, GiTrophyCup } from "react-icons/gi";

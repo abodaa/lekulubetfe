@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { apiFetch } from "../lib/api/client";
-import { useT } from "../contexts/LanguageContext";
+import { useT } from "../contexts/Languagecontext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaTrophy,

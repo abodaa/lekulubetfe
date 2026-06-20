@@ -1,7 +1,7 @@
 import React from "react";
 import { CgProfile } from "react-icons/cg";
 import { GiPlayButton, GiTrophy, GiWallet, GiPlayer } from "react-icons/gi";
-import { useT } from "../contexts/LanguageContext";
+import { useT } from "../contexts/Languagecontext";
 
 const tabs = [
   { key: "game", labelKey: "nav.play", icon: <GiPlayButton size={18} /> },
