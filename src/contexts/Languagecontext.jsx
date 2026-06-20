@@ -6,7 +6,7 @@ import {
   useEffect,
 } from "react";
 import { translations, translate } from "../lib/locales/translations";
-import { apiFetch } from "../api/client";
+import { apiFetch } from "../lib/api/client";
 
 function readInitialLang() {
   try {
