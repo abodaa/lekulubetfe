@@ -9,6 +9,7 @@ import CartellaCard from "../components/CartellaCard";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
+import { useT } from "../contexts/Languagecontext";
 import {
   playNumberSound,
   preloadNumberSounds,
@@ -52,6 +53,7 @@ const MemoizedCartellaCard = React.memo(
 export default function GameLayout({ stake, onNavigate }) {
   const { sessionId } = useAuth();
   const { showSuccess, showError, showWarning } = useToast();
+  const t = useT();
   const [showTimeout, setShowTimeout] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertBanners, setAlertBanners] = useState([]);
@@ -216,7 +218,7 @@ export default function GameLayout({ stake, onNavigate }) {
       }
 
       if (numbers.length > 0) {
-        showSuccess(`Game synced: ${numbers.length} numbers restored`);
+        showSuccess(t("gl.game_synced", { n: numbers.length }));
       }
     };
 
@@ -339,12 +341,12 @@ export default function GameLayout({ stake, onNavigate }) {
   const handleCartellaBingo = useCallback(
     async (cardNumber) => {
       if (!connected || gameState.phase !== "running" || !currentGameId) {
-        showError("Cannot claim BINGO right now");
+        showError(t("gl.cannot_claim"));
         return;
       }
 
       if (claimedCartellasRef.current.has(cardNumber)) {
-        showError(`Cartella #${cardNumber} already won`);
+        showError(t("gl.already_won", { n: cardNumber }));
         return;
       }
 
@@ -356,7 +358,7 @@ export default function GameLayout({ stake, onNavigate }) {
       const entry = (yourCards || []).find((c) => c.cardNumber === cardNumber);
       const cardData = entry?.card;
       if (!cardData || !checkBingoPattern(cardData, calledNumbers)) {
-        showError("No Bingo");
+        showError(t("gl.no_bingo"));
         return;
       }
 
@@ -366,9 +368,9 @@ export default function GameLayout({ stake, onNavigate }) {
         const result = claimBingo({ cardNumber });
 
         if (!result) {
-          showError(`Failed to claim BINGO for Cartella #${cardNumber}`);
+          showError(t("gl.fail_claim", { n: cardNumber }));
         } else {
-          showSuccess(`🎉 BINGO claimed for Cartella #${cardNumber}!`);
+          showSuccess(t("gl.bingo_claimed", { n: cardNumber }));
           claimedCartellasRef.current.add(cardNumber);
           setMissedPatterns((prev) => {
             const newPatterns = { ...prev };
@@ -379,7 +381,7 @@ export default function GameLayout({ stake, onNavigate }) {
         }
       } catch (err) {
         showError(
-          `Failed to claim BINGO for Cartella #${cardNumber} error: ${err.message || err}`,
+          t("gl.fail_claim_err", { n: cardNumber, err: err.message || err }),
         );
       } finally {
         setClaimingStates((prev) => ({ ...prev, [cardNumber]: false }));
@@ -447,7 +449,7 @@ export default function GameLayout({ stake, onNavigate }) {
       );
 
       if (gameState.youWon) {
-        showSuccess(`🎉 Congratulations! You won ${gameState.yourPrize} ETB!`);
+        showSuccess(t("gl.congrats_won", { prize: gameState.yourPrize }));
         setWallet((prev) => ({
           ...prev,
           main: (prev.main || 0) + (gameState.yourPrize || 0),
@@ -483,11 +485,11 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (startCountdown <= 0) return;
-    const t = setTimeout(
+    const timer = setTimeout(
       () => setStartCountdown((prev) => (prev > 0 ? prev - 1 : 0)),
       1000,
     );
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [startCountdown]);
 
   const handleRefresh = async () => {
@@ -500,7 +502,7 @@ export default function GameLayout({ stake, onNavigate }) {
         await new Promise((r) => setTimeout(r, 500));
       }
     } catch {
-      showError("Failed to refresh game state.");
+      showError(t("gl.fail_refresh"));
     } finally {
       setIsRefreshing(false);
     }
@@ -508,8 +510,8 @@ export default function GameLayout({ stake, onNavigate }) {
 
   useEffect(() => {
     if (!currentGameId) {
-      const t = setTimeout(() => setShowTimeout(true), 5000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setShowTimeout(true), 5000);
+      return () => clearTimeout(timer);
     } else setShowTimeout(false);
   }, [currentGameId]);
 
@@ -567,18 +569,18 @@ export default function GameLayout({ stake, onNavigate }) {
     });
     alertBanners.forEach((msg) => {
       if (!alertTimersRef.current.has(msg)) {
-        const t = setTimeout(() => {
+        const timer = setTimeout(() => {
           setAlertBanners((prev) => prev.filter((m) => m !== msg));
           alertTimersRef.current.delete(msg);
         }, 3000);
-        alertTimersRef.current.set(msg, t);
+        alertTimersRef.current.set(msg, timer);
       }
     });
   }, [alertBanners]);
 
   useEffect(() => {
     return () => {
-      alertTimersRef.current.forEach((t) => clearTimeout(t));
+      alertTimersRef.current.forEach((timer) => clearTimeout(timer));
       alertTimersRef.current.clear();
     };
   }, []);
@@ -701,7 +703,9 @@ export default function GameLayout({ stake, onNavigate }) {
       <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
-          <p className="text-white/80 text-lg font-bold">Refreshing...</p>
+          <p className="text-white/80 text-lg font-bold">
+            {t("gl.refreshing")}
+          </p>
         </div>
       </div>
     );
@@ -712,14 +716,16 @@ export default function GameLayout({ stake, onNavigate }) {
       <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
-          <div className="text-white text-lg font-bold mb-2">Connecting...</div>
+          <div className="text-white text-lg font-bold mb-2">
+            {t("gl.connecting")}
+          </div>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4" />
           {showTimeout && (
             <button
               onClick={() => onNavigate?.("cartela-selection")}
               className="px-6 py-3 bg-amber-500 text-slate-900 rounded-lg font-bold"
             >
-              Back
+              {t("common.back")}
             </button>
           )}
         </div>
@@ -791,7 +797,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   setAlertBanners((prev) => prev.filter((_, j) => j !== i))
                 }
                 className="alert-dismiss-btn"
-                aria-label="Dismiss"
+                aria-label={t("gl.dismiss")}
               >
                 <svg
                   className="w-4 h-4"
@@ -816,14 +822,15 @@ export default function GameLayout({ stake, onNavigate }) {
         {group?.code && (
           <div className="mx-3 mt-2 -mb-1 flex items-center justify-between rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5">
             <span className="flex items-center gap-2 text-amber-200 text-[11px] font-semibold">
-              <span className="opacity-70">Group</span>
+              <span className="opacity-70">{t("common.group")}</span>
               <span className="tracking-[0.2em] font-extrabold text-amber-300">
                 {group.code}
               </span>
             </span>
             <span className="text-amber-100/80 text-[11px] font-semibold">
               {(group.members || []).filter((m) => m.online).length}/
-              {group.memberCount || (group.members || []).length} players
+              {group.memberCount || (group.members || []).length}{" "}
+              {t("gh.player_many")}
             </span>
           </div>
         )}
@@ -832,8 +839,8 @@ export default function GameLayout({ stake, onNavigate }) {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => onNavigate?.("game", true)}
-                aria-label="Back to stake selection"
-                title="Leave game"
+                aria-label={t("gl.back_aria")}
+                title={t("gl.leave_game")}
                 className="w-7 h-7 rounded-full flex items-center justify-center bg-white/15 text-white/80 hover:bg-white/25 transition-colors"
               >
                 <svg
@@ -858,9 +865,9 @@ export default function GameLayout({ stake, onNavigate }) {
                     ? "text-emerald-400 bg-emerald-500/20"
                     : "text-white/70 bg-white/20"
                 }`}
-                aria-label={isSoundOn ? "Mute" : "Unmute"}
+                aria-label={isSoundOn ? t("gl.mute") : t("gl.unmute")}
               >
-                <span>Sound</span>{" "}
+                <span>{t("gl.sound")}</span>{" "}
                 <span className="text-xl">
                   {isSoundOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
                 </span>
@@ -884,7 +891,7 @@ export default function GameLayout({ stake, onNavigate }) {
                 }}
                 className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg font-bold ${isAutoMarkOn ? " text-emerald-400 bg-emerald-500/20" : "text-white/70 bg-white/20"}`}
               >
-                <span>Auto</span>{" "}
+                <span>{t("gl.auto")}</span>{" "}
                 <span className="text-xl">
                   {isAutoMarkOn ? <LiaToggleOnSolid /> : <LiaToggleOffSolid />}
                 </span>
@@ -899,7 +906,7 @@ export default function GameLayout({ stake, onNavigate }) {
             {/* Calls count */}
             <div className="flex-shrink-0">
               <div className="text-white/40 text-[8px] uppercase tracking-widest font-bold">
-                Count
+                {t("gl.count")}
               </div>
               <div className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -911,7 +918,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
             <div className="text-right flex-shrink-0">
               <div className="text-white/40 text-[8px] uppercase tracking-widest font-bold">
-                Game
+                {t("gl.game")}
               </div>
               <div className="text-white/70 text-[10px] font-bold font-mono">
                 {currentGameId ? currentGameId.replace("LB", "#") : "---"}
@@ -1010,7 +1017,7 @@ export default function GameLayout({ stake, onNavigate }) {
                   </div>
                 ) : (
                   <p className="text-white/30 text-[11px] text-center font-medium">
-                    Waiting for first call…
+                    {t("gl.waiting_first")}
                   </p>
                 )}
               </div>
@@ -1020,7 +1027,9 @@ export default function GameLayout({ stake, onNavigate }) {
 
         {!isWatchMode && startCountdown > 0 && calledNumbers.length === 0 && (
           <p className="text-white text-[11px] uppercase tracking-widest font-bold mb-1 text-center">
-            Starts in {startCountdown > 0 ? startCountdown : "0"} secs
+            {t("gl.starts_in", {
+              n: startCountdown > 0 ? startCountdown : "0",
+            })}
           </p>
         )}
 
@@ -1126,14 +1135,14 @@ export default function GameLayout({ stake, onNavigate }) {
                   <>
                     <button
                       onClick={() => swiperRef.current?.slidePrev()}
-                      aria-label="Previous cartella"
+                      aria-label={t("gl.prev_cartella")}
                       className="absolute -left-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-white/10 text-white/80 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 active:scale-95 transition-all"
                     >
                       <MdKeyboardArrowLeft size={22} />
                     </button>
                     <button
                       onClick={() => swiperRef.current?.slideNext()}
-                      aria-label="Next cartella"
+                      aria-label={t("gl.next_cartella")}
                       className="absolute -right-1 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-slate-900/90 border-2 border-white/10 text-white/80 flex items-center justify-center shadow-[0_2px_12px_rgba(0,0,0,0.6)] hover:bg-slate-900 active:scale-95 transition-all"
                     >
                       <MdKeyboardArrowRight size={22} />
@@ -1150,22 +1159,22 @@ export default function GameLayout({ stake, onNavigate }) {
                     </div>
                   </div>
                   <h3 className="text-white text-xl font-black mb-2 tracking-wide">
-                    Watch Mode
+                    {t("gl.watch_mode")}
                   </h3>
                   <p className="text-white/40 text-sm font-bold mb-4">
-                    Game currently in progress
+                    {t("gl.watch_in_progress")}
                   </p>
                   <div className="flex items-center justify-center gap-4 mb-6">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span className="text-white/30 text-xs font-bold">
-                        Live
+                        {t("gl.live")}
                       </span>
                     </div>
                     <div className="text-white/10">|</div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-white/30 text-xs font-bold">
-                        Players
+                        {t("cs.players_label")}
                       </span>
                       <span className="text-white/50 text-xs font-extrabold">
                         {gameState.takenCards?.length || 0}
@@ -1179,11 +1188,10 @@ export default function GameLayout({ stake, onNavigate }) {
                       </span>
                       <div className="text-left">
                         <p className="text-white/60 text-xs font-bold mb-1">
-                          You will automatically join the next available game
+                          {t("gl.auto_join")}
                         </p>
                         <p className="text-white/30 text-[10px] leading-relaxed">
-                          Stay on this screen. When a new round begins, you'll
-                          be taken to cartella selection.
+                          {t("gl.stay_screen")}
                         </p>
                       </div>
                     </div>
@@ -1209,11 +1217,11 @@ export default function GameLayout({ stake, onNavigate }) {
               <div className="flex justify-center mb-1.5">
                 {activeAlreadyClaimed ? (
                   <span className="text-emerald-300 text-[10px] font-bold bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
-                    WON ✓
+                    {t("gl.won")} ✓
                   </span>
                 ) : (
                   <span className="text-red-300 text-[10px] font-bold bg-red-500/20 border border-red-400/30 px-2.5 py-0.5 rounded-full">
-                    MISSED PATTERN
+                    {t("gl.missed_pattern")}
                   </span>
                 )}
               </div>
@@ -1222,7 +1230,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* Active cartella + slide position */}
               <div className="flex flex-col items-center justify-center px-3 py-2 rounded-2xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/10 min-w-[64px] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                 <span className="text-white/40 text-[8px] uppercase tracking-wide leading-none">
-                  Cartella
+                  {t("gl.cartella_label")}
                 </span>
                 <span className="text-white font-extrabold text-base leading-tight">
                   #{activeCardNumber}
@@ -1254,11 +1262,11 @@ export default function GameLayout({ stake, onNavigate }) {
                 }`}
               >
                 {activeIsClaiming
-                  ? "Claiming…"
+                  ? t("gl.claiming")
                   : activeAlreadyClaimed
-                    ? "✓ WON"
+                    ? `✓ ${t("gl.won")}`
                     : isAutoMarkOn
-                      ? "AUTO MARK ON"
+                      ? t("gl.auto_mark_on")
                       : "BINGO!"}
               </button>
             </div>

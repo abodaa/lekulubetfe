@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth/AuthProvider";
 import { useToast } from "../contexts/ToastContext";
 import { useWebSocket } from "../contexts/WebSocketContext";
 import { getCachedCartellas, prefetchCartellas } from "../lib/cartellaCache";
+import { useT } from "../contexts/Languagecontext";
 
 export default function CartelaSelection({
   onNavigate,
@@ -15,6 +16,7 @@ export default function CartelaSelection({
 }) {
   const { sessionId } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
+  const t = useT();
   const [cards, setCards] = useState(() => getCachedCartellas() || []);
   const [loading, setLoading] = useState(() => !getCachedCartellas());
   const [error, setError] = useState(null);
@@ -291,17 +293,20 @@ export default function CartelaSelection({
 
   useEffect(() => {
     if (!lastEvent) return;
-    if (lastEvent.type === "game_cancelled") showWarning("Not Enough Player");
+    if (lastEvent.type === "game_cancelled")
+      showWarning(t("cs.not_enough_player"));
     if (
       lastEvent.type === "selection_rejected" &&
       lastEvent.payload?.reason === "LIMIT_REACHED"
     )
-      showError("Maximum 5 cartellas per game");
+      showError(t("cs.max5"));
     if (
       lastEvent.type === "selection_rejected" &&
       lastEvent.payload?.reason === "INSUFFICIENT_FUNDS"
     )
-      showError(`Insufficient balance. Need ${lastEvent.payload?.needed} ETB`);
+      showError(
+        t("cs.insufficient_need", { needed: lastEvent.payload?.needed }),
+      );
   }, [lastEvent, showError, showWarning]);
 
   useEffect(() => {
@@ -317,14 +322,13 @@ export default function CartelaSelection({
     // timer doesn't flash the banner.
     const waitingForPlayers =
       gameState?.phase === "registration" && countdownZero && !hasSelection;
-    const msg =
-      "Waiting for more players to join — the game will start once enough players are in.";
+    const msg = t("cs.waiting_more");
 
     if (waitingForPlayers) {
-      const t = setTimeout(() => {
+      const timer = setTimeout(() => {
         setAlertBanners((prev) => (prev.includes(msg) ? prev : [...prev, msg]));
       }, 4000);
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
     setAlertBanners((prev) =>
       prev.includes(msg) ? prev.filter((m) => m !== msg) : prev,
@@ -419,7 +423,7 @@ export default function CartelaSelection({
       const cardNum = Number(cardNumber);
 
       if (walletLoading) {
-        showError("Loading wallet information. Please wait a moment.");
+        showError(t("cs.loading_wallet"));
         return;
       }
 
@@ -428,8 +432,7 @@ export default function CartelaSelection({
 
       // Check if game is in registration phase
       if (gameState.phase !== "registration") {
-        const waitMsg =
-          "Please wait until the current game finishes. You can select cartella when registration starts again.";
+        const waitMsg = t("cs.wait_finish");
         setAlertBanners((prev) =>
           prev.includes(waitMsg) ? prev : [...prev, waitMsg],
         );
@@ -441,18 +444,18 @@ export default function CartelaSelection({
       if (!connected || wsReadyState !== WebSocket.OPEN) {
         // Self-heal: kick off a reconnect so the next tap goes through.
         if (stake) connectToStake(stake);
-        showError("Reconnecting to game server… please try again in a moment.");
+        showError(t("cs.reconnecting"));
         return;
       }
 
       // Check if already selected this card
       if (selectedNumbers.includes(cardNum)) {
-        showError(`Cartella #${cardNum} already selected`);
+        showError(t("cs.already_selected", { n: cardNum }));
         return;
       }
       // Check max cartellas (5)
       if (selectedNumbers.length >= 5) {
-        showError(`Maximum 5 cartellas per game reached`);
+        showError(t("cs.max5_reached"));
         return;
       }
 
@@ -466,7 +469,7 @@ export default function CartelaSelection({
             ? prev
             : [...prev, "This cartella is already taken."],
         );
-        showError("This cartella is already taken.");
+        showError(t("cs.taken"));
         return;
       }
 
@@ -488,7 +491,11 @@ export default function CartelaSelection({
       );
 
       if (totalBalance < totalNeeded) {
-        const msg = `Insufficient balance. Need ${totalNeeded} ETB for ${newTotalCount} cartella(s). You have ${totalBalance.toLocaleString()} ETB.`;
+        const msg = t("cs.insufficient_detail", {
+          needed: totalNeeded,
+          count: newTotalCount,
+          have: totalBalance.toLocaleString(),
+        });
         setAlertBanners((prev) => [...prev, msg]);
         showError(msg);
         return;
@@ -499,7 +506,7 @@ export default function CartelaSelection({
       setPending((p) => ({ ...p, [cardNum]: "add" }));
     } catch (err) {
       console.error("Error selecting cartella:", err);
-      showError("Failed to select cartella.");
+      showError(t("cs.fail_select"));
     } finally {
       setTimeout(() => {
         isSelectingRef.current = false;
@@ -513,12 +520,12 @@ export default function CartelaSelection({
     const selectedNumbers = effectiveSelections;
 
     if (!selectedNumbers.includes(cardNum)) {
-      showError(`Cartella #${cardNum} not selected`);
+      showError(t("cs.not_selected", { n: cardNum }));
       return;
     }
 
     if (gameState.phase !== "registration") {
-      showError("Cannot remove cartella after game has started");
+      showError(t("cs.cannot_remove"));
       return;
     }
 
@@ -528,7 +535,7 @@ export default function CartelaSelection({
     } catch (err) {
       console.error("Error removing cartella:", err);
 
-      showError("Failed to remove cartella.");
+      showError(t("cs.fail_remove"));
     }
   };
 
@@ -573,7 +580,7 @@ export default function CartelaSelection({
         }
       }
     } catch (e) {
-      showError("Couldn't refresh — check your connection.");
+      showError(t("cs.fail_refresh"));
     } finally {
       setTimeout(() => setRefreshing(false), 600);
     }
@@ -601,16 +608,14 @@ export default function CartelaSelection({
         <div className="text-center max-w-sm">
           <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-white text-xl font-bold mb-2">
-            Connection Error
+            {t("cs.conn_error")}
           </h2>
-          <p className="text-white/60 mb-6">
-            {error || "Couldn't load cartellas. Please retry."}
-          </p>
+          <p className="text-white/60 mb-6">{error || t("cs.load_fail")}</p>
           <button
             onClick={() => setRetryCount((c) => c + 1)}
             className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/20 transition-all"
           >
-            🔄 Retry
+            🔄 {t("common.retry")}
           </button>
         </div>
       </div>
@@ -647,14 +652,15 @@ export default function CartelaSelection({
         {group?.code && (
           <div className="mx-4 mt-3 -mb-1 flex items-center justify-between rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2">
             <span className="flex items-center gap-2 text-amber-200 text-xs font-semibold">
-              <span className="opacity-70">Group</span>
+              <span className="opacity-70">{t("common.group")}</span>
               <span className="tracking-[0.2em] font-extrabold text-amber-300">
                 {group.code}
               </span>
             </span>
             <span className="text-amber-100/80 text-xs font-semibold">
               {(group.members || []).filter((m) => m.online).length}/
-              {group.memberCount || (group.members || []).length} players
+              {group.memberCount || (group.members || []).length}{" "}
+              {t("gh.player_many")}
             </span>
           </div>
         )}
@@ -717,14 +723,14 @@ export default function CartelaSelection({
                     d="M10 19l-7-7m0 0l7-7m-7 7h18"
                   />
                 </svg>
-                Back
+                {t("common.back")}
               </button>
 
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                aria-label="Refresh"
-                title="Refresh"
+                aria-label={t("gh.refresh")}
+                title={t("gh.refresh")}
                 className="flex items-center justify-center h-[38px] w-[38px] rounded-xl bg-white/10 border border-white/20 text-white/70 hover:bg-white/20 hover:text-white transition-all disabled:opacity-60"
               >
                 <svg
@@ -753,7 +759,7 @@ export default function CartelaSelection({
               }`}
             >
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Timer
+                {t("cs.timer")}
               </div>
               <div
                 className={`text-2xl font-extrabold font-mono ${
@@ -791,7 +797,7 @@ export default function CartelaSelection({
             </div> */}
             <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Main
+                {t("cs.main")}
               </div>
               <div className="text-white font-bold text-sm">
                 {walletLoading
@@ -801,7 +807,7 @@ export default function CartelaSelection({
             </div>
             <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-xs uppercase tracking-wider">
-                Bonus
+                {t("cs.bonus")}
               </div>
               <div className="text-white font-bold text-sm">
                 {walletLoading
@@ -811,13 +817,13 @@ export default function CartelaSelection({
             </div>
             <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Stake
+                {t("gh.stake")}
               </div>
               <div className="text-white font-bold text-sm">{stake}</div>
             </div>
             <div className="bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 rounded-xl p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
               <div className="text-white/40 text-[10px] uppercase tracking-wider">
-                Players
+                {t("cs.players_label")}
               </div>
               <div className="text-white font-bold text-sm">
                 {gameState.takenCards?.length || 0}
@@ -831,10 +837,10 @@ export default function CartelaSelection({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-white/80 text-sm font-semibold">
-                Select Your Cartella
+                {t("cs.select_your")}
               </h3>
               <span className="text-white/40 text-xs">
-                {totalCartellas} cards
+                {t("cs.cards_count", { n: totalCartellas })}
               </span>
             </div>
             <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.01] backdrop-blur-xl rounded-2xl p-2 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.35)] max-h-[420px] overflow-y-auto">
@@ -885,7 +891,7 @@ export default function CartelaSelection({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                   <h3 className="text-white/80 text-sm font-semibold">
-                    Your Cartellas ({selectedNumbers.length}/5)
+                    {t("cs.your_cartellas", { n: selectedNumbers.length })}
                   </h3>
                 </div>
                 {selectedNumbers.length > 0 && (
@@ -893,7 +899,9 @@ export default function CartelaSelection({
                     onClick={() => {
                       if (
                         confirm(
-                          `Remove all ${selectedNumbers.length} cartellas?`,
+                          t("cs.remove_all_confirm", {
+                            n: selectedNumbers.length,
+                          }),
                         )
                       ) {
                         selectedNumbers.forEach((num) => deselectCartella(num));
@@ -901,7 +909,7 @@ export default function CartelaSelection({
                     }}
                     className="text-red-400 text-xs hover:text-red-300"
                   >
-                    Remove All
+                    {t("cs.remove_all")}
                   </button>
                 )}
               </div>
@@ -919,7 +927,7 @@ export default function CartelaSelection({
                       <button
                         onClick={() => handleRemoveCartella(number)}
                         className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors z-10"
-                        title="Remove cartella"
+                        title={t("cs.remove_cartella_title")}
                       >
                         ✕
                       </button>
@@ -947,10 +955,10 @@ export default function CartelaSelection({
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-center">
                 <div className="text-3xl mb-2">⏳</div>
                 <p className="text-amber-300/80 text-sm font-medium">
-                  Game in progress
+                  {t("cs.game_in_progress")}
                 </p>
                 <p className="text-white/40 text-xs mt-1">
-                  Registration will open after this game ends.
+                  {t("cs.reg_after")}
                 </p>
               </div>
             )}
@@ -959,10 +967,10 @@ export default function CartelaSelection({
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
               <div className="animate-spin w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full mx-auto mb-2" />
               <p className="text-white/70 text-sm font-medium">
-                Connecting to room...
+                {t("cs.connecting_room")}
               </p>
               <p className="text-white/40 text-xs mt-1">
-                Preparing game for stake {stake} ETB
+                {t("cs.preparing_stake", { stake })}
               </p>
             </div>
           )}

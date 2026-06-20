@@ -7,6 +7,7 @@ import GameLayout from "./GameLayout.jsx";
 import Winner from "./Winner.jsx";
 import { prefetchCartellas } from "../lib/cartellaCache";
 import { loadGroupCode, clearGroupCode } from "../lib/groupSession";
+import { useT } from "../contexts/Languagecontext";
 
 const STAKES = [10, 20, 50];
 const GAME_PHASES = ["registration", "starting", "running", "announce"];
@@ -61,6 +62,7 @@ export default function GroupHub({ onNavigate }) {
   } = useWebSocket();
   const { showError, showSuccess, showInfo } = useToast();
   const { sessionId } = useAuth();
+  const t = useT();
 
   const [tab, setTab] = useState("create");
   const [createStake, setCreateStake] = useState(10);
@@ -70,17 +72,17 @@ export default function GroupHub({ onNavigate }) {
   // Surface server-side group events as toasts.
   useEffect(() => {
     const onErr = (e) =>
-      showError(e.detail?.message || "Something went wrong.");
+      showError(e.detail?.message || t("gh.something_wrong"));
     const onClosed = (e) => {
       const r = e.detail?.reason;
-      if (r === "group_dissolved")
-        showInfo("The group was closed by the owner.");
-      else if (r === "group_join_rejected")
-        showError("Your join request was declined.");
-      else if (r === "group_left") showInfo("You left the group.");
+      if (r === "group_dissolved") showInfo(t("gh.closed_by_owner"));
+      else if (r === "group_join_rejected") showError(t("gh.join_declined"));
+      else if (r === "group_left") showInfo(t("gh.you_left"));
     };
     const onReq = (e) =>
-      showInfo(`${e.detail?.name || "Someone"} asked to join`);
+      showInfo(
+        t("gh.asked_to_join", { name: e.detail?.name || t("gh.someone") }),
+      );
     window.addEventListener("groupError", onErr);
     window.addEventListener("groupClosed", onClosed);
     window.addEventListener("groupJoinRequested", onReq);
@@ -146,7 +148,7 @@ export default function GroupHub({ onNavigate }) {
   const copyCode = (code) => {
     try {
       navigator.clipboard?.writeText(code);
-      showSuccess("Code copied");
+      showSuccess(t("gh.code_copied"));
     } catch {
       /* ignore */
     }
@@ -208,16 +210,16 @@ export default function GroupHub({ onNavigate }) {
       >
         <div className={`${CARD} p-8 w-full max-w-sm text-center`}>
           <div className="w-12 h-12 mx-auto mb-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-          <h2 className="text-lg font-bold mb-1">Request sent</h2>
+          <h2 className="text-lg font-bold mb-1">{t("gh.request_sent")}</h2>
           <p className="text-white/60 text-sm mb-6">
-            Waiting for the group owner to approve you
-            {group?.code ? ` (group ${group.code})` : ""}.
+            {t("gh.waiting_approve")}
+            {group?.code ? t("gh.group_suffix", { code: group.code }) : ""}.
           </p>
           <button
             onClick={leaveGroup}
             className="w-full py-3 rounded-xl bg-white/10 border border-white/20 font-semibold hover:bg-white/15"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </div>
@@ -236,7 +238,7 @@ export default function GroupHub({ onNavigate }) {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-white/40 text-[11px] uppercase tracking-wider">
-                Group code
+                {t("gh.group_code")}
               </div>
               <button
                 onClick={() => copyCode(group.code)}
@@ -250,14 +252,16 @@ export default function GroupHub({ onNavigate }) {
               onClick={leaveGroup}
               className="px-3 py-2 rounded-xl bg-rose-500/15 border border-rose-400/30 text-rose-200 text-sm font-semibold hover:bg-rose-500/25"
             >
-              {isOwner ? "Close group" : "Leave"}
+              {isOwner ? t("gh.close_group") : t("gh.leave")}
             </button>
           </div>
 
           {/* Stake */}
           <div className={`${CARD} p-4 mb-3`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-white/80">Stake</span>
+              <span className="text-sm font-semibold text-white/80">
+                {t("gh.stake")}
+              </span>
               {!isOwner && (
                 <span className="text-amber-300 font-bold">
                   {group.stake} ETB
@@ -267,7 +271,7 @@ export default function GroupHub({ onNavigate }) {
             {isOwner ? (
               <StakePills value={group.stake} onChange={setGroupStake} />
             ) : (
-              <p className="text-white/40 text-xs">Set by the group owner.</p>
+              <p className="text-white/40 text-xs">{t("gh.set_by_owner")}</p>
             )}
             {isOwner && (
               <button
@@ -276,7 +280,7 @@ export default function GroupHub({ onNavigate }) {
                 className="flex items-center justify-between w-full mt-3 gap-3 text-left"
               >
                 <span className="text-xs text-white/60">
-                  List this group publicly so anyone can request to join
+                  {t("gh.list_public")}
                 </span>
                 <span
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors duration-200 ${
@@ -296,7 +300,7 @@ export default function GroupHub({ onNavigate }) {
           {/* Members */}
           <div className={`${CARD} p-4 mb-3`}>
             <div className="text-sm font-semibold text-white/80 mb-2">
-              Players ({group.memberCount})
+              {t("gh.players", { n: group.memberCount })}
             </div>
             <div className="space-y-2">
               {(group.members || []).map((m) => (
@@ -313,7 +317,7 @@ export default function GroupHub({ onNavigate }) {
                     <span className="text-sm">{m.name}</span>
                     {m.isOwner && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                        Owner
+                        {t("gh.owner")}
                       </span>
                     )}
                   </span>
@@ -326,7 +330,7 @@ export default function GroupHub({ onNavigate }) {
           {isOwner && (group.pending || []).length > 0 && (
             <div className={`${CARD} p-4 mb-3`}>
               <div className="text-sm font-semibold text-white/80 mb-2">
-                Join requests
+                {t("gh.join_requests")}
               </div>
               <div className="space-y-2">
                 {group.pending.map((p) => (
@@ -340,13 +344,13 @@ export default function GroupHub({ onNavigate }) {
                         onClick={() => approveJoin(p.userId)}
                         className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/30"
                       >
-                        Approve
+                        {t("gh.approve")}
                       </button>
                       <button
                         onClick={() => rejectJoin(p.userId)}
                         className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white/70 text-xs font-semibold hover:bg-white/15"
                       >
-                        Reject
+                        {t("gh.reject")}
                       </button>
                     </div>
                   </div>
@@ -357,7 +361,7 @@ export default function GroupHub({ onNavigate }) {
 
           {!isOwner && (
             <div className="text-center text-white/50 text-sm py-4">
-              Waiting for the owner to start the game…
+              {t("gh.waiting_owner_start")}
             </div>
           )}
         </div>
@@ -368,9 +372,7 @@ export default function GroupHub({ onNavigate }) {
             <div className="max-w-md mx-auto">
               <button
                 onClick={() =>
-                  canStart
-                    ? startGroup()
-                    : showError("Need at least 2 players online to start.")
+                  canStart ? startGroup() : showError(t("gh.need_2"))
                 }
                 disabled={!canStart}
                 className={`w-full py-4 rounded-2xl font-extrabold text-lg transition-all ${
@@ -380,8 +382,8 @@ export default function GroupHub({ onNavigate }) {
                 }`}
               >
                 {canStart
-                  ? `Start game · ${group.stake} ETB`
-                  : `Waiting for players (${onlineCount}/2)`}
+                  ? t("gh.start_game", { stake: group.stake })
+                  : t("gh.waiting_players", { n: onlineCount })}
               </button>
             </div>
           </div>
@@ -398,10 +400,8 @@ export default function GroupHub({ onNavigate }) {
       >
         <div className={`${CARD} p-8 w-full max-w-sm text-center`}>
           <div className="w-12 h-12 mx-auto mb-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-          <h2 className="text-lg font-bold mb-1">Rejoining your group…</h2>
-          <p className="text-white/60 text-sm">
-            Reconnecting you to the game you were in.
-          </p>
+          <h2 className="text-lg font-bold mb-1">{t("gh.rejoining")}</h2>
+          <p className="text-white/60 text-sm">{t("gh.reconnecting")}</p>
         </div>
       </div>
     );
@@ -419,48 +419,45 @@ export default function GroupHub({ onNavigate }) {
           >
             ‹
           </button>
-          <h1 className="text-xl font-extrabold">Play in a Group</h1>
+          <h1 className="text-xl font-extrabold">{t("game.play_in_group")}</h1>
         </div>
 
         {/* Tabs */}
         <div className="grid grid-cols-2 gap-2 mb-4">
-          {["create", "join"].map((t) => (
+          {["create", "join"].map((tabKey) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
               className={`py-2.5 rounded-xl font-semibold capitalize transition-all ${
-                tab === t
+                tab === tabKey
                   ? "bg-white/15 border border-white/25"
                   : "bg-white/5 border border-white/10 text-white/60"
               }`}
             >
-              {t === "create" ? "Create" : "Join"}
+              {tabKey === "create" ? t("gh.create") : t("gh.join")}
             </button>
           ))}
         </div>
 
         {tab === "create" ? (
           <div className={`${CARD} p-5`}>
-            <h2 className="font-bold mb-1">Create a group</h2>
-            <p className="text-white/55 text-sm mb-4">
-              Pick a stake, then share the code with friends. You approve who
-              joins, and you start the game.
-            </p>
+            <h2 className="font-bold mb-1">{t("gh.create_group_h")}</h2>
+            <p className="text-white/55 text-sm mb-4">{t("gh.create_desc")}</p>
             <div className="text-white/70 text-sm font-semibold mb-2">
-              Stake per player
+              {t("gh.stake_per_player")}
             </div>
             <StakePills value={createStake} onChange={setCreateStake} />
             <button
               onClick={() => createGroup(createStake)}
               className="w-full mt-5 py-4 rounded-2xl font-extrabold text-lg bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950 shadow-[0_8px_24px_rgba(245,158,11,0.4)]"
             >
-              Create group
+              {t("gh.create_group_btn")}
             </button>
           </div>
         ) : (
           <div className="space-y-3">
             <div className={`${CARD} p-5`}>
-              <h2 className="font-bold mb-3">Join with a code</h2>
+              <h2 className="font-bold mb-3">{t("gh.join_with_code")}</h2>
               <input
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -472,28 +469,26 @@ export default function GroupHub({ onNavigate }) {
                 onClick={() =>
                   joinCode.length >= 4
                     ? requestJoinGroup(joinCode)
-                    : showError("Enter a valid group code.")
+                    : showError(t("gh.enter_valid_code"))
                 }
                 className="w-full mt-3 py-3 rounded-xl font-bold bg-gradient-to-b from-amber-400 to-amber-500 text-amber-950"
               >
-                Request to join
+                {t("gh.request_to_join")}
               </button>
             </div>
 
             <div className={`${CARD} p-5`}>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-bold">Open groups</h2>
+                <h2 className="font-bold">{t("gh.open_groups")}</h2>
                 <button
                   onClick={listOpenGroups}
                   className="text-xs text-amber-300/80 hover:text-amber-300"
                 >
-                  Refresh
+                  {t("gh.refresh")}
                 </button>
               </div>
               {(openGroups || []).length === 0 ? (
-                <p className="text-white/40 text-sm">
-                  No open groups right now. Create one or join with a code.
-                </p>
+                <p className="text-white/40 text-sm">{t("gh.no_open")}</p>
               ) : (
                 <div className="space-y-2">
                   {openGroups.map((g) => (
@@ -506,15 +501,17 @@ export default function GroupHub({ onNavigate }) {
                           {g.code}
                         </div>
                         <div className="text-xs text-white/50 truncate">
-                          {g.ownerName} · {g.stake} ETB · {g.memberCount} player
-                          {g.memberCount === 1 ? "" : "s"}
+                          {g.ownerName} · {g.stake} ETB · {g.memberCount}{" "}
+                          {g.memberCount === 1
+                            ? t("gh.player_one")
+                            : t("gh.player_many")}
                         </div>
                       </div>
                       <button
                         onClick={() => requestJoinGroup(g.code)}
                         className="px-4 py-2 rounded-lg text-sm font-semibold bg-white/10 border border-white/20 hover:bg-white/15 shrink-0"
                       >
-                        Request
+                        {t("gh.request_btn")}
                       </button>
                     </div>
                   ))}
