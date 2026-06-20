@@ -5,7 +5,7 @@ import {
   useCallback,
   useEffect,
 } from "react";
-import { translations, translate } from "../lib/locales";
+import { translations, translate } from "../lib/locales/translations";
 import { apiFetch } from "../lib/api/client";
 
 function readInitialLang() {
@@ -76,4 +76,3 @@ export function useLanguage() {
 export function useT() {
   return useContext(LanguageContext).t;
 }
-
