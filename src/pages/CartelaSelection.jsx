@@ -775,7 +775,7 @@ export default function CartelaSelection({
             {/* Derash (prize pool) */}
             <div className="px-4 py-2 rounded-xl text-center min-w-[80px] bg-gradient-to-b from-amber-400/20 to-amber-500/5 border border-amber-400/40">
               <div className="text-amber-200/60 text-[10px] uppercase tracking-wider">
-                Derash
+                {t("common.derash")}
               </div>
               <div className="text-2xl font-extrabold text-amber-300 leading-tight">
                 {derashAmount}

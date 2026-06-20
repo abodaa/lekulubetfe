@@ -941,7 +941,7 @@ export default function GameLayout({ stake, onNavigate }) {
               {/* Derash / prize */}
               <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-gradient-to-b from-amber-500/20 to-amber-600/5 border border-amber-400/50 shadow-[0_0_14px_rgba(245,158,11,0.18)] flex-shrink-0">
                 <span className="text-amber-300/70 text-[8px] font-bold uppercase tracking-wide leading-none">
-                  Derash
+                  {t("common.derash")}
                 </span>
                 <span className="text-amber-300 font-extrabold text-sm leading-tight whitespace-nowrap">
                   {currentPrizePool || 0} {t("common.etb")}

@@ -12,6 +12,7 @@ export const translations = {
     "common.close": "Close",
     "common.retry": "Retry",
     "common.etb": "ETB",
+    "common.derash": "Derash",
 
     // Bottom navigation
     "nav.home": "Home",
@@ -251,6 +252,7 @@ export const translations = {
     "common.close": "ዝጋ",
     "common.retry": "እንደገና ሞክር",
     "common.etb": "ብር",
+    "common.derash": "ደራሽ",
 
     // Bottom navigation
     "nav.home": "መነሻ",
