@@ -5,8 +5,9 @@ import {
   useCallback,
   useEffect,
 } from "react";
-import { translations, translate } from "../lib/locales/translations";
+import { translations, translate } from "../lib/locales";
 import { apiFetch } from "../lib/api/client";
+import { useAuth } from "../lib/auth/AuthProvider";
 
 function readInitialLang() {
   try {
@@ -27,22 +28,32 @@ const LanguageContext = createContext({
 });
 
 export function LanguageProvider({ children }) {
+  const { user } = useAuth();
+  // Seed synchronously from the localStorage cache for an instant first paint
+  // (no blocking on the network). The server value reconciles in below.
   const [lang, setLangState] = useState(readInitialLang);
 
-  // If the profile loads later with a language and the user hasn't made an
-  // explicit choice this session, adopt the server value.
+  // Server is the source of truth. `localStorage("lang")` is only a cache used
+  // for instant first paint. Whenever the profile arrives or changes
+  // (user.language, populated by AuthProvider from GET /user/profile), adopt it
+  // and refresh the cache. This adds NO extra network request — it rides on the
+  // profile fetch AuthProvider already performs. Effect re-runs whenever
+  // user.language changes, so a language switched in the Telegram bot shows up
+  // here on the next profile load.
   useEffect(() => {
-    if (localStorage.getItem("lang")) return;
-    try {
-      const u = JSON.parse(localStorage.getItem("user") || "null");
-      if (u?.language === "am" || u?.language === "en")
-        setLangState(u.language);
-    } catch {
-      /* ignore */
-    }
-    // re-run when the cached user changes is not observable here; this runs once
-    // on mount, which is enough because the switcher persists explicit choices.
-  }, []);
+    const serverLang = user?.language;
+    if (serverLang !== "en" && serverLang !== "am") return;
+    setLangState((cur) => {
+      if (cur !== serverLang) {
+        try {
+          localStorage.setItem("lang", serverLang);
+        } catch {
+          /* ignore */
+        }
+      }
+      return serverLang;
+    });
+  }, [user?.language]);
 
   const setLang = useCallback((next) => {
     const v = next === "am" ? "am" : "en";
