@@ -170,7 +170,7 @@ export const translations = {
     "gh.request_btn": "Request",
     "common.group": "Group",
     "cs.not_enough_player": "Not Enough Players",
-    "cs.max5": "Maximum 5 cartellas per game",
+    "cs.max5": "Maximum {max} cartellas per game",
     "cs.insufficient_need": "Insufficient balance. Need {needed} ETB",
     "cs.loading_wallet": "Loading wallet information. Please wait a moment.",
     "cs.wait_finish":
@@ -178,7 +178,7 @@ export const translations = {
     "cs.reconnecting":
       "Reconnecting to game server… please try again in a moment.",
     "cs.already_selected": "Cartella #{n} already selected",
-    "cs.max5_reached": "Maximum 5 cartellas per game reached",
+    "cs.max5_reached": "Maximum {max} cartellas per game reached",
     "cs.taken": "This cartella is already taken.",
     "cs.insufficient_detail":
       "Insufficient balance. Need {needed} ETB for {count} cartella(s). You have {have} ETB.",
@@ -197,7 +197,7 @@ export const translations = {
     "cs.players_label": "Players",
     "cs.select_your": "Select Your Cartella",
     "cs.cards_count": "{n} cards",
-    "cs.your_cartellas": "Your Cartellas ({n}/5)",
+    "cs.your_cartellas": "Your Cartellas ({n}/{max})",
     "cs.remove_all_confirm": "Remove all {n} cartellas?",
     "cs.remove_all": "Remove All",
     "cs.remove_cartella_title": "Remove cartella",
@@ -409,14 +409,14 @@ export const translations = {
     "gh.request_btn": "ጠይቅ",
     "common.group": "ቡድን",
     "cs.not_enough_player": "በቂ ተጫዋቾች የሉም",
-    "cs.max5": "በአንድ ጨዋታ ቢበዛ 5 ካርቴላ",
+    "cs.max5": "በአንድ ጨዋታ ቢበዛ {max} ካርቴላ",
     "cs.insufficient_need": "በቂ ቀሪ ሂሳብ የለም። {needed} ብር ያስፈልጋል",
     "cs.loading_wallet": "የቦርሳ መረጃ በመጫን ላይ። እባክዎ ጥቂት ይጠብቁ።",
     "cs.wait_finish":
       "እባክዎ የአሁኑ ጨዋታ እስኪጠናቀቅ ይጠብቁ። ምዝገባ እንደገና ሲጀምር ካርቴላ መምረጥ ይችላሉ።",
     "cs.reconnecting": "ከጨዋታ አገልጋይ ጋር እንደገና በመገናኘት ላይ… እባክዎ ከጥቂት ጊዜ በኋላ ይሞክሩ።",
     "cs.already_selected": "ካርቴላ #{n} አስቀድሞ ተመርጧል",
-    "cs.max5_reached": "በአንድ ጨዋታ ቢበዛ 5 ካርቴላ ደርሷል",
+    "cs.max5_reached": "በአንድ ጨዋታ ቢበዛ {max} ካርቴላ ደርሷል",
     "cs.taken": "ይህ ካርቴላ አስቀድሞ ተይዟል።",
     "cs.insufficient_detail":
       "በቂ ቀሪ ሂሳብ የለም። ለ{count} ካርቴላ {needed} ብር ያስፈልጋል። ያለዎት {have} ብር ነው።",
@@ -434,7 +434,7 @@ export const translations = {
     "cs.players_label": "ተጫዋቾች",
     "cs.select_your": "ካርቴላዎን ይምረጡ",
     "cs.cards_count": "{n} ካርዶች",
-    "cs.your_cartellas": "የእርስዎ ካርቴላዎች ({n}/5)",
+    "cs.your_cartellas": "የእርስዎ ካርቴላዎች ({n}/{max})",
     "cs.remove_all_confirm": "ሁሉንም {n} ካርቴላዎች ይወገዱ?",
     "cs.remove_all": "ሁሉንም አስወግድ",
     "cs.remove_cartella_title": "ካርቴላ አስወግድ",

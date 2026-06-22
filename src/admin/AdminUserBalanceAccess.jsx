@@ -29,6 +29,9 @@ export default function AdminUserBalanceAccess() {
   const [reason, setReason] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [cartellaInput, setCartellaInput] = useState("");
+  const [isSavingLimit, setIsSavingLimit] = useState(false);
+  const [limitFeedback, setLimitFeedback] = useState(null);
 
   const isDeduct = mode === "deduct";
   const quickAmounts = [10, 20, 50, 100, 200, 500];
@@ -82,6 +85,9 @@ export default function AdminUserBalanceAccess() {
     setAmount("");
     setReason("");
     setFeedback(null);
+    const u = results.find((x) => x.id === userId);
+    setCartellaInput(u && u.maxCartellas != null ? String(u.maxCartellas) : "");
+    setLimitFeedback(null);
   };
 
   const handleAdjustmentSubmit = async (event) => {
@@ -157,6 +163,56 @@ export default function AdminUserBalanceAccess() {
   };
 
   const canReset = amount !== "" || reason.trim() !== "";
+
+  const handleSaveCartellaLimit = async (reset = false) => {
+    if (!selectedUser) return;
+    let payloadValue;
+    if (reset) {
+      payloadValue = null;
+    } else {
+      const n = Number(cartellaInput);
+      if (!Number.isInteger(n) || n < 1 || n > 200) {
+        setLimitFeedback({
+          type: "error",
+          message: "Enter a whole number between 1 and 200 (or Reset).",
+        });
+        return;
+      }
+      payloadValue = n;
+    }
+
+    setIsSavingLimit(true);
+    setLimitFeedback(null);
+
+    try {
+      const response = await apiFetch(
+        `/admin/users/${selectedUser.id}/max-cartellas`,
+        { method: "POST", body: { maxCartellas: payloadValue } },
+      );
+      const saved = response?.user?.maxCartellas ?? null;
+      setResults((prev) =>
+        prev.map((u) =>
+          u.id === selectedUser.id ? { ...u, maxCartellas: saved } : u,
+        ),
+      );
+      setCartellaInput(saved != null ? String(saved) : "");
+      setLimitFeedback({
+        type: "success",
+        message:
+          saved == null
+            ? "Reset to default."
+            : `Cartella limit set to ${saved}.`,
+      });
+    } catch (error) {
+      console.error("Set cartella limit failed:", error);
+      setLimitFeedback({
+        type: "error",
+        message: "Failed to update. Please try again.",
+      });
+    } finally {
+      setIsSavingLimit(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)]">
@@ -388,6 +444,80 @@ export default function AdminUserBalanceAccess() {
                   </div>
                 )}
               </form>
+
+              {/* Cartella Limit */}
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <FaEdit className="text-amber-400" size={9} />
+                  </div>
+                  <h5 className="text-white/60 text-[11px] font-medium uppercase tracking-wider">
+                    Cartella Limit
+                  </h5>
+                  <span className="ml-auto text-white/30 text-[10px]">
+                    Current:{" "}
+                    {selectedUser.maxCartellas != null
+                      ? selectedUser.maxCartellas
+                      : "Default"}
+                  </span>
+                </div>
+                <p className="text-white/30 text-[10px] mb-2">
+                  Max cartellas this user can pick per game. Leave blank for the
+                  global default; set a number to give this player more.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="200"
+                    value={cartellaInput}
+                    onChange={(e) => setCartellaInput(e.target.value)}
+                    placeholder="Default"
+                    className="flex-1 px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-amber-400/50 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCartellaLimit(false)}
+                    disabled={isSavingLimit || cartellaInput === ""}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium flex items-center justify-center gap-1 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100"
+                  >
+                    {isSavingLimit ? (
+                      <FaSpinner className="animate-spin" size={10} />
+                    ) : (
+                      <FaSave size={10} />
+                    )}
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCartellaLimit(true)}
+                    disabled={
+                      isSavingLimit || selectedUser.maxCartellas == null
+                    }
+                    className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white/60 text-xs font-medium flex items-center justify-center gap-1 hover:bg-white/20 transition-all disabled:opacity-50"
+                  >
+                    <FaUndo size={10} />
+                    Default
+                  </button>
+                </div>
+                {limitFeedback && (
+                  <div
+                    className={`mt-2 p-2 rounded-xl text-xs flex items-center gap-2 ${
+                      limitFeedback.type === "error"
+                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    }`}
+                  >
+                    {limitFeedback.type === "error" ? (
+                      <FaExclamationCircle size={12} />
+                    ) : (
+                      <FaCheckCircle size={12} />
+                    )}
+                    {limitFeedback.message}
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

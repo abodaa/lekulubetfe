@@ -14,9 +14,12 @@ export default function CartelaSelection({
   onCartelaSelected,
   onGameIdUpdate,
 }) {
-  const { sessionId } = useAuth();
+  const { sessionId, user } = useAuth();
   const { showError, showSuccess, showWarning } = useToast();
   const t = useT();
+  // Per-user cartella limit (admin-configurable); falls back to 5.
+  const maxCartellas =
+    Number(user?.maxCartellas) > 0 ? Number(user.maxCartellas) : 5;
   const [cards, setCards] = useState(() => getCachedCartellas() || []);
   const [loading, setLoading] = useState(() => !getCachedCartellas());
   const [error, setError] = useState(null);
@@ -299,7 +302,9 @@ export default function CartelaSelection({
       lastEvent.type === "selection_rejected" &&
       lastEvent.payload?.reason === "LIMIT_REACHED"
     )
-      showError(t("cs.max5"));
+      showError(
+        t("cs.max5", { max: lastEvent.payload?.limit || maxCartellas }),
+      );
     if (
       lastEvent.type === "selection_rejected" &&
       lastEvent.payload?.reason === "INSUFFICIENT_FUNDS"
@@ -454,8 +459,8 @@ export default function CartelaSelection({
         return;
       }
       // Check max cartellas (5)
-      if (selectedNumbers.length >= 5) {
-        showError(t("cs.max5_reached"));
+      if (selectedNumbers.length >= maxCartellas) {
+        showError(t("cs.max5_reached", { max: maxCartellas }));
         return;
       }
 
@@ -595,7 +600,7 @@ export default function CartelaSelection({
           <p className="text-white/80 text-lg font-medium">
             Loading cartellas...
           </p>
-          <p className="text-white/40 text-sm mt-1">Stake: {stake} {t("common.etb")}</p>
+          <p className="text-white/40 text-sm mt-1">Stake: {stake} ETB</p>
         </div>
       </div>
     );
@@ -775,7 +780,7 @@ export default function CartelaSelection({
             {/* Derash (prize pool) */}
             <div className="px-4 py-2 rounded-xl text-center min-w-[80px] bg-gradient-to-b from-amber-400/20 to-amber-500/5 border border-amber-400/40">
               <div className="text-amber-200/60 text-[10px] uppercase tracking-wider">
-                {t("common.derash")}
+                Derash
               </div>
               <div className="text-2xl font-extrabold text-amber-300 leading-tight">
                 {derashAmount}
@@ -891,7 +896,10 @@ export default function CartelaSelection({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                   <h3 className="text-white/80 text-sm font-semibold">
-                    {t("cs.your_cartellas", { n: selectedNumbers.length })}
+                    {t("cs.your_cartellas", {
+                      n: selectedNumbers.length,
+                      max: maxCartellas,
+                    })}
                   </h3>
                 </div>
                 {selectedNumbers.length > 0 && (

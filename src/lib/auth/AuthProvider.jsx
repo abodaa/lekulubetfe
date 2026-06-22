@@ -161,6 +161,7 @@ export function AuthProvider({ children }) {
           isRegistered: prof.user.isRegistered,
           role: prof.user.role,
           language: prof.user.language || "en",
+          maxCartellas: prof.user.maxCartellas || 5,
         };
         setUser(merged);
         localStorage.setItem("user", JSON.stringify(merged));
