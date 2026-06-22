@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api/client";
 import { motion, AnimatePresence } from "framer-motion";
+import AdminReferralSettings from "./AdminReferralSettings";
 import {
   FaGift,
   FaPercent,
@@ -182,6 +183,9 @@ export default function AdminPromotions() {
 
   return (
     <div className="max-w-md mx-auto">
+      {/* Referral commission settings */}
+      <AdminReferralSettings />
+
       {/* Create card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
