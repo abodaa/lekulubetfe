@@ -69,6 +69,33 @@ function isTokenExpired(token) {
   }
 }
 
+// The Telegram user id for whoever is currently opening the Mini App. Read
+// synchronously from the Telegram SDK (initDataUnsafe), with a fallback to
+// parsing the raw initData / URL param. Used to detect a different account
+// opening the app on the same device (shared WebView localStorage).
+function readTgUserId() {
+  try {
+    const fromUnsafe = window?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (fromUnsafe) return String(fromUnsafe);
+    const raw =
+      (window?.Telegram?.WebApp?.initData || "").trim() ||
+      new URLSearchParams(window.location.hash.substring(1)).get(
+        "tgWebAppData",
+      ) ||
+      new URLSearchParams(window.location.search).get("tgWebAppData");
+    if (raw) {
+      const userParam = new URLSearchParams(raw).get("user");
+      if (userParam) {
+        const parsed = JSON.parse(userParam);
+        if (parsed?.id) return String(parsed.id);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 async function fetchProfileWithSession(sessionId) {
   if (!sessionId) return null;
   try {
@@ -79,18 +106,33 @@ async function fetchProfileWithSession(sessionId) {
 }
 
 export function AuthProvider({ children }) {
+  // If a different Telegram account is opening the app on this device, the
+  // cached session/user belong to the previous account — don't seed from them.
+  const initialMismatch = (() => {
+    try {
+      const currentTg = readTgUserId();
+      const cachedTg = localStorage.getItem("tgUserId");
+      return !!currentTg && !!cachedTg && currentTg !== cachedTg;
+    } catch {
+      return false;
+    }
+  })();
+
   const [sessionId, setSessionId] = useState(() =>
-    localStorage.getItem("sessionId"),
+    initialMismatch ? null : localStorage.getItem("sessionId"),
   );
   const [user, setUser] = useState(() => {
+    if (initialMismatch) return null;
     const raw = localStorage.getItem("user");
     return raw ? JSON.parse(raw) : null;
   });
-  // Start WITHOUT the loading screen if we already hold a valid token — returning
-  // users render the app on the very first paint; the effect verifies in the
-  // background. Only show the auth screen when there's no usable cached session.
+  // Start WITHOUT the loading screen if we already hold a valid token AND it
+  // belongs to the current Telegram account — returning users render the app on
+  // the very first paint; the effect verifies in the background. Show the auth
+  // flow when there's no usable cached session or a different account opened it.
   const [isLoading, setIsLoading] = useState(() => {
     try {
+      if (initialMismatch) return true;
       const sid = localStorage.getItem("sessionId");
       const usr = localStorage.getItem("user");
       return !(sid && usr && !isTokenExpired(sid));
@@ -146,6 +188,10 @@ export function AuthProvider({ children }) {
       localStorage.setItem("sessionId", out.sessionId);
       setUser(out.user);
       localStorage.setItem("user", JSON.stringify(out.user));
+      // Tie this session to the Telegram account that produced it, so a
+      // different account on the same device is detected on next open.
+      const tg = readTgUserId();
+      if (tg) localStorage.setItem("tgUserId", tg);
       return true;
     };
 
@@ -173,6 +219,10 @@ export function AuthProvider({ children }) {
     const clearSession = () => {
       localStorage.removeItem("sessionId");
       localStorage.removeItem("user");
+      // Drop the account tag and the cached UI language so the next account
+      // doesn't inherit the previous user's session or language on first paint.
+      localStorage.removeItem("tgUserId");
+      localStorage.removeItem("lang");
       setSessionId(null);
       setUser(null);
     };
@@ -181,12 +231,30 @@ export function AuthProvider({ children }) {
       const storedSid = localStorage.getItem("sessionId");
       const storedUser = safeParseUser();
 
+      // Different Telegram account opening on the same device (shared WebView
+      // localStorage)? Drop the previous account's cache and authenticate as the
+      // current one instead of showing the old account until a manual reload.
+      const currentTgId = readTgUserId();
+      const cachedTgId = localStorage.getItem("tgUserId");
+      const accountMismatch =
+        !!currentTgId && !!cachedTgId && currentTgId !== cachedTgId;
+      if (accountMismatch) {
+        clearSession();
+      }
+
       // ---- FAST PATH: valid cached token -> render immediately, verify in bg ----
-      if (storedSid && storedUser && !isTokenExpired(storedSid)) {
+      if (
+        !accountMismatch &&
+        storedSid &&
+        storedUser &&
+        !isTokenExpired(storedSid)
+      ) {
         setIsLoading(false); // open right away
 
         (async () => {
-          const initData = readInitData(); // no waiting on the fast path
+          // Wait briefly for initData so a delayed account switch is still
+          // detected even when the SDK populates it after first paint.
+          const initData = readInitData() || (await waitForInitData());
           let sid = storedSid;
           if (initData) {
             try {
@@ -205,6 +273,8 @@ export function AuthProvider({ children }) {
                   sid = out.sessionId;
                   setSessionId(out.sessionId);
                   localStorage.setItem("sessionId", out.sessionId);
+                  const tg = readTgUserId();
+                  if (tg) localStorage.setItem("tgUserId", tg);
                 }
               }
             } catch {
