@@ -1396,7 +1396,6 @@ export function WebSocketProvider({ children }) {
     </WebSocketContext.Provider>
   );
 }
-
 export function useWebSocket() {
   const context = useContext(WebSocketContext);
   if (!context)
