@@ -46,8 +46,16 @@ function clearStoredGroupCode() {
 }
 
 export function WebSocketProvider({ children }) {
-  const { sessionId } = useAuth();
+  const { sessionId, user } = useAuth();
   const wsRef = useRef(null);
+  // The current user's DB _id (NOT the JWT). Kept in a ref so the socket
+  // message handler (a stable useCallback) always reads the latest value
+  // without being torn down. Winner payloads carry userId = _id, so win
+  // detection must compare against this, never against the session token.
+  const userIdRef = useRef(user?.id != null ? String(user.id) : null);
+  useEffect(() => {
+    userIdRef.current = user?.id != null ? String(user.id) : null;
+  }, [user?.id]);
   const [connected, setConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const connectionAttemptRef = useRef(false);
@@ -501,7 +509,18 @@ export function WebSocketProvider({ children }) {
                     event.payload.totalCartellas || prev.totalCartellas || 200,
                   ...(phase === "registration"
                     ? { currentNumber: null, winners: [] }
-                    : { currentNumber: latestCalled ?? prev.currentNumber }),
+                    : {
+                        currentNumber: latestCalled ?? prev.currentNumber,
+                        // Reconnect during the end-of-game window: adopt the
+                        // winners the server included in the snapshot so we don't
+                        // render an empty "no winner" screen. Otherwise keep
+                        // whatever we already had.
+                        winners:
+                          Array.isArray(event.payload.winners) &&
+                          event.payload.winners.length > 0
+                            ? event.payload.winners
+                            : prev.winners || [],
+                      }),
                 };
 
                 return newState;
@@ -744,18 +763,22 @@ export function WebSocketProvider({ children }) {
                 )
                   return prev;
 
-                const currentUserId = safeSessionId;
-                const userWon = event.payload.winners?.some(
-                  (w) =>
-                    w.userId === currentUserId ||
-                    w.userId?.toString() === currentUserId,
-                );
+                // Compare against the user's DB _id (userIdRef), NOT the JWT.
+                // winner.userId may be a raw id or a populated { _id } object.
+                const currentUserId = userIdRef.current;
+                const winnerIdOf = (w) =>
+                  String(w?.userId?._id ?? w?.userId ?? w?.user?.id ?? "");
+                const userWon =
+                  !!currentUserId &&
+                  event.payload.winners?.some(
+                    (w) => winnerIdOf(w) === currentUserId,
+                  );
                 const userPrize =
-                  event.payload.winners?.find(
-                    (w) =>
-                      w.userId === currentUserId ||
-                      w.userId?.toString() === currentUserId,
-                  )?.prize || 0;
+                  (currentUserId &&
+                    event.payload.winners?.find(
+                      (w) => winnerIdOf(w) === currentUserId,
+                    )?.prize) ||
+                  0;
 
                 // Convert the server's absolute next-start time into a
                 // local-clock deadline so the Winner countdown reads the same on
@@ -1396,6 +1419,7 @@ export function WebSocketProvider({ children }) {
     </WebSocketContext.Provider>
   );
 }
+
 export function useWebSocket() {
   const context = useContext(WebSocketContext);
   if (!context)

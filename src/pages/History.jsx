@@ -59,7 +59,7 @@ export default function History({ onNavigate }) {
           const isWinner = game?.winners?.some((winner) => {
             const winnerId =
               winner?.userId?._id || winner?.userId || winner?.id;
-            return String(winnerId) === String(sessionId);
+            return String(winnerId) === String(user?.id);
           });
 
           // Also check userResult if exists
@@ -74,7 +74,7 @@ export default function History({ onNavigate }) {
             // Calculate prize from winners array
             const winnerInfo = game?.winners?.find((w) => {
               const winnerId = w?.userId?._id || w?.userId || w?.id;
-              return String(winnerId) === String(sessionId);
+              return String(winnerId) === String(user?.id);
             });
             prize = winnerInfo?.prize || 0;
           }

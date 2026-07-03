@@ -9,7 +9,7 @@ import { playBingoSound } from "../lib/audio/numberSounds";
 
 export default function Winner({ onNavigate, onResetToGame }) {
   const { gameState } = useWebSocket();
-  const { sessionId } = useAuth();
+  const { sessionId, user } = useAuth();
   const t = useT();
   const [countdown, setCountdown] = useState(0);
 
@@ -66,13 +66,13 @@ export default function Winner({ onNavigate, onResetToGame }) {
     }
   }, [hasWinners]);
 
+  // Compare against the user's DB _id, not the JWT session token. Winner
+  // payloads carry userId = _id (sometimes populated as { _id }).
+  const myId = user?.id != null ? String(user.id) : null;
   const isCurrentUserWinner =
-    sessionId &&
+    !!myId &&
     winners.some(
-      (w) =>
-        w.userId === sessionId ||
-        w.sessionId === sessionId ||
-        (w.user && w.user.id && w.user.id.toString() === sessionId?.toString()),
+      (w) => String(w?.userId?._id ?? w?.userId ?? w?.user?.id ?? "") === myId,
     );
 
   // No winner state

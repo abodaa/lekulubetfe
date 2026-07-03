@@ -30,7 +30,7 @@ const getCtx = () => {
 const letterFor = (n) =>
   n <= 15 ? "B" : n <= 30 ? "I" : n <= 45 ? "N" : n <= 60 ? "G" : "O";
 const keyFor = (n) => `${letterFor(n)}${n}`;
-const urlFor = (n) => `/sound/${letterFor(n)}${n}.MP3`;
+const urlFor = (n) => `/sound/${letterFor(n)}${n}.mp3`;
 
 // Warm the output path once so the very first real sound has no startup delay.
 const warmOutput = () => {
