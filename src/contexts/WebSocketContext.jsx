@@ -614,7 +614,7 @@ export function WebSocketProvider({ children }) {
                   phase: "running",
                   gameId: event.payload.gameId,
                   playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
+                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
                   calledNumbers:
                     event.payload.calledNumbers || event.payload.called || [],
                   yourCards: cards,
@@ -675,7 +675,7 @@ export function WebSocketProvider({ children }) {
                 return {
                   ...prev,
                   playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
+                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
                 };
               });
               break;
@@ -690,7 +690,7 @@ export function WebSocketProvider({ children }) {
                 return {
                   ...prev,
                   takenCards: event.payload.takenCards || [],
-                  prizePool: event.payload.prizePool,
+                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
                 };
               });
               break;
@@ -707,7 +707,7 @@ export function WebSocketProvider({ children }) {
                   yourSelections:
                     event.payload.selections || prev.yourSelections || [],
                   playersCount: event.payload.playersCount,
-                  prizePool: event.payload.prizePool,
+                  prizePool: event.payload.prizePool ?? prev.prizePool ?? 0,
                 };
               });
               break;
