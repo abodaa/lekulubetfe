@@ -700,7 +700,7 @@ export default function GameLayout({ stake, onNavigate }) {
   // Conditional returns
   if (isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-white mx-auto mb-4" />
           <p className="text-white/80 text-lg font-bold">
@@ -713,7 +713,7 @@ export default function GameLayout({ stake, onNavigate }) {
 
   if (!currentGameId && !connected && !isRefreshing) {
     return (
-      <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl mb-4">🎮</div>
           <div className="text-white text-lg font-bold mb-2">
@@ -769,7 +769,7 @@ export default function GameLayout({ stake, onNavigate }) {
   if (gameState.phase === "announce") return null;
 
   return (
-    <div className="min-h-[var(--app-height)] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col">
+    <div className="min-h-[100dvh] bg-[radial-gradient(110%_70%_at_50%_0%,#16243f_0%,transparent_55%),linear-gradient(180deg,#0e1830_0%,#0a0f1c_55%,#06080f_100%)] flex flex-col">
       {alertBanners.length > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-2 space-y-2">
           {alertBanners.map((msg, i) => (
@@ -818,7 +818,7 @@ export default function GameLayout({ stake, onNavigate }) {
         </div>
       )}
 
-      <div className="max-w-md mx-auto w-full flex flex-col h-[var(--app-height)]">
+      <div className="max-w-md mx-auto w-full flex flex-col h-[100dvh]">
         {group?.code && (
           <div className="mx-3 mt-2 -mb-1 flex items-center justify-between rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5">
             <span className="flex items-center gap-2 text-amber-200 text-[11px] font-semibold">
