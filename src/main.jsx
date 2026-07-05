@@ -6,54 +6,61 @@ import App from "./App.jsx";
 // Keep --app-height in sync with the ACTUAL usable viewport height so full-height
 // screens fit exactly inside Telegram's WebView (the real fix for the 100vh
 // cut-off, the on-screen keyboard, and address-bar resizes on mobile browsers).
-function setAppHeight() {
+function readViewportHeight() {
   const tg = window?.Telegram?.WebApp;
-  // Telegram restores a minimized Mini App in a COLLAPSED state, which shrinks
-  // viewportStableHeight and, because the game layout uses a fixed
-  // h-[var(--app-height)] column, collapses everything below the header.
-  // Re-expand so Telegram reports the full height again.
-  try {
-    if (tg && tg.isExpanded === false) tg.expand();
-  } catch (e) {
-    console.error("Error occurred while expanding Telegram WebApp:", e);
-  }
-  const h =
-    (tg && (tg.viewportStableHeight || tg.viewportHeight)) ||
-    window.innerHeight;
+  // Prefer Telegram's stable height (excludes the area obscured by its UI, which
+  // was the original 100vh cut-off fix); fall back to viewportHeight, then the
+  // WebView's own innerHeight.
+  return (
+    (tg && (tg.viewportStableHeight || tg.viewportHeight)) || window.innerHeight
+  );
+}
+
+function setAppHeight() {
+  const h = readViewportHeight();
   // Ignore transient tiny/zero heights reported mid-collapse so we never shrink
-  // the layout; a correct viewportChanged fires right after expand() completes.
+  // the layout to nothing.
   if (h && h > 200) {
     document.documentElement.style.setProperty("--app-height", `${h}px`);
   }
 }
 
-// Mark ready + expand on first load.
-try {
+// Force Telegram to (re)expand and re-measure. Telegram restores a minimized
+// Mini App collapsed and OFTEN still reports isExpanded === true, so we must
+// call expand() UNCONDITIONALLY. Expansion is async, so we re-measure a few
+// times to catch the height once the WebView finishes resizing.
+function expandAndMeasure() {
   const tg = window?.Telegram?.WebApp;
-  tg?.ready?.();
-  tg?.expand?.();
-} catch (e) {
-  /* not in Telegram */
-  console.error("Error occurred while initializing Telegram WebApp:", e);
+  try {
+    tg?.expand?.();
+  } catch (e) {
+    /* not in Telegram */
+  }
+  setAppHeight();
+  setTimeout(setAppHeight, 150);
+  setTimeout(setAppHeight, 400);
+  setTimeout(setAppHeight, 800);
 }
 
-setAppHeight();
+try {
+  window?.Telegram?.WebApp?.ready?.();
+} catch (e) {
+  /* not in Telegram */
+}
+
+expandAndMeasure();
 window.addEventListener("resize", setAppHeight);
-window.addEventListener("orientationchange", setAppHeight);
-// Re-measure (and re-expand) when the app is brought back to the foreground —
-// this is the minimize → restore case where the content was collapsing.
+window.addEventListener("orientationchange", expandAndMeasure);
+// The minimize → restore case: the app comes back collapsed, so re-expand and
+// re-measure whenever it returns to the foreground.
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    setAppHeight();
-    // Second pass after Telegram finishes its expand/resize animation.
-    setTimeout(setAppHeight, 300);
-  }
+  if (document.visibilityState === "visible") expandAndMeasure();
 });
+window.addEventListener("focus", expandAndMeasure);
 try {
   window?.Telegram?.WebApp?.onEvent?.("viewportChanged", setAppHeight);
 } catch (e) {
   /* not in Telegram; resize listener is enough */
-  console.error("Error occurred while setting viewportChanged listener:", e);
 }
 
 createRoot(document.getElementById("root")).render(
