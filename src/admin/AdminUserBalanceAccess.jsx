@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { apiFetch } from "../lib/api/client";
+import AdminUserDetail from "./AdminUserDetail";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaSearch,
@@ -32,6 +33,7 @@ export default function AdminUserBalanceAccess() {
   const [cartellaInput, setCartellaInput] = useState("");
   const [isSavingLimit, setIsSavingLimit] = useState(false);
   const [limitFeedback, setLimitFeedback] = useState(null);
+  const [detailUserId, setDetailUserId] = useState(null);
 
   const isDeduct = mode === "deduct";
   const quickAmounts = [10, 20, 50, 100, 200, 500];
@@ -294,6 +296,12 @@ export default function AdminUserBalanceAccess() {
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={() => setDetailUserId(selectedUser.id)}
+                  className="shrink-0 self-start text-[11px] font-medium px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30"
+                >
+                  📋 Full Details
+                </button>
               </div>
 
               {/* Wallet Balance */}
@@ -615,6 +623,13 @@ export default function AdminUserBalanceAccess() {
           )}
         </motion.div>
       </div>
+
+      {detailUserId && (
+        <AdminUserDetail
+          userId={detailUserId}
+          onClose={() => setDetailUserId(null)}
+        />
+      )}
     </div>
   );
 }
