@@ -115,7 +115,11 @@ export default function AdminUserDetail({ userId, onClose }) {
   );
 
   const onFilterType = (type) => {
+    if (type === txnType) return;
     setTxnType(type);
+    // Clear the list so the skeleton shows while the filtered set loads.
+    setTxns([]);
+    setTxnMore(false);
     loadTxns(1, type, true);
   };
 
@@ -293,64 +297,96 @@ export default function AdminUserDetail({ userId, onClose }) {
 
               {tab === "Transactions" && (
                 <div className="space-y-2">
-                  <select
-                    value={txnType}
-                    onChange={(e) => onFilterType(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white/80 px-2 py-1.5"
-                  >
-                    <option value="">All types</option>
+                  {/* Type filter — themed chips instead of a native <select>,
+                      whose OS-rendered white dropdown was unreadable on the
+                      dark theme. Horizontally scrollable on small screens. */}
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <FilterChip
+                      active={txnType === ""}
+                      onClick={() => onFilterType("")}
+                    >
+                      All
+                    </FilterChip>
                     {Object.keys(TXN_META).map((t) => (
-                      <option key={t} value={t}>
+                      <FilterChip
+                        key={t}
+                        active={txnType === t}
+                        onClick={() => onFilterType(t)}
+                      >
                         {TXN_META[t].label}
-                      </option>
+                      </FilterChip>
                     ))}
-                  </select>
+                  </div>
+
+                  {/* Filter fetch in-flight: skeleton rows when replacing the
+                      list; existing rows dim while a fetch is running. */}
+                  {txnLoading && txns.length === 0 && (
+                    <div className="space-y-2">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-[54px] rounded-lg bg-white/5 border border-white/10 animate-pulse"
+                        />
+                      ))}
+                    </div>
+                  )}
                   {txns.length === 0 && !txnLoading && (
                     <div className="text-white/40 text-sm py-6 text-center">
                       No transactions.
                     </div>
                   )}
-                  {txns.map((t) => {
-                    const m = txnMeta(t.type);
-                    const neg = t.amount < 0;
-                    return (
-                      <div
-                        key={t.id}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <div className={`text-sm font-medium ${m.cls}`}>
-                            {m.label}
-                            {t.status && t.status !== "completed" && (
-                              <span className="ml-1.5 text-[10px] uppercase text-amber-300">
-                                {t.status}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-white/40 truncate">
-                            {t.description || t.gameId || ""}
-                          </div>
-                          <div className="text-[10px] text-white/30">
-                            {fmtDate(t.createdAt)}
-                          </div>
-                        </div>
+                  <div
+                    className={
+                      txnLoading && txns.length > 0
+                        ? "space-y-2 opacity-40 pointer-events-none transition-opacity"
+                        : "space-y-2 transition-opacity"
+                    }
+                  >
+                    {txns.map((t) => {
+                      const m = txnMeta(t.type);
+                      const neg = t.amount < 0;
+                      return (
                         <div
-                          className={`text-sm font-semibold shrink-0 ${
-                            neg ? "text-red-400" : "text-emerald-400"
-                          }`}
+                          key={t.id}
+                          className="flex items-center justify-between gap-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2"
                         >
-                          {neg ? "" : "+"}
-                          {money(t.amount)}
+                          <div className="min-w-0">
+                            <div className={`text-sm font-medium ${m.cls}`}>
+                              {m.label}
+                              {t.status && t.status !== "completed" && (
+                                <span className="ml-1.5 text-[10px] uppercase text-amber-300">
+                                  {t.status}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-white/40 truncate">
+                              {t.description || t.gameId || ""}
+                            </div>
+                            <div className="text-[10px] text-white/30">
+                              {fmtDate(t.createdAt)}
+                            </div>
+                          </div>
+                          <div
+                            className={`text-sm font-semibold shrink-0 ${
+                              neg ? "text-red-400" : "text-emerald-400"
+                            }`}
+                          >
+                            {neg ? "" : "+"}
+                            {money(t.amount)}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                   {txnMore && (
                     <button
                       disabled={txnLoading}
                       onClick={() => loadTxns(txnPage + 1, txnType, false)}
-                      className="w-full py-2 text-xs rounded-lg bg-white/5 text-white/60 hover:bg-white/10"
+                      className="w-full py-2 text-xs rounded-lg bg-white/5 text-white/60 hover:bg-white/10 disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
+                      {txnLoading && (
+                        <span className="inline-block w-3 h-3 rounded-full border-2 border-white/30 border-t-white/80 animate-spin" />
+                      )}
                       {txnLoading ? "Loading…" : "Load more"}
                     </button>
                   )}
@@ -459,4 +495,17 @@ const Row = ({ k, v }) => (
     <span className="text-white/40">{k}</span>
     <span className="text-white/80">{v}</span>
   </div>
+);
+
+const FilterChip = ({ active, onClick, children }) => (
+  <button
+    onClick={onClick}
+    className={`shrink-0 text-[11px] px-2.5 py-1.5 rounded-full border transition whitespace-nowrap ${
+      active
+        ? "bg-amber-500/25 text-amber-200 border-amber-500/40"
+        : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white/80"
+    }`}
+  >
+    {children}
+  </button>
 );
