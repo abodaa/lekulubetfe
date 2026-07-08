@@ -630,10 +630,16 @@ export default function AdminStats() {
             />
             <StatCard
               icon={<GiCash size={14} />}
-              label="Game Cut (nominal)"
+              label="Game Cut"
               value={`ETB ${summaryLoading ? "..." : money(overviewData.systemRevenue)}`}
               color="amber"
-              subtext={!summaryLoading ? "20% house cut on pots" : null}
+              subtext={
+                !summaryLoading
+                  ? `20% of real stakes (${(
+                      overviewData.totalCartellas || 0
+                    ).toLocaleString()} cartellas)`
+                  : null
+              }
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
