@@ -635,9 +635,9 @@ export default function AdminStats() {
               color="amber"
               subtext={
                 !summaryLoading
-                  ? `20% of real stakes (${(
+                  ? `House cut on ${(
                       overviewData.totalCartellas || 0
-                    ).toLocaleString()} cartellas)`
+                    ).toLocaleString()} real cartellas (rate at time of play)`
                   : null
               }
             />
