@@ -56,6 +56,7 @@ export default function AdminStats() {
     realRevenue: 0,
     totalPlayers: 0,
     totalGames: 0,
+    totalCartellas: 0,
     totalDeposits: 0,
     totalWithdrawals: 0,
   });
@@ -82,6 +83,7 @@ export default function AdminStats() {
         realRevenue: res?.realRevenue || 0,
         totalPlayers: res?.totalPlayers || 0,
         totalGames: res?.totalGames || 0,
+        totalCartellas: res?.totalCartellas || 0,
         totalDeposits: res?.totalDeposits || 0,
         totalWithdrawals: res?.totalWithdrawals || 0,
       });
@@ -670,6 +672,11 @@ export default function AdminStats() {
                   : overviewData.totalGames.toLocaleString()
               }
               color="blue"
+              subtext={
+                !summaryLoading
+                  ? `${overviewData.totalCartellas.toLocaleString()} cartellas selected`
+                  : null
+              }
             />
             <StatCard
               icon={<GiCash size={14} />}
