@@ -57,6 +57,7 @@ export default function AdminStats() {
     totalPlayers: 0,
     totalGames: 0,
     totalCartellas: 0,
+    cartellasByStake: {},
     totalDeposits: 0,
     totalWithdrawals: 0,
   });
@@ -84,6 +85,7 @@ export default function AdminStats() {
         totalPlayers: res?.totalPlayers || 0,
         totalGames: res?.totalGames || 0,
         totalCartellas: res?.totalCartellas || 0,
+        cartellasByStake: res?.cartellasByStake || {},
         totalDeposits: res?.totalDeposits || 0,
         totalWithdrawals: res?.totalWithdrawals || 0,
       });
@@ -672,9 +674,26 @@ export default function AdminStats() {
                   : overviewData.totalGames.toLocaleString()
               }
               color="blue"
+            />
+            <StatCard
+              icon={<FaGamepad size={14} />}
+              label="Cartellas Selected"
+              value={
+                summaryLoading
+                  ? "..."
+                  : (overviewData.totalCartellas || 0).toLocaleString()
+              }
+              color="purple"
               subtext={
                 !summaryLoading
-                  ? `${overviewData.totalCartellas.toLocaleString()} cartellas selected`
+                  ? [10, 20, 50]
+                      .map(
+                        (s) =>
+                          `${s}: ${(
+                            overviewData.cartellasByStake?.[s] || 0
+                          ).toLocaleString()}`,
+                      )
+                      .join("  ·  ")
                   : null
               }
             />
