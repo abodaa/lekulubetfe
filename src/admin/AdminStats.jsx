@@ -46,6 +46,58 @@ export default function AdminStats() {
   const [peakTimes, setPeakTimes] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Per-period summary — fetched from the server for ONLY the selected range,
+  // so switching filters fetches fresh (no 90-day prefetch, no client slicing).
+  const [summary, setSummary] = useState({
+    systemRevenue: 0,
+    realStakeIn: 0,
+    bonusWagered: 0,
+    prizesOut: 0,
+    realRevenue: 0,
+    totalPlayers: 0,
+    totalGames: 0,
+    totalDeposits: 0,
+    totalWithdrawals: 0,
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  const periodToRange = {
+    daily: "today",
+    weekly: "week",
+    monthly: "month",
+    yearly: "all",
+    all: "all",
+  };
+
+  const fetchSummary = async (period) => {
+    const range = periodToRange[period] || "all";
+    setSummaryLoading(true);
+    try {
+      const res = await apiFetch(`/admin/stats/summary?range=${range}`);
+      setSummary({
+        systemRevenue: res?.systemRevenue || 0,
+        realStakeIn: res?.realStakeIn || 0,
+        bonusWagered: res?.bonusWagered || 0,
+        prizesOut: res?.prizesOut || 0,
+        realRevenue: res?.realRevenue || 0,
+        totalPlayers: res?.totalPlayers || 0,
+        totalGames: res?.totalGames || 0,
+        totalDeposits: res?.totalDeposits || 0,
+        totalWithdrawals: res?.totalWithdrawals || 0,
+      });
+    } catch (e) {
+      console.error("summary fetch failed", e);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Fetch the summary for the selected period: today on mount, and again on
+  // every filter change.
+  useEffect(() => {
+    fetchSummary(activePeriod);
+  }, [activePeriod]);
+
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -158,7 +210,9 @@ export default function AdminStats() {
     };
   };
 
-  const overviewData = getFilteredData();
+  // Headline numbers come from the per-period server summary (correct + fast).
+  // getFilteredData()/dailyStats remain only for the per-day breakdown table.
+  const overviewData = summary;
 
   // Precise money formatter: thousands separators + exactly 2 decimals.
   const money = (n) =>
@@ -562,10 +616,10 @@ export default function AdminStats() {
             <StatCard
               icon={<GiProfit size={14} />}
               label="Real Revenue"
-              value={`ETB ${isLoading ? "..." : money(overviewData.realRevenue)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.realRevenue)}`}
               color="green"
               subtext={
-                !isLoading
+                !summaryLoading
                   ? `Cut ${money(overviewData.systemRevenue)} − Bonus ${money(overviewData.bonusWagered)}`
                   : null
               }
@@ -573,24 +627,26 @@ export default function AdminStats() {
             <StatCard
               icon={<GiCash size={14} />}
               label="Game Cut (nominal)"
-              value={`ETB ${isLoading ? "..." : money(overviewData.systemRevenue)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.systemRevenue)}`}
               color="amber"
-              subtext={!isLoading ? "20% house cut on pots" : null}
+              subtext={!summaryLoading ? "20% house cut on pots" : null}
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Bonus Wagered"
-              value={`ETB ${isLoading ? "..." : money(overviewData.bonusWagered)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.bonusWagered)}`}
               color="purple"
-              subtext={!isLoading ? "promo money staked, not real cash" : null}
+              subtext={
+                !summaryLoading ? "promo money staked, not real cash" : null
+              }
             />
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Prizes Paid Out"
-              value={`ETB ${isLoading ? "..." : money(overviewData.prizesOut)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.prizesOut)}`}
               color="red"
               subtext={
-                !isLoading
+                !summaryLoading
                   ? `Real staked: ETB ${money(overviewData.realStakeIn)}`
                   : null
               }
@@ -599,7 +655,9 @@ export default function AdminStats() {
               icon={<FaUsers size={14} />}
               label="Total Players"
               value={
-                isLoading ? "..." : overviewData.totalPlayers.toLocaleString()
+                summaryLoading
+                  ? "..."
+                  : overviewData.totalPlayers.toLocaleString()
               }
               color="green"
             />
@@ -607,17 +665,19 @@ export default function AdminStats() {
               icon={<FaGamepad size={14} />}
               label="Total Games"
               value={
-                isLoading ? "..." : overviewData.totalGames.toLocaleString()
+                summaryLoading
+                  ? "..."
+                  : overviewData.totalGames.toLocaleString()
               }
               color="blue"
             />
             <StatCard
               icon={<GiCash size={14} />}
               label="Total Deposits"
-              value={`ETB ${isLoading ? "..." : money(overviewData.totalDeposits)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.totalDeposits)}`}
               color="green"
               subtext={
-                !isLoading
+                !summaryLoading
                   ? `Pending: ${todayDepositMeta.pendingCount} (ETB ${money(todayDepositMeta.pendingTotal)})`
                   : null
               }
@@ -625,7 +685,7 @@ export default function AdminStats() {
             <StatCard
               icon={<FaMoneyBillWave size={14} />}
               label="Total Withdrawals"
-              value={`ETB ${isLoading ? "..." : money(overviewData.totalWithdrawals)}`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.totalWithdrawals)}`}
               color="red"
             />
           </div>
