@@ -743,7 +743,7 @@ export default function AdminStats() {
               color="red"
               subtext={
                 !summaryLoading ? (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 text-white">
                     <div>
                       ✅ Approved: {overviewData.approvedWithdrawalsCount} (ETB{" "}
                       {money(overviewData.approvedWithdrawals)})
