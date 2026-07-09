@@ -60,6 +60,16 @@ export default function AdminStats() {
     cartellasByStake: {},
     totalDeposits: 0,
     totalWithdrawals: 0,
+    approvedWithdrawals: 0,
+    approvedWithdrawalsCount: 0,
+    pendingWithdrawals: 0,
+    pendingWithdrawalsCount: 0,
+    cancelledWithdrawals: 0,
+    cancelledWithdrawalsCount: 0,
+    failedWithdrawals: 0,
+    failedWithdrawalsCount: 0,
+    processingWithdrawals: 0,
+    processingWithdrawalsCount: 0,
   });
   const [summaryLoading, setSummaryLoading] = useState(true);
 
@@ -88,6 +98,16 @@ export default function AdminStats() {
         cartellasByStake: res?.cartellasByStake || {},
         totalDeposits: res?.totalDeposits || 0,
         totalWithdrawals: res?.totalWithdrawals || 0,
+        approvedWithdrawals: res?.approvedWithdrawals || 0,
+        approvedWithdrawalsCount: res?.approvedWithdrawalsCount || 0,
+        pendingWithdrawals: res?.pendingWithdrawals || 0,
+        pendingWithdrawalsCount: res?.pendingWithdrawalsCount || 0,
+        cancelledWithdrawals: res?.cancelledWithdrawals || 0,
+        cancelledWithdrawalsCount: res?.cancelledWithdrawalsCount || 0,
+        failedWithdrawals: res?.failedWithdrawals || 0,
+        failedWithdrawalsCount: res?.failedWithdrawalsCount || 0,
+        processingWithdrawals: res?.processingWithdrawals || 0,
+        processingWithdrawalsCount: res?.processingWithdrawalsCount || 0,
       });
     } catch (e) {
       console.error("summary fetch failed", e);
@@ -721,6 +741,36 @@ export default function AdminStats() {
               label="Total Withdrawals"
               value={`ETB ${summaryLoading ? "..." : money(overviewData.totalWithdrawals)}`}
               color="red"
+              subtext={
+                !summaryLoading ? (
+                  <div className="space-y-0.5">
+                    <div>
+                      ✅ Approved: {overviewData.approvedWithdrawalsCount} (ETB{" "}
+                      {money(overviewData.approvedWithdrawals)})
+                    </div>
+                    <div>
+                      ⏳ Pending: {overviewData.pendingWithdrawalsCount} (ETB{" "}
+                      {money(overviewData.pendingWithdrawals)})
+                    </div>
+                    {overviewData.processingWithdrawalsCount > 0 && (
+                      <div>
+                        🔄 Processing: {overviewData.processingWithdrawalsCount}{" "}
+                        (ETB {money(overviewData.processingWithdrawals)})
+                      </div>
+                    )}
+                    <div>
+                      ❌ Cancelled: {overviewData.cancelledWithdrawalsCount}{" "}
+                      (ETB {money(overviewData.cancelledWithdrawals)})
+                    </div>
+                    {overviewData.failedWithdrawalsCount > 0 && (
+                      <div>
+                        ⚠️ Failed: {overviewData.failedWithdrawalsCount} (ETB{" "}
+                        {money(overviewData.failedWithdrawals)})
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              }
             />
           </div>
         </motion.div>
