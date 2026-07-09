@@ -690,9 +690,10 @@ export default function AdminStats() {
               }
             />
             <StatCard
+              className="text-xl"
               icon={<GiRobotGolem size={14} />}
               label="Bot Activity"
-              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} staked`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} BET`}
               color="purple"
               subtext={
                 !summaryLoading
