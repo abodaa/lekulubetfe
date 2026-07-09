@@ -619,12 +619,12 @@ export default function AdminStats() {
           <div className="grid grid-cols-2 gap-2">
             <StatCard
               icon={<GiProfit size={14} />}
-              label="Real Revenue"
-              value={`ETB ${summaryLoading ? "..." : money(overviewData.realRevenue)}`}
+              label="Real Staked (Main)"
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.realStakeIn)}`}
               color="green"
               subtext={
                 !summaryLoading
-                  ? `Cut ${money(overviewData.systemRevenue)} − Bonus ${money(overviewData.bonusWagered)}`
+                  ? "Bet amounts charged from the Main wallet"
                   : null
               }
             />
@@ -647,7 +647,9 @@ export default function AdminStats() {
               value={`ETB ${summaryLoading ? "..." : money(overviewData.bonusWagered)}`}
               color="purple"
               subtext={
-                !summaryLoading ? "promo money staked, not real cash" : null
+                !summaryLoading
+                  ? "Bet amounts charged from the Bonus wallet"
+                  : null
               }
             />
             <StatCard
@@ -657,7 +659,7 @@ export default function AdminStats() {
               color="red"
               subtext={
                 !summaryLoading
-                  ? `Real staked: ETB ${money(overviewData.realStakeIn)}`
+                  ? "Actual money credited to winners (game_win ledger)"
                   : null
               }
             />
