@@ -14,7 +14,7 @@ import {
   //   FaCalendarMonth,
   FaCalendar,
 } from "react-icons/fa";
-import { GiMoneyStack, GiCash, GiProfit } from "react-icons/gi";
+import { GiMoneyStack, GiCash, GiProfit, GiRobotGolem } from "react-icons/gi";
 import { MdPending } from "react-icons/md";
 import {
   ResponsiveContainer,
@@ -53,6 +53,9 @@ export default function AdminStats() {
     realStakeIn: 0,
     bonusWagered: 0,
     prizesOut: 0,
+    botWinnings: 0,
+    botStakeIn: 0,
+    botBetsCount: 0,
     realRevenue: 0,
     totalPlayers: 0,
     totalGames: 0,
@@ -91,6 +94,9 @@ export default function AdminStats() {
         realStakeIn: res?.realStakeIn || 0,
         bonusWagered: res?.bonusWagered || 0,
         prizesOut: res?.prizesOut || 0,
+        botWinnings: res?.botWinnings || 0,
+        botStakeIn: res?.botStakeIn || 0,
+        botBetsCount: res?.botBetsCount || 0,
         realRevenue: res?.realRevenue || 0,
         totalPlayers: res?.totalPlayers || 0,
         totalGames: res?.totalGames || 0,
@@ -684,6 +690,17 @@ export default function AdminStats() {
               }
             />
             <StatCard
+              icon={<GiRobotGolem size={14} />}
+              label="Bot Activity"
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} staked`}
+              color="purple"
+              subtext={
+                !summaryLoading
+                  ? `Won: ETB ${money(overviewData.botWinnings)} · ${overviewData.botBetsCount.toLocaleString()} bets`
+                  : null
+              }
+            />
+            <StatCard
               icon={<FaUsers size={14} />}
               label="Total Players"
               value={
@@ -743,7 +760,7 @@ export default function AdminStats() {
               color="red"
               subtext={
                 !summaryLoading ? (
-                  <div className="space-y-0.5 text-white/70 text-[10px]">
+                  <div className="space-y-0.5">
                     <div>
                       ✅ Approved: {overviewData.approvedWithdrawalsCount} (ETB{" "}
                       {money(overviewData.approvedWithdrawals)})
