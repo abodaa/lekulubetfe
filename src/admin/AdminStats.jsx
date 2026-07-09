@@ -56,6 +56,7 @@ export default function AdminStats() {
     botWinnings: 0,
     botStakeIn: 0,
     botBetsCount: 0,
+    botCartellas: 0,
     realRevenue: 0,
     totalPlayers: 0,
     totalGames: 0,
@@ -97,6 +98,7 @@ export default function AdminStats() {
         botWinnings: res?.botWinnings || 0,
         botStakeIn: res?.botStakeIn || 0,
         botBetsCount: res?.botBetsCount || 0,
+        botCartellas: res?.botCartellas || 0,
         realRevenue: res?.realRevenue || 0,
         totalPlayers: res?.totalPlayers || 0,
         totalGames: res?.totalGames || 0,
@@ -690,14 +692,13 @@ export default function AdminStats() {
               }
             />
             <StatCard
-              className="text-xl"
               icon={<GiRobotGolem size={14} />}
               label="Bot Activity"
-              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} BET`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} staked`}
               color="purple"
               subtext={
                 !summaryLoading
-                  ? `Won: ETB ${money(overviewData.botWinnings)} · ${overviewData.botBetsCount.toLocaleString()} bets`
+                  ? `Won: ETB ${money(overviewData.botWinnings)} · ${overviewData.botCartellas.toLocaleString()} cartellas across ${overviewData.botBetsCount.toLocaleString()} bets · test money`
                   : null
               }
             />
