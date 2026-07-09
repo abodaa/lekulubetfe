@@ -694,11 +694,11 @@ export default function AdminStats() {
             <StatCard
               icon={<GiRobotGolem size={14} />}
               label="Bot Activity"
-              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} staked`}
+              value={`ETB ${summaryLoading ? "..." : money(overviewData.botStakeIn)} BET`}
               color="purple"
               subtext={
                 !summaryLoading
-                  ? `Won: ETB ${money(overviewData.botWinnings)} · ${overviewData.botCartellas.toLocaleString()} cartellas across ${overviewData.botBetsCount.toLocaleString()} bets · test money`
+                  ? `Won: ETB ${money(overviewData.botWinnings)} · ${overviewData.botCartellas.toLocaleString()} cartellas across ${overviewData.botBetsCount.toLocaleString()} bets`
                   : null
               }
             />
@@ -762,7 +762,7 @@ export default function AdminStats() {
               color="red"
               subtext={
                 !summaryLoading ? (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 text-white/70 text-[10px]">
                     <div>
                       ✅ Approved: {overviewData.approvedWithdrawalsCount} (ETB{" "}
                       {money(overviewData.approvedWithdrawals)})
