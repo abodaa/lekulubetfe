@@ -279,6 +279,9 @@ export default function AdminStats() {
           totalGames: 0,
           totalPlayers: 0,
           systemRevenue: 0,
+          realRevenue: 0,
+          bonusWagered: 0,
+          prizesOut: 0,
           totalDeposits: 0,
           totalWithdrawals: 0,
           stakes: new Set(),
@@ -288,6 +291,9 @@ export default function AdminStats() {
       weeks[weekKey].totalGames += stat.totalGames || 0;
       weeks[weekKey].totalPlayers += stat.totalPlayers || 0;
       weeks[weekKey].systemRevenue += stat.systemRevenue || 0;
+      weeks[weekKey].realRevenue += stat.realRevenue || 0;
+      weeks[weekKey].bonusWagered += stat.bonusWagered || 0;
+      weeks[weekKey].prizesOut += stat.prizesOut || 0;
       weeks[weekKey].totalDeposits += stat.totalDeposits || 0;
       weeks[weekKey].totalWithdrawals += stat.totalWithdrawals || 0;
       if (stat.stakes) stat.stakes.forEach((s) => weeks[weekKey].stakes.add(s));
@@ -328,6 +334,9 @@ export default function AdminStats() {
           totalGames: 0,
           totalPlayers: 0,
           systemRevenue: 0,
+          realRevenue: 0,
+          bonusWagered: 0,
+          prizesOut: 0,
           totalDeposits: 0,
           totalWithdrawals: 0,
           stakes: new Set(),
@@ -337,6 +346,9 @@ export default function AdminStats() {
       months[monthKey].totalGames += stat.totalGames || 0;
       months[monthKey].totalPlayers += stat.totalPlayers || 0;
       months[monthKey].systemRevenue += stat.systemRevenue || 0;
+      months[monthKey].realRevenue += stat.realRevenue || 0;
+      months[monthKey].bonusWagered += stat.bonusWagered || 0;
+      months[monthKey].prizesOut += stat.prizesOut || 0;
       months[monthKey].totalDeposits += stat.totalDeposits || 0;
       months[monthKey].totalWithdrawals += stat.totalWithdrawals || 0;
       if (stat.stakes)
@@ -373,6 +385,9 @@ export default function AdminStats() {
           totalGames: 0,
           totalPlayers: 0,
           systemRevenue: 0,
+          realRevenue: 0,
+          bonusWagered: 0,
+          prizesOut: 0,
           totalDeposits: 0,
           totalWithdrawals: 0,
           stakes: new Set(),
@@ -382,6 +397,9 @@ export default function AdminStats() {
       years[yearKey].totalGames += stat.totalGames || 0;
       years[yearKey].totalPlayers += stat.totalPlayers || 0;
       years[yearKey].systemRevenue += stat.systemRevenue || 0;
+      years[yearKey].realRevenue += stat.realRevenue || 0;
+      years[yearKey].bonusWagered += stat.bonusWagered || 0;
+      years[yearKey].prizesOut += stat.prizesOut || 0;
       years[yearKey].totalDeposits += stat.totalDeposits || 0;
       years[yearKey].totalWithdrawals += stat.totalWithdrawals || 0;
       if (stat.stakes) stat.stakes.forEach((s) => years[yearKey].stakes.add(s));
@@ -645,6 +663,80 @@ export default function AdminStats() {
             </h3>
           </div>
           <div className="grid grid-cols-2 gap-2">
+            {/* Real Revenue — the true bottom line. Accounts for bonus money:
+                real cash wagered from Main minus actual prizes paid to winners.
+                Nominal "Game Cut" overstates profit because bonus-funded bets
+                still pay real winnings. */}
+            {(() => {
+              const rr = Number(overviewData.realRevenue || 0);
+              const gross = Number(overviewData.systemRevenue || 0);
+              const gap = gross - rr; // how much bonus/payouts reduced the cut
+              const positive = rr >= 0;
+              return (
+                <div
+                  className={`col-span-2 bg-gradient-to-br ${
+                    positive
+                      ? "from-emerald-500/25 to-green-600/15 border-emerald-400/40"
+                      : "from-red-500/25 to-rose-600/15 border-red-400/40"
+                  } backdrop-blur rounded-2xl border p-4`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-white/60 text-[11px] uppercase tracking-wider font-semibold">
+                      Real Revenue · {getPeriodTitle()}
+                    </div>
+                    <div
+                      className={positive ? "text-emerald-300" : "text-red-300"}
+                    >
+                      <GiProfit size={18} />
+                    </div>
+                  </div>
+                  <div
+                    className={`text-3xl font-bold ${
+                      summaryLoading
+                        ? "text-white/50"
+                        : positive
+                          ? "text-emerald-300"
+                          : "text-red-300"
+                    }`}
+                  >
+                    {summaryLoading ? "..." : `ETB ${money(rr)}`}
+                  </div>
+                  <div className="text-white/40 text-[10px] mt-1">
+                    Real cash wagered (Main) − prizes paid to winners. Bonus
+                    wagered isn&apos;t revenue, but prizes it funds are still
+                    real cash out.
+                  </div>
+                  {!summaryLoading && (
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-black/20 rounded-lg py-1.5">
+                        <div className="text-amber-300 text-sm font-semibold">
+                          ETB {money(gross)}
+                        </div>
+                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                          Gross Cut
+                        </div>
+                      </div>
+                      <div className="bg-black/20 rounded-lg py-1.5">
+                        <div className="text-purple-300 text-sm font-semibold">
+                          − ETB {money(overviewData.bonusWagered)}
+                        </div>
+                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                          Bonus Wagered
+                        </div>
+                      </div>
+                      <div className="bg-black/20 rounded-lg py-1.5">
+                        <div className="text-cyan-300 text-sm font-semibold">
+                          ETB {money(gap)}
+                        </div>
+                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                          Cut − Real
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <StatCard
               icon={<GiProfit size={14} />}
               label="Real Staked (Main)"
@@ -658,14 +750,12 @@ export default function AdminStats() {
             />
             <StatCard
               icon={<GiCash size={14} />}
-              label="Game Cut"
+              label="Gross Game Cut"
               value={`ETB ${summaryLoading ? "..." : money(overviewData.systemRevenue)}`}
               color="amber"
               subtext={
                 !summaryLoading
-                  ? `House cut on ${(
-                      overviewData.totalCartellas || 0
-                    ).toLocaleString()} real cartellas (rate at time of play)`
+                  ? `Nominal cut before bonus — see Real Revenue above for the true bottom line`
                   : null
               }
             />
@@ -931,7 +1021,7 @@ export default function AdminStats() {
                       Stake
                     </th>
                     <th className="text-right py-2 px-2 text-white/30 font-medium">
-                      Revenue
+                      Real Rev
                     </th>
                     <th className="text-right py-2 px-2 text-white/30 font-medium">
                       Deposits
@@ -969,8 +1059,15 @@ export default function AdminStats() {
                       <td className="text-center py-2 px-2 text-white/60 text-[9px]">
                         {stat.stakesDisplay || "N/A"}
                       </td>
-                      <td className="text-right py-2 px-2 text-amber-400">
-                        ETB {(stat.systemRevenue || 0).toFixed(2)}
+                      <td
+                        className={`text-right py-2 px-2 ${
+                          (stat.realRevenue || 0) >= 0
+                            ? "text-emerald-400"
+                            : "text-red-400"
+                        }`}
+                        title={`Gross cut: ETB ${(stat.systemRevenue || 0).toFixed(2)} · Bonus wagered: ETB ${(stat.bonusWagered || 0).toFixed(2)} · Prizes paid: ETB ${(stat.prizesOut || 0).toFixed(2)}`}
+                      >
+                        ETB {(stat.realRevenue || 0).toFixed(2)}
                       </td>
                       <td className="text-right py-2 px-2 text-emerald-400">
                         ETB {(stat.totalDeposits || 0).toFixed(2)}
@@ -1078,7 +1175,14 @@ export default function AdminStats() {
                               {game.whoWon || "—"}
                             </span>
                           </td> */}
-                          <td className="text-right py-1 px-2 text-cyan-400">
+                          <td
+                            className={`text-right py-1 px-2 ${
+                              (game.netRevenue ?? 0) >= 0
+                                ? "text-emerald-400"
+                                : "text-red-400"
+                            }`}
+                            title={`Real staked (Main): ETB ${(game.realStakeIn ?? 0).toFixed(2)} · Bonus wagered: ETB ${(game.bonusWagered ?? 0).toFixed(2)} · Prizes paid: ETB ${(game.prizesOut ?? 0).toFixed(2)}`}
+                          >
                             ETB {(game.netRevenue ?? 0).toFixed(2)}
                           </td>
                         </tr>
