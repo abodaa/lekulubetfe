@@ -868,42 +868,88 @@ export default function AdminStats() {
                   : null
               }
             />
-            <StatCard
-              icon={<FaMoneyBillWave size={14} />}
-              label="Total Withdrawals"
-              value={`ETB ${summaryLoading ? "..." : money(overviewData.totalWithdrawals)}`}
-              color="red"
-              subtext={
-                !summaryLoading ? (
-                  <div className="space-y-0.5 text-white/70 text-[10px]">
-                    <div>
-                      ✅ Approved: {overviewData.approvedWithdrawalsCount} (ETB{" "}
-                      {money(overviewData.approvedWithdrawals)})
+            {/* Withdrawals — styled to match the Real Revenue hero card:
+                full-width, large headline (cash actually paid out), with a
+                chip strip breaking down the pipeline states. */}
+            {(() => {
+              const total = Number(overviewData.totalWithdrawals || 0);
+              const hasExtra =
+                overviewData.processingWithdrawalsCount > 0 ||
+                overviewData.failedWithdrawalsCount > 0;
+              return (
+                <div className="col-span-2 bg-gradient-to-br from-red-500/25 to-rose-600/15 border-red-400/40 backdrop-blur rounded-2xl border p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-white/60 text-[11px] uppercase tracking-wider font-semibold">
+                      Withdrawals · {getPeriodTitle()}
                     </div>
-                    <div>
-                      ⏳ Pending: {overviewData.pendingWithdrawalsCount} (ETB{" "}
-                      {money(overviewData.pendingWithdrawals)})
+                    <div className="text-red-300">
+                      <FaMoneyBillWave size={18} />
                     </div>
-                    {overviewData.processingWithdrawalsCount > 0 && (
-                      <div>
-                        🔄 Processing: {overviewData.processingWithdrawalsCount}{" "}
-                        (ETB {money(overviewData.processingWithdrawals)})
-                      </div>
-                    )}
-                    <div>
-                      ❌ Cancelled: {overviewData.cancelledWithdrawalsCount}{" "}
-                      (ETB {money(overviewData.cancelledWithdrawals)})
-                    </div>
-                    {overviewData.failedWithdrawalsCount > 0 && (
-                      <div>
-                        ⚠️ Failed: {overviewData.failedWithdrawalsCount} (ETB{" "}
-                        {money(overviewData.failedWithdrawals)})
-                      </div>
-                    )}
                   </div>
-                ) : null
-              }
-            />
+                  <div
+                    className={`text-3xl font-bold ${
+                      summaryLoading ? "text-white/50" : "text-red-300"
+                    }`}
+                  >
+                    {summaryLoading ? "..." : `ETB ${money(total)}`}
+                  </div>
+                  <div className="text-white/40 text-[10px] mt-1">
+                    Actual cash paid out to players — approved &amp; completed
+                    withdrawals.
+                  </div>
+                  {!summaryLoading && (
+                    <>
+                      <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
+                        <div className="bg-black/20 rounded-lg py-1.5">
+                          <div className="text-emerald-300 text-sm font-semibold">
+                            ETB {money(overviewData.approvedWithdrawals)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Approved · {overviewData.approvedWithdrawalsCount}
+                          </div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg py-1.5">
+                          <div className="text-amber-300 text-sm font-semibold">
+                            ETB {money(overviewData.pendingWithdrawals)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Pending · {overviewData.pendingWithdrawalsCount}
+                          </div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg py-1.5">
+                          <div className="text-red-300 text-sm font-semibold">
+                            ETB {money(overviewData.cancelledWithdrawals)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Cancelled · {overviewData.cancelledWithdrawalsCount}
+                          </div>
+                        </div>
+                      </div>
+                      {hasExtra && (
+                        <div className="mt-2 text-white/35 text-[9px] leading-relaxed">
+                          {overviewData.processingWithdrawalsCount > 0 && (
+                            <>
+                              Processing{" "}
+                              {overviewData.processingWithdrawalsCount} (ETB{" "}
+                              {money(overviewData.processingWithdrawals)})
+                              {overviewData.failedWithdrawalsCount > 0
+                                ? " · "
+                                : ""}
+                            </>
+                          )}
+                          {overviewData.failedWithdrawalsCount > 0 && (
+                            <>
+                              Failed {overviewData.failedWithdrawalsCount} (ETB{" "}
+                              {money(overviewData.failedWithdrawals)})
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </motion.div>
 
