@@ -670,7 +670,10 @@ export default function AdminStats() {
             {(() => {
               const rr = Number(overviewData.realRevenue || 0);
               const gross = Number(overviewData.systemRevenue || 0);
-              const gap = gross - rr; // how much bonus/payouts reduced the cut
+              const staked = Number(overviewData.realStakeIn || 0);
+              const bonus = Number(overviewData.bonusWagered || 0);
+              const prizes = Number(overviewData.prizesOut || 0);
+              const totalWagered = staked + bonus;
               const positive = rr >= 0;
               return (
                 <div
@@ -702,37 +705,57 @@ export default function AdminStats() {
                     {summaryLoading ? "..." : `ETB ${money(rr)}`}
                   </div>
                   <div className="text-white/40 text-[10px] mt-1">
-                    Real cash wagered (Main) − prizes paid to winners. Bonus
-                    wagered isn&apos;t revenue, but prizes it funds are still
-                    real cash out.
+                    Real cash staked (Main) minus prizes actually paid to
+                    winners. Bonus wagered isn&apos;t income, but any prize it
+                    funds is still real cash out.
                   </div>
                   {!summaryLoading && (
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-black/20 rounded-lg py-1.5">
-                        <div className="text-amber-300 text-sm font-semibold">
-                          ETB {money(gross)}
+                    <>
+                      {/* The exact equation behind the headline number. */}
+                      <div className="mt-3 flex items-stretch gap-1.5 text-center">
+                        <div className="flex-1 bg-black/20 rounded-lg py-1.5">
+                          <div className="text-emerald-300 text-sm font-semibold">
+                            ETB {money(staked)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Real Staked
+                          </div>
                         </div>
-                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
-                          Gross Cut
+                        <div className="flex items-center text-white/40 text-sm font-bold">
+                          −
+                        </div>
+                        <div className="flex-1 bg-black/20 rounded-lg py-1.5">
+                          <div className="text-red-300 text-sm font-semibold">
+                            ETB {money(prizes)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Prizes Paid
+                          </div>
+                        </div>
+                        <div className="flex items-center text-white/40 text-sm font-bold">
+                          =
+                        </div>
+                        <div className="flex-1 bg-black/20 rounded-lg py-1.5">
+                          <div
+                            className={`text-sm font-semibold ${
+                              positive ? "text-emerald-300" : "text-red-300"
+                            }`}
+                          >
+                            ETB {money(rr)}
+                          </div>
+                          <div className="text-white/40 text-[8px] uppercase tracking-wide">
+                            Real Rev
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-black/20 rounded-lg py-1.5">
-                        <div className="text-purple-300 text-sm font-semibold">
-                          − ETB {money(overviewData.bonusWagered)}
-                        </div>
-                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
-                          Bonus Wagered
-                        </div>
+                      {/* Context: total wagered split, and the gross cut for reference. */}
+                      <div className="mt-2 text-white/35 text-[9px] leading-relaxed">
+                        Total wagered ETB {money(totalWagered)} = Main{" "}
+                        {money(staked)} + Bonus {money(bonus)}. Gross game cut
+                        (nominal) was ETB {money(gross)} — it ignores that
+                        bonus/bot-funded pots still pay real winnings.
                       </div>
-                      <div className="bg-black/20 rounded-lg py-1.5">
-                        <div className="text-cyan-300 text-sm font-semibold">
-                          ETB {money(gap)}
-                        </div>
-                        <div className="text-white/40 text-[8px] uppercase tracking-wide">
-                          Cut − Real
-                        </div>
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
               );
