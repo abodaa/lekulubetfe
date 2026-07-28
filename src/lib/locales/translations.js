@@ -172,6 +172,8 @@ export const translations = {
     "cs.not_enough_player": "Not Enough Players",
     "cs.max5": "Maximum {max} cartellas per game",
     "cs.insufficient_need": "Insufficient balance. Need {needed} ETB",
+    "cs.bonus_disabled":
+      "Bonus wallet can't be used for betting right now. Please use your main balance.",
     "cs.loading_wallet": "Loading wallet information. Please wait a moment.",
     "cs.wait_finish":
       "Please wait until the current game finishes. You can select cartella when registration starts again.",
@@ -411,6 +413,8 @@ export const translations = {
     "cs.not_enough_player": "በቂ ተጫዋቾች የሉም",
     "cs.max5": "በአንድ ጨዋታ ቢበዛ {max} ካርቴላ",
     "cs.insufficient_need": "በቂ ቀሪ ሂሳብ የለም። {needed} ብር ያስፈልጋል",
+    "cs.bonus_disabled":
+      "የቦነስ ዋሌት አሁን ለውርርድ መጠቀም አይቻልም። እባክዎ ዋናውን ቀሪ ሂሳብ ይጠቀሙ።",
     "cs.loading_wallet": "የቦርሳ መረጃ በመጫን ላይ። እባክዎ ጥቂት ይጠብቁ።",
     "cs.wait_finish":
       "እባክዎ የአሁኑ ጨዋታ እስኪጠናቀቅ ይጠብቁ። ምዝገባ እንደገና ሲጀምር ካርቴላ መምረጥ ይችላሉ።",

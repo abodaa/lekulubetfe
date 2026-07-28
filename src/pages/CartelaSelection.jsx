@@ -312,6 +312,11 @@ export default function CartelaSelection({
       showError(
         t("cs.insufficient_need", { needed: lastEvent.payload?.needed }),
       );
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "BONUS_BETTING_DISABLED"
+    )
+      showError(t("cs.bonus_disabled"));
   }, [lastEvent, showError, showWarning]);
 
   useEffect(() => {
