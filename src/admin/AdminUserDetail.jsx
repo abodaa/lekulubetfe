@@ -259,7 +259,10 @@ export default function AdminUserDetail({ userId, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div
+          className="flex-1 overflow-y-auto px-4 pt-4"
+          style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom))" }}
+        >
           {loading && <div className="text-white/50 text-sm">Loading…</div>}
           {error && <div className="text-red-400 text-sm">{error}</div>}
 
