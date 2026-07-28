@@ -67,6 +67,10 @@ export default function AdminUserDetail({ userId, onClose }) {
   const [gameMore, setGameMore] = useState(false);
   const [gameLoading, setGameLoading] = useState(false);
 
+  // Per-user bonus-betting override save state.
+  const [bbSaving, setBbSaving] = useState(false);
+  const [bbFeedback, setBbFeedback] = useState(null);
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -137,6 +141,46 @@ export default function AdminUserDetail({ userId, onClose }) {
         console.error(e);
       } finally {
         setGameLoading(false);
+      }
+    },
+    [userId],
+  );
+
+  // Save the per-user bonus-betting override. `value` is true | false | null
+  // (null clears the override so the user inherits the global setting).
+  const setBonusBetting = useCallback(
+    async (value) => {
+      setBbSaving(true);
+      setBbFeedback(null);
+      try {
+        const res = await apiFetch(`/admin/users/${userId}/bonus-betting`, {
+          method: "POST",
+          body: { allowed: value },
+        });
+        // Reflect the new values in the loaded detail payload.
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                user: {
+                  ...prev.user,
+                  bonusBettingAllowed: res.user?.bonusBettingAllowed ?? null,
+                  bonusBettingGlobal:
+                    res.user?.bonusBettingGlobal ??
+                    prev.user.bonusBettingGlobal,
+                  bonusBettingEffective:
+                    res.user?.bonusBettingEffective ??
+                    prev.user.bonusBettingEffective,
+                },
+              }
+            : prev,
+        );
+        setBbFeedback({ type: "success", message: res.message || "Saved." });
+      } catch (e) {
+        console.error("Save bonus-betting override failed:", e);
+        setBbFeedback({ type: "error", message: "Failed to save. Try again." });
+      } finally {
+        setBbSaving(false);
       }
     },
     [userId],
@@ -291,6 +335,75 @@ export default function AdminUserDetail({ userId, onClose }) {
                     />
                     <Row k="Joined" v={fmtDate(u.createdAt)} />
                     <Row k="Last active" v={fmtDate(u.lastActive)} />
+                  </div>
+
+                  {/* Bonus-wallet betting override */}
+                  <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white/80 text-xs font-semibold">
+                        Bonus wallet betting
+                      </span>
+                      <span
+                        className={`text-[10px] uppercase px-1.5 py-0.5 rounded border ${
+                          u.bonusBettingEffective
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                            : "bg-red-500/20 text-red-300 border-red-500/30"
+                        }`}
+                      >
+                        {u.bonusBettingEffective ? "Allowed" : "Blocked"}
+                      </span>
+                    </div>
+                    <p className="text-white/40 text-[10px] mb-2">
+                      Whether this user can bet with their Bonus wallet.
+                      “Inherit” follows the global setting (currently{" "}
+                      {u.bonusBettingGlobal ? "allowed" : "blocked"}).
+                    </p>
+                    {(() => {
+                      const current =
+                        u.bonusBettingAllowed === true
+                          ? "allow"
+                          : u.bonusBettingAllowed === false
+                            ? "disallow"
+                            : "inherit";
+                      const opts = [
+                        { key: "inherit", label: "Inherit", value: null },
+                        { key: "allow", label: "Allow", value: true },
+                        { key: "disallow", label: "Disallow", value: false },
+                      ];
+                      return (
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {opts.map((o) => {
+                            const active = current === o.key;
+                            return (
+                              <button
+                                key={o.key}
+                                type="button"
+                                disabled={bbSaving || active}
+                                onClick={() => setBonusBetting(o.value)}
+                                className={`py-1.5 rounded-lg text-[11px] font-medium border transition disabled:opacity-60 ${
+                                  active
+                                    ? "bg-sky-500/25 text-sky-200 border-sky-400/40"
+                                    : "bg-white/5 text-white/60 border-white/10 hover:text-white/90"
+                                }`}
+                              >
+                                {o.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                    {bbFeedback && (
+                      <div
+                        className={`mt-2 text-[11px] ${
+                          bbFeedback.type === "error"
+                            ? "text-red-400"
+                            : "text-emerald-400"
+                        }`}
+                      >
+                        {bbFeedback.message}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

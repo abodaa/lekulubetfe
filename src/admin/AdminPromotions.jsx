@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import AdminReferralSettings from "./AdminReferralSettings";
+import AdminBonusBettingSettings from "./AdminBonusBettingSettings";
 import {
   FaGift,
   FaPercent,
@@ -185,6 +186,9 @@ export default function AdminPromotions() {
     <div className="max-w-md mx-auto">
       {/* Referral commission settings */}
       <AdminReferralSettings />
+
+      {/* Bonus wallet betting (global switch) */}
+      <AdminBonusBettingSettings />
 
       {/* Create card */}
       <motion.div
