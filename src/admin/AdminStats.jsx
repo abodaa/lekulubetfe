@@ -158,17 +158,12 @@ export default function AdminStats() {
       );
       setPeakTimes(peakRes || null);
 
-      // Fetch wallet totals
-      const [totalMainRes, totalBonusRes] = await Promise.all([
-        apiFetch("/admin/stats/wallets/total-main").catch(() => ({
-          totalMain: 0,
-        })),
-        apiFetch("/admin/stats/wallets/total-bonus").catch(() => ({
-          totalBonus: 0,
-        })),
-      ]);
-      setTotalMainWallet(totalMainRes?.totalMain || 0);
-      setTotalBonusWallet(totalBonusRes?.totalBonus || 0);
+      // Fetch wallet totals (single aggregated round-trip)
+      const walletTotals = await apiFetch("/admin/stats/wallets/totals").catch(
+        () => ({ totalMain: 0, totalBonus: 0 }),
+      );
+      setTotalMainWallet(walletTotals?.totalMain || 0);
+      setTotalBonusWallet(walletTotals?.totalBonus || 0);
 
       // Fetch today's overview
       const todayRes = await apiFetch("/admin/stats/today").catch(() => ({
