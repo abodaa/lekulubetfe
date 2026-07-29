@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "../lib/api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -11,6 +11,7 @@ import {
   FaClock,
   FaExclamationCircle,
   FaCheckCircle,
+  FaSyncAlt,
 } from "react-icons/fa";
 
 const FILTERS = [
@@ -40,6 +41,18 @@ function fmtDate(d) {
   }
 }
 
+function fmtClock(ts) {
+  if (!ts) return "";
+  try {
+    return new Date(ts).toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export default function AdminWithdrawals() {
   const [status, setStatus] = useState("pending");
   const [items, setItems] = useState([]);
@@ -53,44 +66,107 @@ export default function AdminWithdrawals() {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Per-row action state.
   const [confirm, setConfirm] = useState(null); // { id, action: 'approve'|'decline' }
   const [actioningId, setActioningId] = useState(null);
 
+  // Refs so the polling interval always reads current values without being
+  // torn down and recreated on every state change.
+  const pageRef = useRef(1);
+  const busyRef = useRef(false); // true while a load/action is in flight
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const load = useCallback(
-    async (nextPage, replace) => {
-      if (replace) setLoading(true);
-      else setLoadingMore(true);
+    async (nextPage, { replace = false, silent = false } = {}) => {
+      busyRef.current = true;
+      if (replace && !silent) setLoading(true);
+      else if (!replace) setLoadingMore(true);
       try {
         const res = await apiFetch(
-          `/admin/withdrawals?status=${status}&page=${nextPage}&limit=20`,
+          `/admin/withdrawals?status=${statusRef.current}&page=${nextPage}&limit=20`,
         );
         const list = Array.isArray(res?.withdrawals) ? res.withdrawals : [];
         setItems((prev) => (replace ? list : [...prev, ...list]));
-        setCounts(res?.counts || counts);
+        if (res?.counts) setCounts(res.counts);
         setHasMore(!!res?.hasMore);
         setPage(nextPage);
+        pageRef.current = nextPage;
+        setLastUpdated(Date.now());
       } catch (e) {
         console.error("Load withdrawals failed:", e);
-        setFeedback({ type: "error", message: "Failed to load withdrawals." });
+        if (!silent)
+          setFeedback({
+            type: "error",
+            message: "Failed to load withdrawals.",
+          });
       } finally {
+        busyRef.current = false;
         setLoading(false);
         setLoadingMore(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status],
+    [],
   );
 
   useEffect(() => {
     setConfirm(null);
-    load(1, true);
+    setItems([]);
+    load(1, { replace: true });
   }, [status, load]);
+
+  // Manual refresh — reloads the first page of the current filter without
+  // blanking the list.
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(1, { replace: true, silent: true });
+    setRefreshing(false);
+  }, [load]);
+
+  // Auto-refresh: poll every 15s while the tab is visible. Only silently
+  // replaces the list when the admin is on the first page (so a deep scroll
+  // isn't yanked back); the per-status counts always update so new pending
+  // requests are visible on the badges regardless.
+  useEffect(() => {
+    const POLL_MS = 15000;
+    const tick = () => {
+      if (document.hidden) return;
+      if (busyRef.current) return; // don't fight an in-flight load/action
+      if (pageRef.current === 1) {
+        load(1, { replace: true, silent: true });
+      } else {
+        // Just refresh counts by fetching page 1 counts silently in the
+        // background without disturbing the visible (paged) list.
+        apiFetch(
+          `/admin/withdrawals?status=${statusRef.current}&page=1&limit=1`,
+        )
+          .then((res) => {
+            if (res?.counts) setCounts(res.counts);
+            setLastUpdated(Date.now());
+          })
+          .catch(() => {});
+      }
+    };
+    const id = setInterval(tick, POLL_MS);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load]);
 
   const act = async (id, action) => {
     setActioningId(id);
+    busyRef.current = true;
     setFeedback(null);
     try {
       const path =
@@ -139,8 +215,9 @@ export default function AdminWithdrawals() {
             : "Action failed. Please try again.";
       setFeedback({ type: "error", message: msg });
       // Refresh so the list reflects reality after a conflict.
-      load(1, true);
+      load(1, { replace: true, silent: true });
     } finally {
+      busyRef.current = false;
       setActioningId(null);
       setConfirm(null);
     }
@@ -148,10 +225,33 @@ export default function AdminWithdrawals() {
 
   return (
     <div className="max-w-md mx-auto">
-      <h1 className="text-white text-lg font-bold mb-3 flex items-center gap-2">
-        <FaMoneyBillWave className="text-emerald-400" size={16} />
-        Withdrawal Requests
-      </h1>
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="text-white text-lg font-bold flex items-center gap-2">
+          <FaMoneyBillWave className="text-emerald-400" size={16} />
+          Withdrawal Requests
+        </h1>
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-white/30 text-[10px]">
+              Updated {fmtClock(lastUpdated)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing || loading}
+            aria-label="Refresh"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 border border-white/15 text-white/70 hover:text-white hover:bg-white/15 transition disabled:opacity-60"
+          >
+            <FaSyncAlt size={12} className={refreshing ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {/* Auto-refresh note */}
+      <p className="text-white/30 text-[10px] mb-2">
+        Auto-refreshes every 15s. Tap the icon to check now.
+      </p>
 
       {/* Filter tabs */}
       <div className="grid grid-cols-4 gap-1.5 mb-3">
@@ -335,7 +435,7 @@ export default function AdminWithdrawals() {
             <button
               type="button"
               disabled={loadingMore}
-              onClick={() => load(page + 1, false)}
+              onClick={() => load(page + 1, {})}
               className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-xs font-medium disabled:opacity-60"
             >
               {loadingMore ? (
