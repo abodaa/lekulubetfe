@@ -132,14 +132,24 @@ export default function Wallet({ onNavigate }) {
     fetchTransactions();
   }, [sessionId, activeTab]);
 
+  // Types that move money OUT of the user's wallet. Withdrawals are stored
+  // with a positive amount, so sign alone can't determine direction.
+  const OUTGOING_TYPES = [
+    "withdrawal",
+    "game_bet",
+    "transfer_out",
+    "coin_spend",
+  ];
+  const isOutgoingTx = (type, amount) =>
+    OUTGOING_TYPES.includes(type) || Number(amount) < 0;
+
   const getTransactionIcon = (type, amount) => {
     if (type === "deposit") return <FiArrowDownLeft size={14} />;
     if (type === "game_win") return <FiArrowDownLeft size={14} />;
-    if (type === "game_bet") return <FiArrowUpRight size={14} />;
-    return amount > 0 ? (
-      <FiArrowDownLeft size={14} />
-    ) : (
+    return isOutgoingTx(type, amount) ? (
       <FiArrowUpRight size={14} />
+    ) : (
+      <FiArrowDownLeft size={14} />
     );
   };
 
@@ -351,7 +361,35 @@ export default function Wallet({ onNavigate }) {
               ) : (
                 <div className="divide-y divide-white/5">
                   {transactions.slice(0, 20).map((transaction, idx) => {
-                    const isPositive = transaction.amount > 0;
+                    // Direction is derived from the transaction TYPE, not the
+                    // sign of the stored amount (withdrawals store a positive
+                    // amount but are money leaving the wallet).
+                    const outgoing = isOutgoingTx(
+                      transaction.type,
+                      transaction.amount,
+                    );
+                    const isPositive = !outgoing;
+                    const magnitude = Math.abs(Number(transaction.amount) || 0);
+                    const statusLabel =
+                      transaction.status === "completed"
+                        ? t("tx.success")
+                        : transaction.status === "cancelled"
+                          ? t("tx.cancelled")
+                          : transaction.status === "failed"
+                            ? t("tx.failed")
+                            : transaction.status === "processing"
+                              ? t("tx.processing")
+                              : transaction.status === "pending"
+                                ? t("tx.pending")
+                                : transaction.status || t("tx.pending");
+                    const statusColor =
+                      transaction.status === "cancelled" ||
+                      transaction.status === "failed"
+                        ? "text-red-400/70"
+                        : transaction.status === "pending" ||
+                            transaction.status === "processing"
+                          ? "text-amber-400/70"
+                          : "text-white/40";
                     return (
                       <div key={transaction.id || idx} className="p-3">
                         <div className="flex items-center justify-between">
@@ -377,7 +415,9 @@ export default function Wallet({ onNavigate }) {
                                       ? t("tx.game_win")
                                       : transaction.type === "game_bet"
                                         ? t("tx.game_bet")
-                                        : t("tx.transaction"))}
+                                        : transaction.type === "withdrawal"
+                                          ? t("tx.withdrawal")
+                                          : t("tx.transaction"))}
                               </p>
                               <p className="text-white/40 text-[9px]">
                                 {new Date(
@@ -392,15 +432,13 @@ export default function Wallet({ onNavigate }) {
                                 isPositive ? "text-green-400" : "text-red-400"
                               }`}
                             >
-                              {isPositive
-                                ? `+${transaction.amount}`
-                                : `${transaction.amount}`}{" "}
+                              {isPositive ? `+${magnitude}` : `-${magnitude}`}{" "}
                               {t("common.etb")}
                             </p>
-                            <p className="text-white/40 text-[9px] uppercase">
-                              {transaction.status === "completed" || isPositive
-                                ? t("tx.success")
-                                : transaction.status || t("tx.pending")}
+                            <p
+                              className={`text-[9px] uppercase ${statusColor}`}
+                            >
+                              {statusLabel}
                             </p>
                           </div>
                         </div>
