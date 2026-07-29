@@ -21,6 +21,13 @@ const FILTERS = [
   { key: "all", label: "All" },
 ];
 
+const RANGES = [
+  { key: "day", label: "Today" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+  { key: "all", label: "All" },
+];
+
 const STATUS_STYLE = {
   pending: "bg-amber-500/20 text-amber-300 border-amber-500/30",
   approved: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
@@ -74,14 +81,23 @@ export default function AdminWithdrawals() {
   const [confirm, setConfirm] = useState(null); // { id, action: 'approve'|'decline' }
   const [actioningId, setActioningId] = useState(null);
 
+  // Time-range filter + bulk decline.
+  const [range, setRange] = useState("all"); // day | week | month | all
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   // Refs so the polling interval always reads current values without being
   // torn down and recreated on every state change.
   const pageRef = useRef(1);
   const busyRef = useRef(false); // true while a load/action is in flight
   const statusRef = useRef(status);
+  const rangeRef = useRef(range);
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+  useEffect(() => {
+    rangeRef.current = range;
+  }, [range]);
 
   const load = useCallback(
     async (nextPage, { replace = false, silent = false } = {}) => {
@@ -90,7 +106,7 @@ export default function AdminWithdrawals() {
       else if (!replace) setLoadingMore(true);
       try {
         const res = await apiFetch(
-          `/admin/withdrawals?status=${statusRef.current}&page=${nextPage}&limit=20`,
+          `/admin/withdrawals?status=${statusRef.current}&range=${rangeRef.current}&page=${nextPage}&limit=20`,
         );
         const list = Array.isArray(res?.withdrawals) ? res.withdrawals : [];
         setItems((prev) => (replace ? list : [...prev, ...list]));
@@ -117,9 +133,10 @@ export default function AdminWithdrawals() {
 
   useEffect(() => {
     setConfirm(null);
+    setBulkConfirm(false);
     setItems([]);
     load(1, { replace: true });
-  }, [status, load]);
+  }, [status, range, load]);
 
   // Manual refresh — reloads the first page of the current filter without
   // blanking the list.
@@ -141,10 +158,10 @@ export default function AdminWithdrawals() {
       if (pageRef.current === 1) {
         load(1, { replace: true, silent: true });
       } else {
-        // Just refresh counts by fetching page 1 counts silently in the
-        // background without disturbing the visible (paged) list.
+        // Just refresh counts (cheap countsOnly call) without disturbing the
+        // visible (paged) list.
         apiFetch(
-          `/admin/withdrawals?status=${statusRef.current}&page=1&limit=1`,
+          `/admin/withdrawals?status=${statusRef.current}&range=${rangeRef.current}&countsOnly=1`,
         )
           .then((res) => {
             if (res?.counts) setCounts(res.counts);
@@ -223,6 +240,44 @@ export default function AdminWithdrawals() {
     }
   };
 
+  // Bulk-decline every pending request in the current time range.
+  const declineAll = async () => {
+    setBulkBusy(true);
+    busyRef.current = true;
+    setFeedback(null);
+    try {
+      const res = await apiFetch("/admin/withdrawals/decline-all", {
+        method: "POST",
+        body: { range: rangeRef.current },
+      });
+      const n = res?.declined ?? 0;
+      setFeedback({
+        type: "success",
+        message: n
+          ? `Declined ${n} pending request${n === 1 ? "" : "s"}.`
+          : "No pending requests to decline.",
+      });
+    } catch (e) {
+      console.error("Bulk decline failed:", e);
+      setFeedback({
+        type: "error",
+        message: "Bulk decline failed. Please try again.",
+      });
+    } finally {
+      busyRef.current = false;
+      setBulkBusy(false);
+      setBulkConfirm(false);
+      load(1, { replace: true, silent: true });
+    }
+  };
+
+  const rangeLabel = {
+    day: "today",
+    week: "this week",
+    month: "this month",
+    all: "all time",
+  };
+
   return (
     <div className="max-w-md mx-auto">
       <div className="flex items-center justify-between mb-3">
@@ -281,6 +336,73 @@ export default function AdminWithdrawals() {
           );
         })}
       </div>
+
+      {/* Time-range filter */}
+      <div className="flex items-center gap-1.5 mb-3">
+        <span className="text-white/40 text-[10px] shrink-0">Period:</span>
+        <div className="flex-1 grid grid-cols-4 gap-1">
+          {RANGES.map((rg) => {
+            const active = range === rg.key;
+            return (
+              <button
+                key={rg.key}
+                type="button"
+                onClick={() => setRange(rg.key)}
+                className={`py-1.5 rounded-lg text-[11px] font-medium border transition ${
+                  active
+                    ? "bg-sky-500/25 text-sky-200 border-sky-400/40"
+                    : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"
+                }`}
+              >
+                {rg.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bulk decline (pending view only) */}
+      {status === "pending" && counts.pending > 0 && (
+        <div className="mb-3">
+          {bulkConfirm ? (
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-red-500/10 border border-red-500/25">
+              <span className="text-red-200 text-[11px] flex-1">
+                Decline ALL pending requests ({rangeLabel[range]})? This can't
+                be undone.
+              </span>
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={declineAll}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-red-600 text-white disabled:opacity-60"
+              >
+                {bulkBusy ? (
+                  <FaSpinner className="animate-spin" size={11} />
+                ) : (
+                  "Decline all"
+                )}
+              </button>
+              <button
+                type="button"
+                disabled={bulkBusy}
+                onClick={() => setBulkConfirm(false)}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/10 text-white/70"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setBulkConfirm(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold bg-red-600/20 text-red-300 border border-red-500/30 hover:bg-red-600/30 transition"
+            >
+              <FaTimes size={11} />
+              Decline all pending ({rangeLabel[range]})
+            </button>
+          )}
+        </div>
+      )}
 
       {feedback && (
         <div
