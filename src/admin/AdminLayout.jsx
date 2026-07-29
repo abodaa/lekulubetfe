@@ -16,10 +16,12 @@ import {
   FaArrowLeft,
   FaGift,
   FaPercent,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import { MdAdminPanelSettings } from "react-icons/md";
 import AdminBonus from "./AdminBonus";
 import AdminPromotions from "./AdminPromotions";
+import AdminWithdrawals from "./AdminWithdrawals";
 
 function AdminNav({ current, onNavigate }) {
   const tabs = [
@@ -27,6 +29,7 @@ function AdminNav({ current, onNavigate }) {
     { key: "users", label: "Users", icon: <FaUsers size={16} /> },
     { key: "bonus", label: "Bonus", icon: <FaGift size={16} /> },
     { key: "promos", label: "Promos", icon: <FaPercent size={16} /> },
+    { key: "cashout", label: "Cashout", icon: <FaMoneyBillWave size={16} /> },
     { key: "stats", label: "Stats", icon: <FaChartBar size={16} /> },
   ];
 
@@ -240,6 +243,7 @@ export default function AdminLayout({ onNavigate }) {
         {tab === "users" && <AdminUserBalanceAccess />}
         {tab === "bonus" && <AdminBonus />}
         {tab === "promos" && <AdminPromotions />}
+        {tab === "cashout" && <AdminWithdrawals />}
         {tab === "stats" && <AdminStats />}
       </main>
 
