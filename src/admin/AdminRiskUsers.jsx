@@ -295,6 +295,11 @@ export default function AdminRiskUsers() {
                           Cleared
                         </span>
                       )}
+                      {u.reflagged && (
+                        <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-orange-500/25 text-orange-300 shrink-0">
+                          Re-flagged
+                        </span>
+                      )}
                     </div>
                     {(u.phone || u.username) && (
                       <div className="text-white/40 text-[11px] flex items-center gap-1 mt-0.5">
@@ -305,10 +310,12 @@ export default function AdminRiskUsers() {
                   </div>
                   <span
                     className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border shrink-0 ${
-                      SEVERITY_STYLE[u.severity] || SEVERITY_STYLE.low
+                      u.score === 0
+                        ? "bg-white/10 text-white/50 border-white/15"
+                        : SEVERITY_STYLE[u.severity] || SEVERITY_STYLE.low
                     }`}
                   >
-                    {u.severity} · {u.score}
+                    {u.score === 0 ? "No flags" : `${u.severity} · ${u.score}`}
                   </span>
                 </div>
 
