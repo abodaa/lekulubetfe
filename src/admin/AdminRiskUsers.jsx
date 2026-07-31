@@ -48,6 +48,7 @@ export default function AdminRiskUsers() {
           `/admin/risk/flagged?window=${windowDays}&limit=100&includeCleared=${
             showCleared ? 1 : 0
           }`,
+          { timeoutMs: 45000 },
         );
         setUsers(Array.isArray(res?.users) ? res.users : []);
         setGeneratedAt(res?.generatedAt || null);
