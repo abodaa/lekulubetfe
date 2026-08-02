@@ -149,13 +149,13 @@ export default function AdminUserDetail({ userId, onClose }) {
   // Save the per-user bonus-betting override. `value` is true | false | null
   // (null clears the override so the user inherits the global setting).
   const setBonusBetting = useCallback(
-    async (value) => {
+    async (patch) => {
       setBbSaving(true);
       setBbFeedback(null);
       try {
         const res = await apiFetch(`/admin/users/${userId}/bonus-betting`, {
           method: "POST",
-          body: { allowed: value },
+          body: patch,
         });
         // Reflect the new values in the loaded detail payload.
         setData((prev) =>
@@ -165,12 +165,19 @@ export default function AdminUserDetail({ userId, onClose }) {
                 user: {
                   ...prev.user,
                   bonusBettingAllowed: res.user?.bonusBettingAllowed ?? null,
+                  bonusBettingPercent: res.user?.bonusBettingPercent ?? null,
                   bonusBettingGlobal:
                     res.user?.bonusBettingGlobal ??
                     prev.user.bonusBettingGlobal,
+                  bonusBettingGlobalPercent:
+                    res.user?.bonusBettingGlobalPercent ??
+                    prev.user.bonusBettingGlobalPercent,
                   bonusBettingEffective:
                     res.user?.bonusBettingEffective ??
                     prev.user.bonusBettingEffective,
+                  bonusBettingEffectivePercent:
+                    res.user?.bonusBettingEffectivePercent ??
+                    prev.user.bonusBettingEffectivePercent,
                 },
               }
             : prev,
@@ -353,13 +360,19 @@ export default function AdminUserDetail({ userId, onClose }) {
                             : "bg-red-500/20 text-red-300 border-red-500/30"
                         }`}
                       >
-                        {u.bonusBettingEffective ? "Allowed" : "Blocked"}
+                        {u.bonusBettingEffective
+                          ? `Allowed · ${u.bonusBettingEffectivePercent ?? 100}%`
+                          : "Blocked"}
                       </span>
                     </div>
                     <p className="text-white/40 text-[10px] mb-2">
-                      Whether this user can bet with their Bonus wallet.
-                      “Inherit” follows the global setting (currently{" "}
-                      {u.bonusBettingGlobal ? "allowed" : "blocked"}).
+                      Whether this user can bet with their Bonus wallet, and how
+                      much of it. “Inherit” follows the global setting
+                      (currently{" "}
+                      {u.bonusBettingGlobal
+                        ? `allowed · ${u.bonusBettingGlobalPercent ?? 100}%`
+                        : "blocked"}
+                      ).
                     </p>
                     {(() => {
                       const current =
@@ -382,7 +395,9 @@ export default function AdminUserDetail({ userId, onClose }) {
                                 key={o.key}
                                 type="button"
                                 disabled={bbSaving || active}
-                                onClick={() => setBonusBetting(o.value)}
+                                onClick={() =>
+                                  setBonusBetting({ allowed: o.value })
+                                }
                                 className={`py-1.5 rounded-lg text-[11px] font-medium border transition disabled:opacity-60 ${
                                   active
                                     ? "bg-sky-500/25 text-sky-200 border-sky-400/40"
@@ -396,6 +411,45 @@ export default function AdminUserDetail({ userId, onClose }) {
                         </div>
                       );
                     })()}
+
+                    {/* Per-user usable-bonus percentage */}
+                    <div className="mt-2.5 pt-2.5 border-t border-white/10">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-white/60 text-[11px]">
+                          Usable bonus %
+                        </span>
+                        <span className="text-white/40 text-[10px]">
+                          {u.bonusBettingPercent == null
+                            ? "Inherit"
+                            : `${u.bonusBettingPercent}%`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {[null, 0, 25, 50, 75, 100].map((p) => {
+                          const active = (u.bonusBettingPercent ?? null) === p;
+                          return (
+                            <button
+                              key={String(p)}
+                              type="button"
+                              disabled={bbSaving || active}
+                              onClick={() => setBonusBetting({ percent: p })}
+                              className={`flex-1 py-1 rounded-lg text-[10px] font-medium border transition disabled:opacity-60 ${
+                                active
+                                  ? "bg-sky-500/25 text-sky-200 border-sky-400/40"
+                                  : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"
+                              }`}
+                            >
+                              {p == null ? "Inh" : p}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-white/30 text-[10px] mt-1">
+                        Caps how much of this user's bonus is usable for
+                        betting.
+                      </p>
+                    </div>
+
                     {bbFeedback && (
                       <div
                         className={`mt-2 text-[11px] ${

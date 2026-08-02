@@ -18,6 +18,8 @@ export default function AdminBonusBettingSettings() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [enabled, setEnabled] = useState(true);
+  const [percent, setPercent] = useState(100);
+  const [percentInput, setPercentInput] = useState("100");
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +28,10 @@ export default function AdminBonusBettingSettings() {
         const res = await apiFetch("/admin/settings/bonus-betting");
         if (cancelled) return;
         setEnabled(!!res.bonusBettingEnabled);
+        const p =
+          res.bonusBettingPercent == null ? 100 : res.bonusBettingPercent;
+        setPercent(p);
+        setPercentInput(String(p));
       } catch (e) {
         console.error("Load bonus-betting settings failed:", e);
         if (!cancelled)
@@ -39,21 +45,19 @@ export default function AdminBonusBettingSettings() {
     };
   }, []);
 
-  const handleSave = async (nextValue) => {
+  const handleSave = async (patch, successMsg) => {
     setSaving(true);
     setFeedback(null);
     try {
       const res = await apiFetch("/admin/settings/bonus-betting", {
         method: "POST",
-        body: { bonusBettingEnabled: nextValue },
+        body: patch,
       });
       setEnabled(!!res.bonusBettingEnabled);
-      setFeedback({
-        type: "success",
-        message: res.bonusBettingEnabled
-          ? "Bonus betting enabled for all users."
-          : "Bonus betting disabled for all users.",
-      });
+      const p = res.bonusBettingPercent == null ? 100 : res.bonusBettingPercent;
+      setPercent(p);
+      setPercentInput(String(p));
+      setFeedback({ type: "success", message: successMsg(res) });
     } catch (e) {
       console.error("Save bonus-betting settings failed:", e);
       setFeedback({
@@ -63,6 +67,21 @@ export default function AdminBonusBettingSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleEnabled = (nextValue) =>
+    handleSave({ bonusBettingEnabled: nextValue }, (res) =>
+      res.bonusBettingEnabled
+        ? "Bonus betting enabled for all users."
+        : "Bonus betting disabled for all users.",
+    );
+
+  const savePercent = () => {
+    let p = Math.max(0, Math.min(100, Math.round(Number(percentInput) || 0)));
+    handleSave(
+      { bonusBettingPercent: p },
+      (res) => `Global bonus usable set to ${res.bonusBettingPercent}%.`,
+    );
   };
 
   return (
@@ -76,10 +95,10 @@ export default function AdminBonusBettingSettings() {
         Bonus Wallet Betting
       </h2>
       <p className="text-white/40 text-[11px] mb-3">
-        Controls whether players can place game bets using their Bonus wallet.
-        When off, bonus balances are frozen from betting for everyone — main
-        wallet must cover the stake. You can still force-allow or force-disallow
-        individual users from their profile.
+        Controls whether players can bet using their Bonus wallet, and how much
+        of it. When off, bonus is frozen for everyone. The percentage caps how
+        much of each player's bonus is usable for betting (e.g. 50% = half). You
+        can override both per user from their profile.
       </p>
 
       {loading ? (
@@ -93,7 +112,7 @@ export default function AdminBonusBettingSettings() {
           <button
             type="button"
             disabled={saving}
-            onClick={() => handleSave(!enabled)}
+            onClick={() => toggleEnabled(!enabled)}
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10 disabled:opacity-60"
           >
             <span className="text-white/70 text-xs font-medium">
@@ -112,6 +131,54 @@ export default function AdminBonusBettingSettings() {
             </span>
           </button>
 
+          {/* Usable percentage */}
+          <div
+            className={`px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 ${
+              enabled ? "" : "opacity-50"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-white/70 text-xs font-medium">
+                Usable bonus (all users)
+              </span>
+              <span className="text-sky-300 text-xs font-bold">{percent}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Number(percentInput) || 0}
+                disabled={!enabled || saving}
+                onChange={(e) => setPercentInput(e.target.value)}
+                className="flex-1 accent-sky-500"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={percentInput}
+                disabled={!enabled || saving}
+                onChange={(e) => setPercentInput(e.target.value)}
+                className="w-14 px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-white text-xs text-center focus:outline-none focus:border-sky-500/50"
+              />
+              <button
+                type="button"
+                disabled={
+                  !enabled || saving || String(percent) === percentInput
+                }
+                onClick={savePercent}
+                className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-sky-600 text-white disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-white/30 text-[10px] mt-1.5">
+              Players can bet with at most this share of their bonus.
+            </p>
+          </div>
+
           <div className="flex items-center gap-2 text-[11px] text-white/50">
             {saving ? (
               <>
@@ -121,7 +188,10 @@ export default function AdminBonusBettingSettings() {
             ) : (
               <>
                 <FaSave size={10} />
-                Current: {enabled ? "Enabled" : "Disabled"} for all users
+                Current: {enabled
+                  ? `Enabled · ${percent}% usable`
+                  : "Disabled"}{" "}
+                for all users
               </>
             )}
           </div>
