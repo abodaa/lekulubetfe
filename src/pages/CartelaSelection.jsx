@@ -61,7 +61,7 @@ export default function CartelaSelection({
   const roomCheckTimerRef = useRef(null);
   const isNavigatingBackRef = useRef(false);
 
-  const totalCartellas = gameState.totalCartellas || cards.length || 200;
+  const totalCartellas = gameState.totalCartellas || cards.length || 300;
 
   // Connect to stake when component mounts
   useEffect(() => {

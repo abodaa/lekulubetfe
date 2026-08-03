@@ -1,13 +1,15 @@
 // src/lib/cartellaCache.js
 //
-// The 200 cartella layouts are static, so we cache them aggressively:
+// The 300 cartella layouts are static, so we cache them aggressively:
 //   - in memory (instant within a session), and
 //   - in localStorage (instant on every future open, even after a reload).
 // Bump CACHE_VERSION if the backend ever changes the predefined layouts.
 
 import { apiFetch } from "./api/client";
 
-const CACHE_VERSION = 1;
+// v2: pool grew from 200 -> 300 cartellas; v1 caches must be invalidated so
+// clients refetch the full set (otherwise cards 201-300 have no layout).
+const CACHE_VERSION = 2;
 const STORAGE_KEY = `cartellas:v${CACHE_VERSION}`;
 
 let memCache = null;
