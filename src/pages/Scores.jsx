@@ -213,7 +213,7 @@ export default function Scores({ onNavigate }) {
         </motion.div>
 
         {/* Leaderboard Section */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -240,7 +240,6 @@ export default function Scores({ onNavigate }) {
             </div>
           </div>
 
-          {/* Leaderboard List */}
           <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 overflow-hidden">
             {leadersLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -299,7 +298,6 @@ export default function Scores({ onNavigate }) {
             )}
           </div>
 
-          {/* Stats Footer */}
           {leaderboardRows.length > 0 && (
             <div className="mt-3 text-center">
               <p className="text-white/20 text-[9px]">
@@ -309,7 +307,7 @@ export default function Scores({ onNavigate }) {
               </p>
             </div>
           )}
-        </motion.div>
+        </motion.div> */}
       </main>
 
       <BottomNav current="scores" onNavigate={onNavigate} />
