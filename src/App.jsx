@@ -19,6 +19,7 @@ const Rules = lazy(() => import("./components/Rules"));
 const Scores = lazy(() => import("./pages/Scores"));
 const History = lazy(() => import("./pages/History"));
 const Wallet = lazy(() => import("./pages/Wallet"));
+const Deposit = lazy(() => import("./pages/Deposit"));
 const Profile = lazy(() => import("./pages/Profile"));
 // Admin is the big, rarely-used bundle — keep it lazy.
 const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
@@ -299,6 +300,8 @@ function AppContent() {
         return <History onNavigate={handleNavigate} />;
       case "wallet":
         return <Wallet onNavigate={handleNavigate} />;
+      case "deposit":
+        return <Deposit onNavigate={handleNavigate} />;
       case "profile":
         return <Profile onNavigate={handleNavigate} />;
       case "winner":
