@@ -269,15 +269,6 @@ export default function Wallet({ onNavigate }) {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="space-y-3"
           >
-            {/* Deposit button */}
-            <button
-              onClick={() => onNavigate && onNavigate("deposit")}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-sm shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition"
-            >
-              <FiArrowDownLeft size={16} />
-              {t("wallet.deposit")}
-            </button>
-
             {/* Main Wallet Card */}
             <div className="rounded-xl bg-white/5 backdrop-blur border border-white/10 p-4">
               <div className="flex items-center justify-between mb-2">
@@ -428,6 +419,18 @@ export default function Wallet({ onNavigate }) {
                                           ? t("tx.withdrawal")
                                           : t("tx.transaction"))}
                               </p>
+                              {transaction.counterparty &&
+                                transaction.counterparty.name && (
+                                  <p className="text-white/50 text-[9px]">
+                                    {transaction.counterparty.direction === "to"
+                                      ? "→ "
+                                      : "← "}
+                                    {transaction.counterparty.name}
+                                    {transaction.counterparty.phone
+                                      ? ` · ${transaction.counterparty.phone}`
+                                      : ""}
+                                  </p>
+                                )}
                               <p className="text-white/40 text-[9px]">
                                 {new Date(
                                   transaction.createdAt,

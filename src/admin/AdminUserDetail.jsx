@@ -532,6 +532,17 @@ export default function AdminUserDetail({ userId, onClose }) {
                             <div className="text-[11px] text-white/40 truncate">
                               {t.description || t.gameId || ""}
                             </div>
+                            {t.counterparty && t.counterparty.name && (
+                              <div className="text-[10px] text-sky-300/70 truncate">
+                                {t.counterparty.direction === "to"
+                                  ? "→ To "
+                                  : "← From "}
+                                {t.counterparty.name}
+                                {t.counterparty.phone
+                                  ? ` · ${t.counterparty.phone}`
+                                  : ""}
+                              </div>
+                            )}
                             <div className="text-[10px] text-white/30">
                               {fmtDate(t.createdAt)}
                             </div>

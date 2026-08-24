@@ -317,7 +317,37 @@ export default function CartelaSelection({
       lastEvent.payload?.reason === "BONUS_BETTING_DISABLED"
     )
       showError(t("cs.bonus_disabled"));
-  }, [lastEvent, showError, showWarning]);
+    // Bug fix: these reasons used to fall through silently — the optimistic
+    // gold highlight would flash on tap and then vanish with no explanation,
+    // looking like a random UI glitch instead of a rejected selection.
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "TAKEN"
+    )
+      showError(
+        t("cs.taken_by_other", { n: lastEvent.payload?.cardNumber ?? "" }),
+      );
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "NOT_IN_REGISTRATION"
+    ) {
+      showError(t("cs.registration_closed"));
+      // Self-heal: the client thought it was still registration but the
+      // server disagreed (e.g. a stale snapshot). Re-request a fresh one
+      // instead of leaving the user stuck tapping into the same mismatch.
+      if (stake) connectToStake(stake);
+    }
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "GAME_FULL"
+    )
+      showError(t("cs.game_full"));
+    if (
+      lastEvent.type === "selection_rejected" &&
+      lastEvent.payload?.reason === "WALLET_ERROR"
+    )
+      showError(t("cs.selection_failed_retry"));
+  }, [lastEvent, showError, showWarning, t, stake, connectToStake]);
 
   useEffect(() => {
     const hasSelection =
@@ -413,11 +443,28 @@ export default function CartelaSelection({
     });
   }, [gameState.yourSelections]);
 
-  // If the server rejects a selection, drop optimistic state and resync.
+  // If the server rejects a selection, drop the optimistic state for THAT
+  // card only. Bug fix: this used to call setPending({}) and wipe every
+  // in-flight optimistic selection, so a rejection for one cartella (e.g.
+  // someone else grabbed it a moment earlier) could visually un-select a
+  // completely different cartella the user had just tapped and was still
+  // waiting to be confirmed.
   useEffect(() => {
-    if (lastEvent?.type === "selection_rejected") {
+    if (lastEvent?.type !== "selection_rejected") return;
+    const rejectedCard = lastEvent.payload?.cardNumber;
+    if (rejectedCard == null) {
+      // No specific card on the payload (shouldn't normally happen) — fall
+      // back to a full reset so we never get stuck showing a phantom
+      // selection.
       setPending({});
+      return;
     }
+    setPending((prev) => {
+      if (!(rejectedCard in prev)) return prev;
+      const next = { ...prev };
+      delete next[rejectedCard];
+      return next;
+    });
   }, [lastEvent]);
 
   // ========== MAIN HANDLER FOR SELECTING A CARTELLA ==========
