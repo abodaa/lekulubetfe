@@ -28,6 +28,7 @@ export default function AdminUserBalanceAccess() {
   const [mode, setMode] = useState("add"); // "add" | "deduct"
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
+  const [isDepositSettlement, setIsDepositSettlement] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [cartellaInput, setCartellaInput] = useState("");
@@ -128,6 +129,7 @@ export default function AdminUserBalanceAccess() {
             mainDelta,
             playDelta: 0,
             reason: reason || "",
+            isDeposit: isDepositSettlement,
           },
         },
       );
@@ -144,11 +146,12 @@ export default function AdminUserBalanceAccess() {
       }
 
       setAmount("");
+      setIsDepositSettlement(false);
       setFeedback({
         type: "success",
         message: isDeduct
-          ? `Deducted ${value.toLocaleString()} ETB from Main wallet.`
-          : `Added ${value.toLocaleString()} ETB to Main wallet.`,
+          ? `Deducted ${value.toLocaleString()} ETB from Main wallet.${isDepositSettlement ? " Deposit history adjusted too." : ""}`
+          : `Added ${value.toLocaleString()} ETB to Main wallet.${isDepositSettlement ? " Counted toward deposit history." : ""}`,
       });
     } catch (error) {
       console.error("Admin wallet adjustment failed:", error);
@@ -164,7 +167,7 @@ export default function AdminUserBalanceAccess() {
     }
   };
 
-  const canReset = amount !== "" || reason.trim() !== "";
+  const canReset = amount !== "" || reason.trim() !== "" || isDepositSettlement;
 
   const handleSaveCartellaLimit = async (reset = false) => {
     if (!selectedUser) return;
@@ -394,12 +397,36 @@ export default function AdminUserBalanceAccess() {
                   className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/30 focus:outline-none focus:border-emerald-500/50 transition-all resize-none"
                 />
 
+                {/* Count-as-deposit toggle. Use this when the credit/debit
+                    represents a deposit settled by hand (e.g. a bank
+                    transfer verified manually) rather than compensation, a
+                    correction, or a bonus — checking it makes this amount
+                    count toward the user's deposit history and, if credited,
+                    locks it the same way a normal deposit is locked until
+                    it's played (excluded from withdrawals/transfers). */}
+                <label className="flex items-start gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isDepositSettlement}
+                    onChange={(e) => setIsDepositSettlement(e.target.checked)}
+                    className="mt-0.5 accent-emerald-500"
+                  />
+                  <span className="text-white/60 text-[11px] leading-snug">
+                    Count as a deposit (e.g. settling a manually-verified bank
+                    transfer) — counts toward deposit history and stays locked
+                    until played, like a normal deposit. Leave unchecked for
+                    compensation, corrections, or bonuses, which should be
+                    immediately withdrawable.
+                  </span>
+                </label>
+
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setAmount("");
                       setReason("");
+                      setIsDepositSettlement(false);
                       setFeedback(null);
                     }}
                     disabled={isAdjusting || !canReset}
