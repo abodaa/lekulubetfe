@@ -60,6 +60,8 @@ export const translations = {
     "wallet.tab_balance": "Balance",
     "wallet.tab_history": "History",
     "wallet.withdrawable": "Withdrawable",
+    "wallet.withdrawable_amount":
+      "Only ETB {amount} of this is withdrawable — the rest is deposited funds, which aren't withdrawable until played.",
     "wallet.promotional": "Promotional",
     "wallet.bonus_hint": "Used when Main & Play are empty",
     "wallet.earn_from_bets": "Earn from bets",
@@ -313,6 +315,8 @@ export const translations = {
     "wallet.tab_balance": "ቀሪ ሂሳብ",
     "wallet.tab_history": "ታሪክ",
     "wallet.withdrawable": "ሊወጣ የሚችል",
+    "wallet.withdrawable_amount":
+      "ETB {amount} ብቻ ሊወጣ ይችላል — የተቀረው የተቀማጭ ገንዘብ ነው፣ ተጫውተው እስኪያሸንፉ ድረስ ሊወጣ አይችልም።",
     "wallet.promotional": "የማስታወቂያ",
     "wallet.bonus_hint": "ዋና ቦርሳ ሲያልቅ ይውላል",
     "wallet.earn_from_bets": "ከውርርድ ያግኙ",

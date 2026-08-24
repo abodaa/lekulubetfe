@@ -24,6 +24,7 @@ export default function Wallet({ onNavigate }) {
     coins: 0,
     playDeposited: 0,
     bonus: 0, // ADDED
+    withdrawableMain: 0,
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("balance");
@@ -37,13 +38,15 @@ export default function Wallet({ onNavigate }) {
   useEffect(() => {
     const handleWalletUpdate = (event) => {
       if (event.detail && event.detail.type === "wallet_update") {
-        const { main, play, coins, source, bonus } = event.detail.payload;
+        const { main, play, coins, source, bonus, withdrawableMain } =
+          event.detail.payload;
         setWallet((prev) => ({
           ...prev,
           main: main ?? prev.main,
           play: play ?? prev.play,
           coins: coins ?? prev.coins,
           bonus: bonus ?? prev.bonus,
+          withdrawableMain: withdrawableMain ?? prev.withdrawableMain,
         }));
         if (source === "win") {
           console.log("Success: Congratulations! You won the game!");
@@ -71,6 +74,8 @@ export default function Wallet({ onNavigate }) {
           const bonusValue = walletData.bonus ?? 0;
           const coinsValue = walletData.coins ?? 0;
           const playDepositedValue = walletData.playDeposited ?? 0;
+          const withdrawableMainValue =
+            walletData.withdrawableMain ?? mainValue;
 
           setWallet({
             main: mainValue,
@@ -78,6 +83,7 @@ export default function Wallet({ onNavigate }) {
             coins: coinsValue,
             playDeposited: playDepositedValue,
             bonus: bonusValue,
+            withdrawableMain: withdrawableMainValue,
           });
         } catch (walletError) {
           console.error("Wallet fetch error:", walletError);
@@ -97,6 +103,7 @@ export default function Wallet({ onNavigate }) {
                 coins: profile.wallet.coins || 0,
                 playDeposited: profile.wallet.playDeposited || 0,
                 bonus: bonusValue,
+                withdrawableMain: profile.wallet.withdrawableMain ?? mainValue,
               });
             }
           } catch (e) {
@@ -288,6 +295,17 @@ export default function Wallet({ onNavigate }) {
                 {wallet.main?.toLocaleString() || 0}{" "}
                 <span className="text-white/40 text-sm">{t("common.etb")}</span>
               </div>
+              {/* Only surface the withdrawable-vs-total split when it actually
+                  matters — i.e. some of the balance is still locked deposit
+                  principal — so users with an all-winnings balance don't see
+                  a redundant second number. */}
+              {wallet.withdrawableMain < wallet.main && (
+                <div className="mt-1 text-amber-400/80 text-[11px]">
+                  {t("wallet.withdrawable_amount", {
+                    amount: wallet.withdrawableMain?.toLocaleString() || 0,
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Bonus Wallet Card */}
