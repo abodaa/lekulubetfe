@@ -62,6 +62,49 @@ export const translations = {
     "wallet.withdrawable": "Withdrawable",
     "wallet.withdrawable_amount":
       "Only ETB {amount} of this is withdrawable — the rest is deposited funds, which aren't withdrawable until played.",
+    "wallet.deposit_btn": "Deposit",
+
+    // Deposit flow (Mini App)
+    "deposit.title": "Deposit",
+    "deposit.select_method": "Choose how you're sending money",
+    "deposit.method_telebirr": "Telebirr",
+    "deposit.method_cbe": "CBE",
+    "deposit.account_name": "Name",
+    "deposit.account_number": "Account",
+    "deposit.copy": "Copy",
+    "deposit.copied": "Copied",
+    "deposit.instructions_steps":
+      "1. Send at least ETB {min} to the account above.\n2. Copy the FULL SMS you receive confirming the payment.\n3. Come back here and paste it below.",
+    "deposit.continue": "I've sent it — continue",
+    "deposit.paste_label": "Paste the SMS you received",
+    "deposit.paste_placeholder": "Paste the confirmation SMS here…",
+    "deposit.submit": "Verify & Deposit",
+    "deposit.verifying_title": "Verifying your deposit…",
+    "deposit.verifying_sub":
+      "This can take up to 30 seconds. Don't close this.",
+    "deposit.success_title": "Deposit successful",
+    "deposit.success_message": "ETB {amount} added. Main wallet: ETB {main}.",
+    "deposit.bonus_line": "+ ETB {amount} bonus",
+    "deposit.promo_line": "+ ETB {amount} promo cashback",
+    "deposit.done": "Done",
+    "deposit.try_again": "Try Again",
+    "deposit.contact_support": "Contact Support",
+    "deposit.err_no_method": "Please choose a deposit method first.",
+    "deposit.err_unavailable":
+      "Automatic verification is temporarily unavailable. Please try again shortly or contact support.",
+    "deposit.err_unreadable":
+      "Couldn't read a {bank} confirmation in that text. Make sure you pasted the full SMS, unedited.",
+    "deposit.err_already_credited":
+      "This receipt was already used for a deposit.",
+    "deposit.err_not_verified":
+      "We couldn't verify this payment. Double-check the SMS and try again.",
+    "deposit.err_wrong_account":
+      "This payment wasn't sent to our account. Please check the account number and try again.",
+    "deposit.err_below_min":
+      "The amount sent (ETB {amount}) is below the ETB {min} minimum.",
+    "deposit.err_generic": "Something went wrong. Please try again.",
+    "deposit.err_timeout":
+      "Verification is taking longer than expected. Please check your Wallet in a moment — if it wasn't credited, try again.",
     "wallet.promotional": "Promotional",
     "wallet.bonus_hint": "Used when Main & Play are empty",
     "wallet.earn_from_bets": "Earn from bets",
@@ -317,6 +360,46 @@ export const translations = {
     "wallet.withdrawable": "ሊወጣ የሚችል",
     "wallet.withdrawable_amount":
       "ETB {amount} ብቻ ሊወጣ ይችላል — የተቀረው የተቀማጭ ገንዘብ ነው፣ ተጫውተው እስኪያሸንፉ ድረስ ሊወጣ አይችልም።",
+    "wallet.deposit_btn": "ገንዘብ ያስገቡ",
+
+    // Deposit flow (Mini App)
+    "deposit.title": "ገንዘብ ያስገቡ",
+    "deposit.select_method": "እንዴት እንደሚልኩ ይምረጡ",
+    "deposit.method_telebirr": "ቴሌብር",
+    "deposit.method_cbe": "CBE",
+    "deposit.account_name": "ስም",
+    "deposit.account_number": "አካውንት",
+    "deposit.copy": "ቅዳ",
+    "deposit.copied": "ተቀድቷል",
+    "deposit.instructions_steps":
+      "1. ቢያንስ {min} ብር ወደ ላይኛው አካውንት ይላኩ።\n2. ክፍያውን የሚያረጋግጠውን ሙሉ SMS ይቅዱ።\n3. ወደዚህ ተመልሰው ከታች ይለጥፉ።",
+    "deposit.continue": "ልኬያለሁ — ይቀጥሉ",
+    "deposit.paste_label": "የደረሰዎትን SMS ይለጥፉ",
+    "deposit.paste_placeholder": "የክፍያ ማረጋገጫ SMS እዚህ ይለጥፉ…",
+    "deposit.submit": "አረጋግጠው ያስገቡ",
+    "deposit.verifying_title": "ተቀማጭዎን በማረጋገጥ ላይ…",
+    "deposit.verifying_sub": "እስከ 30 ሰከንድ ሊወስድ ይችላል። እባክዎ አይዝጉ።",
+    "deposit.success_title": "ተቀማጭ ተሳክቷል",
+    "deposit.success_message": "{amount} ብር ታክሏል። ዋና ቦርሳ፡ {main} ብር።",
+    "deposit.bonus_line": "+ {amount} ብር ቦነስ",
+    "deposit.promo_line": "+ {amount} ብር ፕሮሞ ካሽባክ",
+    "deposit.done": "ተከናውኗል",
+    "deposit.try_again": "እንደገና ይሞክሩ",
+    "deposit.contact_support": "ድጋፍ ያግኙ",
+    "deposit.err_no_method": "እባክዎ መጀመሪያ የክፍያ አማራጭ ይምረጡ።",
+    "deposit.err_unavailable":
+      "ራስ-ሰር ማረጋገጫ ለጊዜው አይገኝም። እባክዎ ትንሽ ቆይተው ይሞክሩ ወይም ድጋፍ ያግኙ።",
+    "deposit.err_unreadable":
+      "በዚያ ጽሑፍ ውስጥ የ{bank} ማረጋገጫ ማንበብ አልተቻለም። ሙሉውን SMS ሳይቀየር መለጠፍዎን ያረጋግጡ።",
+    "deposit.err_already_credited": "ይህ ደረሰኝ ቀደም ሲል ለተቀማጭ ገንዘብ ጥቅም ላይ ውሏል።",
+    "deposit.err_not_verified":
+      "ይህን ክፍያ ማረጋገጥ አልቻልንም። SMS ን ደግመው ያረጋግጡ እና እንደገና ይሞክሩ።",
+    "deposit.err_wrong_account":
+      "ይህ ክፍያ ወደ እኛ አካውንት አልተላከም። እባክዎ የአካውንት ቁጥሩን በድጋሚ ያረጋግጡ።",
+    "deposit.err_below_min": "የተላከው መጠን ({amount} ብር) ከዝቅተኛው {min} ብር በታች ነው።",
+    "deposit.err_generic": "የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።",
+    "deposit.err_timeout":
+      "ማረጋገጡ ከተጠበቀው በላይ እየወሰደ ነው። እባክዎ ከትንሽ ቆይታ በኋላ ቦርሳዎን ይመልከቱ — ካልታከለ እንደገና ይሞክሩ።",
     "wallet.promotional": "የማስታወቂያ",
     "wallet.bonus_hint": "ዋና ቦርሳ ሲያልቅ ይውላል",
     "wallet.earn_from_bets": "ከውርርድ ያግኙ",

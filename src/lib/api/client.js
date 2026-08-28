@@ -112,7 +112,19 @@ export async function apiFetch(
   if (!res.ok) {
     const errorText = await res.text();
     console.error(`API Error ${res.status}:`, errorText);
-    throw new Error(`api_error_${res.status}`);
+    let errorBody = null;
+    try {
+      errorBody = errorText ? JSON.parse(errorText) : null;
+    } catch {
+      // Not JSON — leave errorBody null, callers fall back to err.message.
+    }
+    const err = new Error(`api_error_${res.status}`);
+    err.status = res.status;
+    // Parsed response body (e.g. { success:false, error:"NOT_VERIFIED" }),
+    // so callers can show the server's actual reason instead of just a
+    // generic "api_error_400".
+    err.body = errorBody;
+    throw err;
   }
   return res.json();
 }

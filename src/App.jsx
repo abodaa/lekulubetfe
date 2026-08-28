@@ -27,6 +27,11 @@ const AdminLayout = lazy(() => import("./admin/AdminLayout.jsx"));
 function AppContent() {
   const [currentPage, setCurrentPage] = useState("game");
   const [selectedStake, setSelectedStake] = useState(null);
+  // Set when the bot's Deposit button deep-links in via ?page=wallet&action=deposit
+  // (see the query-param routing effect below). Wallet.jsx auto-opens the
+  // Deposit modal when this is set, and we clear it right after so navigating
+  // away and back to Wallet through the bottom nav doesn't reopen it.
+  const [pendingWalletAction, setPendingWalletAction] = useState(null);
   const [selectedCartelas, setSelectedCartelas] = useState([]);
   const [currentGameId, setCurrentGameId] = useState(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -144,11 +149,24 @@ function AppContent() {
       const isAdmin = urlParams.get("admin") === "true";
       const stakeParam = urlParams.get("stake");
       const pageParam = urlParams.get("page");
+      const actionParam = urlParams.get("action");
 
       if (isAdmin) {
         setCurrentPage("admin");
       } else if (pageParam === "leaderboard") {
         setCurrentPage("scores");
+      } else if (pageParam === "wallet") {
+        // Deep link from the bot's Deposit button (see buildDepositKeyboard
+        // in telegram/bot.js) — land on Wallet and let it auto-open the
+        // Deposit modal via the same ?action=deposit param.
+        setCurrentPage("wallet");
+        if (actionParam === "deposit") {
+          setPendingWalletAction("deposit");
+          // Consume the deep link once — otherwise a later browser
+          // back/forward (which re-fires this via popstate) would reopen
+          // the modal even though the user already dismissed it.
+          window.history.replaceState(null, "", window.location.pathname);
+        }
       } else {
         if (stakeParam) {
           const stakeValue = parseInt(stakeParam);
@@ -298,7 +316,13 @@ function AppContent() {
       case "history":
         return <History onNavigate={handleNavigate} />;
       case "wallet":
-        return <Wallet onNavigate={handleNavigate} />;
+        return (
+          <Wallet
+            onNavigate={handleNavigate}
+            pendingAction={pendingWalletAction}
+            onPendingActionHandled={() => setPendingWalletAction(null)}
+          />
+        );
       case "profile":
         return <Profile onNavigate={handleNavigate} />;
       case "winner":

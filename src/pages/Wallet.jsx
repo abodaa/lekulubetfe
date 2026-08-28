@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import BottomNav from "../components/BottomNav";
+import DepositModal from "../components/DepositModal.jsx";
 import { useAuth } from "../lib/auth/AuthProvider.jsx";
 import { useT } from "../contexts/Languagecontext.jsx";
 import { apiFetch } from "../lib/api/client.js";
@@ -11,11 +12,16 @@ import {
   FaUserCircle,
   FaCheckCircle,
   FaExclamationCircle,
+  FaPlus,
 } from "react-icons/fa";
 import { GiMoneyStack, GiPlayButton } from "react-icons/gi";
 import { FiArrowDownLeft, FiArrowUpRight } from "react-icons/fi";
 
-export default function Wallet({ onNavigate }) {
+export default function Wallet({
+  onNavigate,
+  pendingAction,
+  onPendingActionHandled,
+}) {
   const { sessionId, user, isLoading: authLoading } = useAuth();
   const t = useT();
   const [wallet, setWallet] = useState({
@@ -28,6 +34,18 @@ export default function Wallet({ onNavigate }) {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("balance");
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+
+  // Bot's Deposit button deep-links here via ?page=wallet&action=deposit
+  // (see App.jsx). Open the modal as soon as we're mounted with that pending,
+  // then tell the parent it's been handled so it doesn't fire again if the
+  // user leaves and comes back to this tab through the bottom nav.
+  useEffect(() => {
+    if (pendingAction === "deposit") {
+      setDepositModalOpen(true);
+      onPendingActionHandled?.();
+    }
+  }, [pendingAction, onPendingActionHandled]);
   const [transactions, setTransactions] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [displayPhone, setDisplayPhone] = useState(null);
@@ -118,6 +136,40 @@ export default function Wallet({ onNavigate }) {
     };
     fetchData();
   }, [sessionId, authLoading]);
+
+  // Lightweight refresh used after a successful deposit — re-pulls the wallet
+  // (and, if the user's looking at it, their transaction history) rather than
+  // trying to hand-patch every field locally, since the deposit response
+  // doesn't include the new absolute Bonus wallet total (only how much was
+  // added), and history needs the new deposit row anyway.
+  const refreshWalletAndHistory = async () => {
+    try {
+      const walletData = await apiFetch("/wallet", { sessionId });
+      setWallet({
+        main: walletData.main ?? walletData.balance ?? 0,
+        play: walletData.play ?? 0,
+        coins: walletData.coins ?? 0,
+        playDeposited: walletData.playDeposited ?? 0,
+        bonus: walletData.bonus ?? 0,
+        withdrawableMain: walletData.withdrawableMain ?? walletData.main ?? 0,
+      });
+    } catch (e) {
+      console.error("Post-deposit wallet refresh failed:", e);
+    }
+    if (activeTab === "history") {
+      try {
+        setHistoryLoading(true);
+        const transactionData = await apiFetch("/user/transactions", {
+          sessionId,
+        });
+        setTransactions(transactionData.transactions?.transactions || []);
+      } catch (e) {
+        console.error("Post-deposit history refresh failed:", e);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+  };
 
   // Fetch transactions only when history tab is active
   useEffect(() => {
@@ -291,21 +343,35 @@ export default function Wallet({ onNavigate }) {
                   {t("wallet.withdrawable")}
                 </span>
               </div>
-              <div className="text-white text-2xl font-bold">
-                {wallet.main?.toLocaleString() || 0}{" "}
-                <span className="text-white/40 text-sm">{t("common.etb")}</span>
-              </div>
-              {/* Only surface the withdrawable-vs-total split when it actually
-                  matters — i.e. some of the balance is still locked deposit
-                  principal — so users with an all-winnings balance don't see
-                  a redundant second number. */}
-              {wallet.withdrawableMain < wallet.main && (
-                <div className="mt-1 text-amber-400/80 text-[11px]">
-                  {t("wallet.withdrawable_amount", {
-                    amount: wallet.withdrawableMain?.toLocaleString() || 0,
-                  })}
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-white text-2xl font-bold">
+                    {wallet.main?.toLocaleString() || 0}{" "}
+                    <span className="text-white/40 text-sm">
+                      {t("common.etb")}
+                    </span>
+                  </div>
+                  {/* Only surface the withdrawable-vs-total split when it
+                      actually matters — i.e. some of the balance is still
+                      locked deposit principal — so users with an
+                      all-winnings balance don't see a redundant second
+                      number. */}
+                  {wallet.withdrawableMain < wallet.main && (
+                    <div className="mt-1 text-amber-400/80 text-[11px]">
+                      {t("wallet.withdrawable_amount", {
+                        amount: wallet.withdrawableMain?.toLocaleString() || 0,
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+                <button
+                  onClick={() => setDepositModalOpen(true)}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-semibold hover:scale-[1.03] transition-transform"
+                >
+                  <FaPlus size={9} />
+                  {t("wallet.deposit_btn")}
+                </button>
+              </div>
             </div>
 
             {/* Bonus Wallet Card */}
@@ -483,6 +549,13 @@ export default function Wallet({ onNavigate }) {
       </main>
 
       <BottomNav current="wallet" onNavigate={onNavigate} />
+
+      <DepositModal
+        isOpen={depositModalOpen}
+        onClose={() => setDepositModalOpen(false)}
+        sessionId={sessionId}
+        onSuccess={refreshWalletAndHistory}
+      />
     </div>
   );
 }
