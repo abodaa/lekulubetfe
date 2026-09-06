@@ -359,7 +359,7 @@ export const translations = {
     "wallet.tab_history": "ታሪክ",
     "wallet.withdrawable": "ሊወጣ የሚችል",
     "wallet.withdrawable_amount":
-      "ETB {amount} ብቻ ሊወጣ ይችላል — የተቀረው የተቀማጭ ገንዘብ ነው፣ ተጫውተው እስኪያሸንፉ ድረስ ሊወጣ አይችልም።",
+      "{amount} ብር ብቻ ሊወጣ ይችላል — የተቀረው የተቀማጭ ገንዘብ ነው፣ ተጫውተው እስኪያሸንፉ ድረስ ሊወጣ አይችልም።",
     "wallet.deposit_btn": "ገንዘብ ያስገቡ",
 
     // Deposit flow (Mini App)
