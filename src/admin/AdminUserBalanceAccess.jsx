@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { apiFetch } from "../lib/api/client";
 import AdminUserDetail from "./AdminUserDetail";
+import AdminInviteAudit from "./AdminInviteAudit";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaSearch,
@@ -16,6 +17,7 @@ import {
   FaUserCircle,
   FaPlusCircle,
   FaMinusCircle,
+  FaUserFriends,
 } from "react-icons/fa";
 import { MdDeleteForever, MdMoneyOff } from "react-icons/md";
 
@@ -35,6 +37,7 @@ export default function AdminUserBalanceAccess() {
   const [isSavingLimit, setIsSavingLimit] = useState(false);
   const [limitFeedback, setLimitFeedback] = useState(null);
   const [detailUserId, setDetailUserId] = useState(null);
+  const [showInviteAudit, setShowInviteAudit] = useState(false);
 
   const isDeduct = mode === "deduct";
   const quickAmounts = [10, 20, 50, 100, 200, 500];
@@ -649,6 +652,19 @@ export default function AdminUserBalanceAccess() {
             </div>
           )}
         </motion.div>
+
+        {/* Invite Audit — find/bulk-clear invitedBy relationships that look
+            like the bot.start invite-tracking bug rather than real invites.
+            Placed at the bottom of the Users tab since it's a maintenance
+            tool, not part of the day-to-day search/adjust workflow above. */}
+        <button
+          type="button"
+          onClick={() => setShowInviteAudit(true)}
+          className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-b from-white/[0.06] to-white/[0.02] backdrop-blur-xl border border-white/10 text-white/60 text-sm font-medium hover:text-white hover:border-white/20 transition-all"
+        >
+          <FaUserFriends size={14} />
+          Invite Audit
+        </button>
       </div>
 
       {detailUserId && (
@@ -656,6 +672,10 @@ export default function AdminUserBalanceAccess() {
           userId={detailUserId}
           onClose={() => setDetailUserId(null)}
         />
+      )}
+
+      {showInviteAudit && (
+        <AdminInviteAudit onClose={() => setShowInviteAudit(false)} />
       )}
     </div>
   );

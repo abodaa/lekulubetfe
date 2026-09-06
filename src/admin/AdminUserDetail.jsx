@@ -71,6 +71,33 @@ export default function AdminUserDetail({ userId, onClose }) {
   const [bbSaving, setBbSaving] = useState(false);
   const [bbFeedback, setBbFeedback] = useState(null);
 
+  // Remediation for the bot.start invite-tracking bug — clears a wrongly
+  // attributed inviter from this account (see the /clear-inviter route).
+  const [clearingInviter, setClearingInviter] = useState(false);
+  const [clearInviterError, setClearInviterError] = useState(null);
+
+  const handleClearInviter = async () => {
+    if (!confirm("Remove this inviter from the account? This can't be undone."))
+      return;
+    setClearingInviter(true);
+    setClearInviterError(null);
+    try {
+      await apiFetch(`/admin/users/${userId}/clear-inviter`, {
+        method: "POST",
+      });
+      setData((prev) =>
+        prev
+          ? { ...prev, referrals: { ...prev.referrals, inviter: null } }
+          : prev,
+      );
+    } catch (e) {
+      console.error("Clear inviter failed:", e);
+      setClearInviterError("Failed to clear. Please try again.");
+    } finally {
+      setClearingInviter(false);
+    }
+  };
+
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -627,8 +654,19 @@ export default function AdminUserDetail({ userId, onClose }) {
               {tab === "Referrals" && (
                 <div className="space-y-3">
                   <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white/70">
-                    <div className="text-[11px] uppercase tracking-wide text-white/40 mb-1">
-                      Invited by
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-[11px] uppercase tracking-wide text-white/40">
+                        Invited by
+                      </div>
+                      {r.inviter && (
+                        <button
+                          onClick={handleClearInviter}
+                          disabled={clearingInviter}
+                          className="text-[11px] px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                        >
+                          {clearingInviter ? "Clearing…" : "Clear"}
+                        </button>
+                      )}
                     </div>
                     {r.inviter ? (
                       <div>
@@ -639,6 +677,11 @@ export default function AdminUserDetail({ userId, onClose }) {
                       </div>
                     ) : (
                       <div className="text-white/40">Not referred</div>
+                    )}
+                    {clearInviterError && (
+                      <div className="text-red-400 text-xs mt-1">
+                        {clearInviterError}
+                      </div>
                     )}
                   </div>
                   <div className="text-[11px] uppercase tracking-wide text-white/40">
