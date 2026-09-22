@@ -187,7 +187,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_API_URL ||
         (window.location.hostname === "localhost"
           ? "http://localhost:3001"
-          : "https://lekulubingoback-vbpk.onrender.com");
+          : "https://lekulubetbe-y7ye.onrender.com");
 
       const response = await fetch(
         `${apiBase}/api/games/${currentStake}/status`,
@@ -315,7 +315,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_WS_URL ||
         (window.location.hostname === "localhost"
           ? "ws://localhost:3001"
-          : "wss://lekulubingoback-vbpk.onrender.com");
+          : "wss://lekulubetbe-y7ye.onrender.com");
       wsBase = (wsBase || "").replace(/\/+$/, "");
       if (!/\/ws$/i.test(wsBase)) {
         wsBase += "/ws";
@@ -1068,7 +1068,7 @@ export function WebSocketProvider({ children }) {
         import.meta.env.VITE_API_URL ||
         (window.location.hostname === "localhost"
           ? "http://localhost:3001"
-          : "https://lekulubingoback-vbpk.onrender.com");
+          : "https://lekulubetbe-y7ye.onrender.com");
 
       const response = await fetch(
         `${apiBase}/api/games/${currentStake}/status`,
