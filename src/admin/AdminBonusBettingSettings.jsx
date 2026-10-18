@@ -11,6 +11,7 @@ import {
   FaGamepad,
   FaPercent,
   FaDice,
+  FaCoins,
 } from "react-icons/fa";
 
 // Global settings panel for Bonus Wallet Betting, Bot Management, and Win Steering.
@@ -23,6 +24,7 @@ export default function AdminBonusBettingSettings() {
   const [botEnabled, setBotEnabled] = useState(false);
   const [botCount, setBotCount] = useState(5);
   const [botCountInput, setBotCountInput] = useState("5");
+  const [botStakes, setBotStakes] = useState([10]);
   const [botMinCartellas, setBotMinCartellas] = useState(1);
   const [botMinCartellasInput, setBotMinCartellasInput] = useState("1");
   const [botMaxCartellas, setBotMaxCartellas] = useState(3);
@@ -50,6 +52,12 @@ export default function AdminBonusBettingSettings() {
     const bCount = res.botCount == null ? 5 : res.botCount;
     setBotCount(bCount);
     setBotCountInput(String(bCount));
+
+    const bStakes =
+      Array.isArray(res.botStakes) && res.botStakes.length
+        ? res.botStakes
+        : [10];
+    setBotStakes(bStakes);
 
     const bMinC = res.botMinCartellas == null ? 1 : res.botMinCartellas;
     const bMaxC = res.botMaxCartellas == null ? 3 : res.botMaxCartellas;
@@ -133,6 +141,32 @@ export default function AdminBonusBettingSettings() {
       { botCount: cnt },
       (res) => `Amount of bot players set to ${res.botCount}.`,
     );
+  };
+
+  const toggleStake = (stakeVal) => {
+    let next;
+    if (botStakes.includes(stakeVal)) {
+      if (botStakes.length === 1) return; // Keep at least one stake active
+      next = botStakes.filter((s) => s !== stakeVal);
+    } else {
+      next = [...botStakes, stakeVal].sort((a, b) => a - b);
+    }
+    setBotStakes(next);
+    handleSave(
+      { botStakes: next },
+      (res) =>
+        `Bots assigned to stake(s): ${res.botStakes.join(", ")} (${res.botCount} bots divided across ${res.botStakes.length} stakes).`,
+    );
+  };
+
+  const getStakeBotCount = (stakeVal) => {
+    if (!botStakes.includes(stakeVal)) return 0;
+    const total = botCount;
+    const nStakes = botStakes.length;
+    const base = Math.floor(total / nStakes);
+    const remainder = total % nStakes;
+    const stakeIndex = botStakes.indexOf(stakeVal);
+    return base + (stakeIndex < remainder ? 1 : 0);
   };
 
   const saveBotWinningPercentage = () => {
@@ -308,6 +342,76 @@ export default function AdminBonusBettingSettings() {
               Regardless of player types (main betters or bonus betters), bots
               select random cartellas and play.
             </p>
+          </div>
+
+          {/* Assigned Stakes for Bots */}
+          <div
+            className={`px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 ${
+              botEnabled ? "" : "opacity-60"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-white/70 text-xs font-medium flex items-center gap-1.5">
+                <FaCoins size={12} className="text-amber-400" />
+                Assigned Stakes for Bots
+              </span>
+              <span className="text-amber-300 text-[11px] font-semibold">
+                {botStakes.length === 1
+                  ? `Stake ${botStakes[0]} (All ${botCount} bots)`
+                  : `${botStakes.length} stakes (Amount divided)`}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {[10, 20, 50].map((sVal) => {
+                const isSelected = botStakes.includes(sVal);
+                const allocatedBots = getStakeBotCount(sVal);
+                return (
+                  <button
+                    key={sVal}
+                    type="button"
+                    disabled={!botEnabled || saving}
+                    onClick={() => toggleStake(sVal)}
+                    className={`flex flex-col items-center justify-center py-2 px-2 rounded-xl border transition-all text-center ${
+                      isSelected
+                        ? "bg-amber-500/20 border-amber-500/50 text-white shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                        : "bg-white/5 border-white/10 text-white/50 hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-white">
+                      {sVal} ETB
+                    </span>
+                    <span
+                      className={`text-[10px] mt-0.5 font-medium ${
+                        isSelected
+                          ? "text-amber-300 font-semibold"
+                          : "text-white/30"
+                      }`}
+                    >
+                      {isSelected
+                        ? `${allocatedBots} bot${allocatedBots === 1 ? "" : "s"}`
+                        : "Off"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-white/40 text-[10px] mt-2 flex flex-col gap-0.5">
+              <div>
+                When multiple stakes are selected, the bot amount divides across
+                them (e.g. Stake 10 and 20).
+              </div>
+              {botStakes.length > 1 && (
+                <div className="text-amber-300/80 font-medium">
+                  Allocation:{" "}
+                  {botStakes
+                    .map((s) => `${getStakeBotCount(s)} on Stake ${s}`)
+                    .join(" + ")}{" "}
+                  = {botCount} bots total.
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 2. Bot Winning Chance for Main Betters */}
