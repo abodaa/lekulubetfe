@@ -37,6 +37,8 @@ export default function AdminBonusBettingSettings() {
 
   // 3. Bonus Betters Bot Winner Guarantee & Realistic Turn Range
   const [botSteeringEnabled, setBotSteeringEnabled] = useState(true);
+  const [bonusBotCount, setBonusBotCount] = useState(1);
+  const [bonusBotCountInput, setBonusBotCountInput] = useState("1");
   const [winTurnMin, setWinTurnMin] = useState(18);
   const [winTurnMax, setWinTurnMax] = useState(26);
   const [winTurnMinInput, setWinTurnMinInput] = useState("18");
@@ -72,6 +74,10 @@ export default function AdminBonusBettingSettings() {
     setBotWinningPercentageInput(String(bPct));
 
     setBotSteeringEnabled(res.bonusBotSteeringEnabled !== false);
+    const bBotCount = res.bonusBotCount == null ? 1 : res.bonusBotCount;
+    setBonusBotCount(bBotCount);
+    setBonusBotCountInput(String(bBotCount));
+
     const minVal =
       res.bonusBotWinTurnMin == null ? 18 : res.bonusBotWinTurnMin;
     const maxVal =
@@ -186,6 +192,18 @@ export default function AdminBonusBettingSettings() {
         ? "Bonus betters bot winner guarantee ENABLED (Bot always wins 100%)."
         : "Bonus betters bot winner guarantee DISABLED (The draw is fair).",
     );
+
+  const saveBonusBotCount = () => {
+    let cnt = Math.max(
+      1,
+      Math.min(50, Math.round(Number(bonusBotCountInput) || 1)),
+    );
+    handleSave(
+      { bonusBotCount: cnt },
+      (res) =>
+        `Random bots entering for bonus-only players set to ${res.bonusBotCount}.`,
+    );
+  };
 
   const saveTurnRange = () => {
     let minV = Math.max(
@@ -498,6 +516,60 @@ export default function AdminBonusBettingSettings() {
               />
             </span>
           </button>
+
+          {/* Bots Entering when Bot Players is OFF & All Betters are Bonus Betters */}
+          <div
+            className={`px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 ${
+              botSteeringEnabled ? "" : "opacity-50"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-white/70 text-xs font-medium flex items-center gap-1.5">
+                <FaRobot size={12} className="text-amber-400" />
+                Bonus Players Bot Count (When Bots OFF)
+              </span>
+              <span className="text-amber-300 text-xs font-bold">
+                {bonusBotCount} {bonusBotCount === 1 ? "Bot" : "Bots"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={1}
+                max={20}
+                step={1}
+                value={Number(bonusBotCountInput) || 1}
+                disabled={!botSteeringEnabled || saving}
+                onChange={(e) => setBonusBotCountInput(e.target.value)}
+                className="flex-1 accent-amber-500"
+              />
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={bonusBotCountInput}
+                disabled={!botSteeringEnabled || saving}
+                onChange={(e) => setBonusBotCountInput(e.target.value)}
+                className="w-14 px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-white text-xs text-center focus:outline-none focus:border-amber-500/50"
+              />
+              <button
+                type="button"
+                disabled={
+                  !botSteeringEnabled ||
+                  saving ||
+                  String(bonusBotCount) === bonusBotCountInput
+                }
+                onClick={saveBonusBotCount}
+                className="px-3 py-1 rounded-lg text-[11px] font-semibold bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-40 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-white/30 text-[10px] mt-1.5">
+              When bot players is OFF and all players in a room bet using bonus
+              wallet, this number of random bots enters the game to play and win.
+            </p>
+          </div>
 
           {/* 4. Realistic Bot Win Turn Range */}
           <div
