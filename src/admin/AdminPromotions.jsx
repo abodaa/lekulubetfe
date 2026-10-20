@@ -139,7 +139,7 @@ export default function AdminPromotions() {
       setForm(emptyForm());
       load();
     } catch (e2) {
-      const code = e2?.message || "";
+      const code = e2?.body?.error || e2?.message || "";
       const map = {
         CODE_IN_USE: "That promo code is already in use by an active giveaway.",
         INVALID_WINDOW: "Invalid time window.",
@@ -150,7 +150,13 @@ export default function AdminPromotions() {
       };
       setFeedback({
         type: "error",
-        message: map[code] || "Failed to create promotion. Please try again.",
+        message:
+          map[code] ||
+          e2?.body?.error ||
+          (e2?.message === "api_error_400"
+            ? "Invalid promotion data."
+            : e2?.message) ||
+          "Failed to create promotion. Please try again.",
       });
     } finally {
       setSubmitting(false);
@@ -165,7 +171,11 @@ export default function AdminPromotions() {
       load();
     } catch (e) {
       console.error("Cancel failed:", e);
-      setFeedback({ type: "error", message: "Failed to cancel promotion." });
+      setFeedback({
+        type: "error",
+        message:
+          e?.body?.error || e?.message || "Failed to cancel promotion.",
+      });
     } finally {
       setCancellingId(null);
     }
@@ -184,7 +194,12 @@ export default function AdminPromotions() {
       console.error("Post to channel failed:", e);
       setFeedback({
         type: "error",
-        message: e?.message || "Failed to post promotion to channel.",
+        message:
+          e?.body?.error ||
+          (e?.message === "api_error_400"
+            ? "Failed to post to channel. Check channel configuration."
+            : e?.message) ||
+          "Failed to post promotion to channel.",
       });
     } finally {
       setPostingChannelId(null);

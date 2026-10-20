@@ -70,7 +70,12 @@ export default function AdminPromoChannelSettings() {
       console.error("Save promo channel settings failed:", e);
       setFeedback({
         type: "error",
-        message: e?.message || "Failed to save settings. Please try again.",
+        message:
+          e?.body?.error ||
+          (e?.message === "api_error_400"
+            ? "Invalid channel settings."
+            : e?.message) ||
+          "Failed to save settings. Please try again.",
       });
     } finally {
       setSaving(false);
@@ -101,7 +106,10 @@ export default function AdminPromoChannelSettings() {
       setTestFeedback({
         type: "error",
         message:
-          e?.message ||
+          e?.body?.error ||
+          (e?.message === "api_error_400"
+            ? "Could not send message. Check bot admin rights in channel."
+            : e?.message) ||
           "Could not send message. Check bot admin rights in channel.",
       });
     } finally {
