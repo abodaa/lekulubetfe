@@ -3,6 +3,7 @@ import { apiFetch } from "../lib/api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import AdminReferralSettings from "./AdminReferralSettings";
 import AdminBonusBettingSettings from "./AdminBonusBettingSettings";
+import AdminPromoChannelSettings from "./AdminPromoChannelSettings";
 import {
   FaGift,
   FaPercent,
@@ -13,6 +14,8 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
   FaSpinner,
+  FaPaperPlane,
+  FaTelegramPlane,
 } from "react-icons/fa";
 
 // Default the datetime-local inputs to a sensible window (now -> +2h), in the
@@ -59,6 +62,7 @@ export default function AdminPromotions() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [postingChannelId, setPostingChannelId] = useState(null);
 
   const isDeposit = form.type === "deposit_bonus";
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -167,6 +171,26 @@ export default function AdminPromotions() {
     }
   };
 
+  const postToChannel = async (id) => {
+    setPostingChannelId(id);
+    try {
+      await apiFetch(`/admin/promotions/${id}/post-channel`, { method: "POST" });
+      setFeedback({
+        type: "success",
+        message: "Promotion successfully posted to dedicated Telegram channel!",
+      });
+      load();
+    } catch (e) {
+      console.error("Post to channel failed:", e);
+      setFeedback({
+        type: "error",
+        message: e?.message || "Failed to post promotion to channel.",
+      });
+    } finally {
+      setPostingChannelId(null);
+    }
+  };
+
   const fmt = (d) =>
     d
       ? new Date(d).toLocaleString("en-GB", {
@@ -184,6 +208,9 @@ export default function AdminPromotions() {
 
   return (
     <div className="max-w-md mx-auto">
+      {/* Telegram Promotion Channel settings */}
+      <AdminPromoChannelSettings />
+
       {/* Referral commission settings */}
       <AdminReferralSettings />
 
@@ -507,22 +534,54 @@ export default function AdminPromotions() {
                         <FaClock size={8} />
                         {fmt(p.startAt)} → {fmt(p.endAt)}
                       </div>
+
+                      {p.channelMessageId ? (
+                        <div className="flex items-center gap-1.5 text-sky-400 text-[10px] mt-1.5 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md w-fit font-medium">
+                          <FaTelegramPlane size={9} />
+                          <span>Posted to Channel ({p.channelChatId || "Telegram"})</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-white/30 text-[10px] mt-1.5 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md w-fit">
+                          <FaPaperPlane size={8} />
+                          <span>Not posted to channel yet</span>
+                        </div>
+                      )}
                     </div>
 
-                    {["scheduled", "active"].includes(p.status) && (
-                      <button
-                        onClick={() => cancel(p._id)}
-                        disabled={cancellingId === p._id}
-                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-[11px] font-medium hover:bg-red-500/30 transition-all"
-                      >
-                        {cancellingId === p._id ? (
-                          <FaSpinner className="animate-spin" size={10} />
-                        ) : (
-                          <FaBan size={10} />
-                        )}
-                        Cancel
-                      </button>
-                    )}
+                    <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                      {["scheduled", "active"].includes(p.status) && (
+                        <button
+                          type="button"
+                          onClick={() => postToChannel(p._id)}
+                          disabled={postingChannelId === p._id}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-sky-500/20 border border-sky-500/30 text-sky-300 text-[11px] font-medium hover:bg-sky-500/30 transition-all disabled:opacity-40"
+                          title="Post announcement with interactive claim button to dedicated channel"
+                        >
+                          {postingChannelId === p._id ? (
+                            <FaSpinner className="animate-spin" size={10} />
+                          ) : (
+                            <FaPaperPlane size={10} />
+                          )}
+                          {p.channelMessageId ? "Re-post" : "Post to Channel"}
+                        </button>
+                      )}
+
+                      {["scheduled", "active"].includes(p.status) && (
+                        <button
+                          type="button"
+                          onClick={() => cancel(p._id)}
+                          disabled={cancellingId === p._id}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-[11px] font-medium hover:bg-red-500/30 transition-all disabled:opacity-40"
+                        >
+                          {cancellingId === p._id ? (
+                            <FaSpinner className="animate-spin" size={10} />
+                          ) : (
+                            <FaBan size={10} />
+                          )}
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </motion.div>
               ))}
